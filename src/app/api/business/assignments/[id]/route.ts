@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: false, error: '요청 형식이 올바르지 않습니다.' }, { status: 400 })
   }
 
-  const ALLOWED = ['status', 'hourly_rate'] as const
+  const ALLOWED = ['status', 'hourly_rate', 'attended_at'] as const
   const updates: Record<string, unknown> = {}
   for (const key of ALLOWED) {
     if (key in (body as Record<string, unknown>)) {
@@ -29,7 +29,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: false, error: '변경할 필드가 없습니다.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const service = createServiceClient()
+
+  const { data, error } = await service
     .from('assignments')
     .update(updates)
     .eq('id', id)

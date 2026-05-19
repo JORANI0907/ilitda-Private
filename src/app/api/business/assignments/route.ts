@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -14,27 +14,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '요청 형식이 올바르지 않습니다.' }, { status: 400 })
   }
 
-  const ALLOWED = ['schedule_id', 'worker_id', 'hourly_rate'] as const
+  const b = body as Record<string, unknown>
   const updates: Record<string, unknown> = { status: 'pending' }
-  for (const key of ALLOWED) {
-    if (key in (body as Record<string, unknown>)) {
-      updates[key] = (body as Record<string, unknown>)[key]
-    }
+
+  for (const key of ['schedule_id', 'worker_id', 'connection_id', 'hourly_rate'] as const) {
+    if (key in b) updates[key] = b[key]
   }
 
-  if (!updates.schedule_id || !updates.worker_id) {
-    return NextResponse.json({ success: false, error: 'schedule_id, worker_id는 필수입니다.' }, { status: 400 })
+  if (!updates.schedule_id) {
+    return NextResponse.json({ success: false, error: 'schedule_id는 필수입니다.' }, { status: 400 })
+  }
+  if (!updates.worker_id && !updates.connection_id) {
+    return NextResponse.json(
+      { success: false, error: 'worker_id 또는 connection_id가 필요합니다.' },
+      { status: 400 },
+    )
   }
 
-  const { data, error } = await supabase
+  const service = createServiceClient()
+
+  const { data, error } = await service
     .from('assignments')
     .insert(updates)
     .select(`
       *,
-      worker:workers(
-        id,
-        profile:profiles(name, phone)
-      )
+      connection:connections(id, display_name, manual_phone),
+      worker:workers(id, profile:profiles(name, phone))
     `)
     .single()
 
