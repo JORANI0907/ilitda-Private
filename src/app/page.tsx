@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-// 루트("/")는 로그인 페이지로 리다이렉트
+// public-first: 루트("/")는 사업자 홈으로 — 비로그인 사용자도 UI·DB 열람 가능
 export default function RootPage() {
-  redirect('/login')
+  redirect('/business/home')
 }
