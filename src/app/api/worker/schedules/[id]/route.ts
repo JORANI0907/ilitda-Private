@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -14,7 +14,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
   }
 
-  const { data: worker, error: workerError } = await supabase
+  const service = createServiceClient()
+
+  const { data: worker, error: workerError } = await service
     .from('workers')
     .select('id')
     .eq('profile_id', user.id)
@@ -27,7 +29,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await service
     .from('assignments')
     .select(
       `
@@ -43,7 +45,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         status,
         client:clients(id, name, address, phone)
       ),
-      attendance:attendances(
+      attendance(
         id,
         checkin_at,
         checkin_lat,
@@ -79,7 +81,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
   }
 
-  const { data: worker, error: workerError } = await supabase
+  const service = createServiceClient()
+
+  const { data: worker, error: workerError } = await service
     .from('workers')
     .select('id')
     .eq('profile_id', user.id)
@@ -112,7 +116,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  const { error } = await supabase
+  const { error } = await service
     .from('assignments')
     .update(updates)
     .eq('id', id)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -16,8 +16,10 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  const service = createServiceClient()
+
   // worker_id 조회
-  const { data: worker, error: workerError } = await supabase
+  const { data: worker, error: workerError } = await service
     .from('workers')
     .select('id')
     .eq('profile_id', user.id)
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
     toDate = nextSunday.toISOString().slice(0, 10)
   }
 
-  let query = supabase
+  let query = service
     .from('assignments')
     .select(
       `

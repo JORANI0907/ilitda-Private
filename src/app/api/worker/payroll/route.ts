@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const mode = searchParams.get('mode') ?? 'current' // 'current' | 'history'
 
-  const { data: worker, error: workerError } = await supabase
+  const service = createServiceClient()
+
+  const { data: worker, error: workerError } = await service
     .from('workers')
     .select('id')
     .eq('profile_id', user.id)
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
 
-    const { data, error } = await supabase
+    const { data, error } = await service
       .from('assignments')
       .select(
         `
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
         hourly_rate,
         status,
         schedule:schedules(service_date, start_time, end_time, client:clients(name)),
-        attendance:attendances(total_minutes, checkin_at, checkout_at)
+        attendance(total_minutes, checkin_at, checkout_at)
       `,
       )
       .eq('worker_id', worker.id)
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
   }
 
   // history: 과거 월별 payroll 요약
-  const { data, error, count } = await supabase
+  const { data, error, count } = await service
     .from('payrolls')
     .select('*', { count: 'exact' })
     .eq('worker_id', worker.id)

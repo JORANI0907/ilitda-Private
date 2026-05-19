@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 const config: CapacitorConfig = {
   appId: 'kr.ilitda.app',
   appName: '일잇다',
-  webDir: '.next',
+  webDir: 'cap-web',
   server: {
     url: 'https://ilitda.vercel.app',
     cleartext: false,

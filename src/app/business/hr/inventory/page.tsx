@@ -8,15 +8,13 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
-import { LoginPrompt } from '@/components/shared/LoginPrompt'
-import { createClient } from '@/lib/supabase/client'
 
 interface InventoryItem {
   id: string
   name: string
   unit: string | null
-  current_quantity: number
-  min_quantity: number | null
+  current_qty: number
+  min_qty: number | null
   business_id: string
 }
 
@@ -35,7 +33,6 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null)
   const [showAddItem, setShowAddItem] = useState(false)
   const [showTxModal, setShowTxModal] = useState(false)
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [newItemName, setNewItemName] = useState('')
   const [newItemUnit, setNewItemUnit] = useState('')
   const [newItemMin, setNewItemMin] = useState('')
@@ -46,38 +43,14 @@ export default function InventoryPage() {
   const fetchItems = useCallback(async () => {
     setIsLoading(true)
     setError(null)
-    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setItems([])
-        setIsLoading(false)
+      const res = await fetch('/api/business/inventory')
+      const json = await res.json()
+      if (!json.success) {
+        setError(json.error ?? '데이터를 불러오지 못했습니다.')
         return
       }
-
-      const { data: business, error: bizError } = await supabase
-        .from('businesses')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single()
-
-      if (bizError || !business) {
-        setError('사업자 정보를 찾을 수 없습니다.')
-        setIsLoading(false)
-        return
-      }
-
-      const { data, error: invError } = await supabase
-        .from('inventory_items')
-        .select('*')
-        .eq('business_id', business.id)
-        .order('name', { ascending: true })
-
-      if (invError) {
-        setError(invError.message)
-        return
-      }
-      setItems(data ?? [])
+      setItems(json.data ?? [])
     } catch {
       setError('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
@@ -85,9 +58,7 @@ export default function InventoryPage() {
     }
   }, [])
 
-  useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
+  useEffect(() => { fetchItems() }, [fetchItems])
 
   async function handleAddItem() {
     setFormError(null)
@@ -96,36 +67,19 @@ export default function InventoryPage() {
       return
     }
     setIsSubmitting(true)
-    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setShowAddItem(false)
-        setShowLoginPrompt(true)
-        return
-      }
-
-      const { data: business } = await supabase
-        .from('businesses')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single()
-
-      if (!business) {
-        setFormError('사업자 정보를 찾을 수 없습니다.')
-        return
-      }
-
-      const { error } = await supabase.from('inventory_items').insert({
-        business_id: business.id,
-        name: newItemName.trim(),
-        unit: newItemUnit.trim() || null,
-        current_quantity: 0,
-        min_quantity: newItemMin ? Number(newItemMin) : null,
+      const res = await fetch('/api/business/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newItemName.trim(),
+          unit: newItemUnit.trim() || null,
+          min_qty: newItemMin ? Number(newItemMin) : null,
+        }),
       })
-
-      if (error) {
-        setFormError(error.message)
+      const json = await res.json()
+      if (!json.success) {
+        setFormError(json.error ?? '오류가 발생했습니다.')
         return
       }
       setShowAddItem(false)
@@ -147,33 +101,22 @@ export default function InventoryPage() {
       return
     }
     setIsSubmitting(true)
-    const supabase = createClient()
     try {
-      const qty = Number(txForm.quantity)
-      const { error } = await supabase.from('inventory_transactions').insert({
-        item_id: txForm.item_id,
-        type: txForm.type,
-        quantity: qty,
-        notes: txForm.notes || null,
+      const res = await fetch('/api/business/inventory-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inventory_id: txForm.item_id,
+          type: txForm.type,
+          qty: Number(txForm.quantity),
+          note: txForm.notes || null,
+        }),
       })
-
-      if (error) {
-        setFormError(error.message)
+      const json = await res.json()
+      if (!json.success) {
+        setFormError(json.error ?? '오류가 발생했습니다.')
         return
       }
-
-      // 수량 업데이트
-      const item = items.find((i) => i.id === txForm.item_id)
-      if (item) {
-        const newQty = txForm.type === 'in'
-          ? item.current_quantity + qty
-          : Math.max(0, item.current_quantity - qty)
-        await supabase
-          .from('inventory_items')
-          .update({ current_quantity: newQty })
-          .eq('id', txForm.item_id)
-      }
-
       setShowTxModal(false)
       setTxForm(INITIAL_TX)
       await fetchItems()
@@ -224,19 +167,19 @@ export default function InventoryPage() {
         )}
 
         {!isLoading && !error && items.map((item) => {
-          const isLow = item.min_quantity !== null && item.current_quantity <= item.min_quantity
+          const isLow = item.min_qty !== null && item.current_qty <= item.min_qty
           return (
             <Card key={item.id} padding="md">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="font-semibold text-text-primary">{item.name}</span>
-                  {item.min_quantity !== null && (
-                    <span className="text-xs text-text-tertiary">최소: {item.min_quantity}{item.unit ?? ''}</span>
+                  {item.min_qty !== null && (
+                    <span className="text-xs text-text-tertiary">최소: {item.min_qty}{item.unit ?? ''}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <p className={`text-lg font-bold ${isLow ? 'text-state-danger' : 'text-text-primary'}`}>
-                    {item.current_quantity}
+                    {item.current_qty}
                     <span className="text-sm font-normal text-text-tertiary ml-0.5">{item.unit ?? ''}</span>
                   </p>
                   <div className="flex gap-1">
@@ -316,11 +259,6 @@ export default function InventoryPage() {
           {formError && <p className="text-sm text-state-danger">{formError}</p>}
         </div>
       </Modal>
-
-      <LoginPrompt
-        open={showLoginPrompt}
-        onClose={() => setShowLoginPrompt(false)}
-      />
     </div>
   )
 }

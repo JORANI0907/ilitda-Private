@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const period = searchParams.get('period') ?? 'current' // current | last
 
-  const { data: business, error: bizError } = await supabase
+  const service = createServiceClient()
+
+  const { data: business, error: bizError } = await service
     .from('businesses')
     .select('id')
     .eq('profile_id', user.id)
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
     periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
   }
 
-  const { data, error, count } = await supabase
+  const { data, error, count } = await service
     .from('payrolls')
     .select(`
       *,
@@ -67,7 +69,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
   }
 
-  const { data: business, error: bizError } = await supabase
+  const service = createServiceClient()
+
+  const { data: business, error: bizError } = await service
     .from('businesses')
     .select('id')
     .eq('profile_id', user.id)
@@ -90,12 +94,12 @@ export async function POST(request: NextRequest) {
   }
 
   // 해당 기간 배정+출퇴근 기록 기반으로 급여 일괄 생성
-  const { data: assignments, error: aError } = await supabase
+  const { data: assignments, error: aError } = await service
     .from('assignments')
     .select(`
       id, worker_id, hourly_rate,
       schedule:schedules!inner(business_id, service_date),
-      attendances(total_minutes)
+      attendance(total_minutes)
     `)
     .eq('schedule.business_id', business.id)
     .gte('schedule.service_date', period_start as string)
@@ -112,8 +116,8 @@ export async function POST(request: NextRequest) {
 
   for (const a of (assignments ?? [])) {
     const existing = workerMap.get(a.worker_id) ?? { total_minutes: 0, total_amount: 0, hourly_rate: a.hourly_rate ?? 0 }
-    const minutes = (a.attendances as Array<{ total_minutes: number | null }>)
-      .reduce((sum, att) => sum + (att.total_minutes ?? 0), 0)
+    const attendanceRows = a.attendance as Array<{ total_minutes: number | null }> | null
+    const minutes = (attendanceRows ?? []).reduce((sum, att) => sum + (att.total_minutes ?? 0), 0)
     const amount = Math.round((minutes / 60) * (a.hourly_rate ?? 0))
 
     workerMap.set(a.worker_id, {
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '해당 기간에 완료된 배정이 없습니다.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await service
     .from('payrolls')
     .insert(inserts)
     .select()
@@ -169,7 +173,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'id는 필수입니다.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const service = createServiceClient()
+
+  const { data, error } = await service
     .from('payrolls')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', id as string)

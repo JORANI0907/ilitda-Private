@@ -1,16 +1,17 @@
 'use client'
 
-import { Calendar, Clock, User } from 'lucide-react'
+import { Calendar, Clock, User, Star } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { ScheduleStatusBadge } from '@/components/ui/Badge'
 import type { Schedule, Client } from '@/types'
 
 interface ScheduleCardProps {
-  schedule: Schedule & { client?: Pick<Client, 'name'> | null }
+  schedule: Schedule & { client?: Pick<Client, 'name' | 'is_favorite'> | null }
   onClick?: () => void
+  onFavoriteToggle?: (clientId: string, newValue: boolean) => void
 }
 
-export function ScheduleCard({ schedule, onClick }: ScheduleCardProps) {
+export function ScheduleCard({ schedule, onClick, onFavoriteToggle }: ScheduleCardProps) {
   const dateStr = new Date(schedule.service_date).toLocaleDateString('ko-KR', {
     month: 'long',
     day: 'numeric',
@@ -20,6 +21,8 @@ export function ScheduleCard({ schedule, onClick }: ScheduleCardProps) {
   const timeStr = schedule.start_time
     ? schedule.start_time.slice(0, 5)
     : '시간 미정'
+
+  const isFavorite = schedule.client?.is_favorite === true
 
   return (
     <Card onClick={onClick} padding="md">
@@ -45,7 +48,25 @@ export function ScheduleCard({ schedule, onClick }: ScheduleCardProps) {
             <p className="text-xs text-text-tertiary truncate">{schedule.notes}</p>
           )}
         </div>
-        <ScheduleStatusBadge status={schedule.status} />
+        <div className="flex items-center gap-2 shrink-0">
+          <ScheduleStatusBadge status={schedule.status} />
+          {schedule.client_id && onFavoriteToggle && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onFavoriteToggle(schedule.client_id!, !isFavorite)
+              }}
+              className="p-1 rounded-md transition-colors hover:bg-surface-sunken"
+              aria-label={isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+            >
+              <Star
+                size={16}
+                className={isFavorite ? 'fill-amber-400 text-amber-400' : 'text-text-tertiary'}
+              />
+            </button>
+          )}
+        </div>
       </div>
     </Card>
   )

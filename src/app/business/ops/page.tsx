@@ -4,11 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 
-type Segment = 'schedules' | 'customers'
+type Segment = 'schedules' | 'favorites'
 
 const SEGMENTS: { key: Segment; label: string; path: string }[] = [
   { key: 'schedules', label: '일정', path: '/business/ops/schedules' },
-  { key: 'customers', label: '고객', path: '/business/ops/customers' },
+  { key: 'favorites', label: '즐겨찾기', path: '/business/ops/favorites' },
 ]
 
 export default function OpsPage() {

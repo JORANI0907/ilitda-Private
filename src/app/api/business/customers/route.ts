@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
@@ -12,17 +12,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q') ?? ''
 
-  const { data: business, error: bizError } = await supabase
+  const service = createServiceClient()
+
+  const { data: business, error: bizError } = await service
     .from('businesses')
     .select('id')
     .eq('profile_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (bizError || !business) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  let query = supabase
+  let query = service
     .from('clients')
     .select('*', { count: 'exact' })
     .eq('business_id', business.id)
@@ -54,11 +56,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
   }
 
-  const { data: business, error: bizError } = await supabase
+  const service = createServiceClient()
+
+  const { data: business, error: bizError } = await service
     .from('businesses')
     .select('id')
     .eq('profile_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (bizError || !business) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '고객명은 필수입니다.' }, { status: 400 })
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await service
     .from('clients')
     .insert(updates)
     .select()

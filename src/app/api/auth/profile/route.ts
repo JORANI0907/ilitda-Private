@@ -170,12 +170,14 @@ export async function POST(
   }
 
   if (is_business && business) {
+    const slug = crypto.randomUUID().replace(/-/g, '').slice(0, 8)
     const { error: bizError } = await serviceClient.from('businesses').insert({
       profile_id: user.id,
       business_name: business.business_name.trim(),
       registration_number: business.registration_number ?? null,
       address: business.address ?? null,
       representative_name: business.representative_name ?? null,
+      request_slug: slug,
     })
     if (bizError) {
       return NextResponse.json(

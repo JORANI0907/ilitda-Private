@@ -1,23 +1,28 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Calendar, Users, Briefcase, ChevronRight, TrendingUp } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/Button'
 
-// 더미 데이터 — Day 3에서 Supabase 쿼리로 교체
-const DUMMY_STATS = [
-  { label: '이번 달 일정', value: '12건', icon: <Calendar size={20} />, color: 'text-brand-600' },
-  { label: '등록 인력', value: '8명', icon: <Users size={20} />, color: 'text-state-success' },
-  { label: '진행 중', value: '3건', icon: <Briefcase size={20} />, color: 'text-state-warning' },
-]
+interface UpcomingSchedule {
+  id: string
+  service_date: string
+  start_time: string | null
+  status: string
+  service_type: string | null
+  client: { name: string } | null
+}
 
-const DUMMY_SCHEDULES = [
-  { id: '1', client: '스타벅스 판교점', date: '5월 20일 오후 11시', type: '주방후드', status: 'in_progress' as const },
-  { id: '2', client: '이마트 분당점', date: '5월 22일 오전 2시', type: '바닥코팅', status: 'scheduled' as const },
-  { id: '3', client: '롯데리아 야탑점', date: '5월 25일 오후 10시', type: '에어컨', status: 'scheduled' as const },
-]
+interface HomeData {
+  businessName: string
+  monthScheduleCount: number
+  inProgressCount: number
+  workerCount: number
+  upcomingSchedules: UpcomingSchedule[]
+}
 
 const STATUS_MAP: Record<string, { label: string; variant: 'primary' | 'success' | 'warning' | 'info' }> = {
   scheduled:   { label: '예정', variant: 'info' },
@@ -25,32 +30,72 @@ const STATUS_MAP: Record<string, { label: string; variant: 'primary' | 'success'
   completed:   { label: '완료', variant: 'success' },
 }
 
+function formatScheduleDate(serviceDate: string, startTime: string | null): string {
+  const [, m, d] = serviceDate.split('-')
+  const datePart = `${Number(m)}월 ${Number(d)}일`
+  if (!startTime) return datePart
+  const [h] = startTime.split(':')
+  const hour = Number(h)
+  const period = hour < 12 ? '오전' : '오후'
+  const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+  return `${datePart} ${period} ${displayHour}시`
+}
+
 export default function BusinessHomePage() {
+  const [data, setData] = useState<HomeData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/business/home')
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setData(json.data) })
+      .catch(() => {})
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  const stats = data ? [
+    { label: '이번 달 일정', value: `${data.monthScheduleCount}건`, icon: <Calendar size={20} />, color: 'text-brand-600' },
+    { label: '등록 인력', value: `${data.workerCount}명`, icon: <Users size={20} />, color: 'text-state-success' },
+    { label: '진행 중', value: `${data.inProgressCount}건`, icon: <Briefcase size={20} />, color: 'text-state-warning' },
+  ] : []
+
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       {/* 헤더 */}
       <div>
         <p className="text-sm text-text-secondary">안녕하세요</p>
-        <h1 className="text-2xl font-bold text-text-primary leading-tight">범빌드코리아 님 👋</h1>
+        {isLoading
+          ? <div className="h-8 w-40 bg-surface-sunken rounded animate-pulse mt-1" />
+          : <h1 className="text-2xl font-bold text-text-primary leading-tight">{data?.businessName ?? ''} 님 👋</h1>
+        }
       </div>
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-3 gap-3">
-        {DUMMY_STATS.map((stat) => (
-          <Card key={stat.label} padding="sm" className="text-center">
-            <span className={`${stat.color} flex justify-center mb-1`}>{stat.icon}</span>
-            <p className="text-xl font-bold text-text-primary">{stat.value}</p>
-            <p className="text-xs text-text-secondary mt-0.5 break-keep">{stat.label}</p>
-          </Card>
-        ))}
+        {isLoading
+          ? Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} padding="sm" className="text-center">
+                <div className="h-12 bg-surface-sunken rounded animate-pulse" />
+              </Card>
+            ))
+          : stats.map((stat) => (
+              <Card key={stat.label} padding="sm" className="text-center">
+                <span className={`${stat.color} flex justify-center mb-1`}>{stat.icon}</span>
+                <p className="text-xl font-bold text-text-primary">{stat.value}</p>
+                <p className="text-xs text-text-secondary mt-0.5 break-keep">{stat.label}</p>
+              </Card>
+            ))
+        }
       </div>
 
-      {/* 이번 주 매출 배너 */}
+      {/* 배너 */}
       <Card className="bg-brand-600 border-0" padding="md">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-brand-200">이번 달 예상 매출</p>
-            <p className="text-2xl font-bold text-white mt-0.5">4,320,000원</p>
+            <p className="text-sm text-brand-200">이번 달 일정 현황</p>
+            <p className="text-2xl font-bold text-white mt-0.5">
+              {isLoading ? '...' : `총 ${data?.monthScheduleCount ?? 0}건`}
+            </p>
           </div>
           <TrendingUp size={36} className="text-brand-300" />
         </div>
@@ -66,22 +111,35 @@ export default function BusinessHomePage() {
             </Button>
           }
         />
-        {DUMMY_SCHEDULES.map((s) => (
-          <Card key={s.id} onClick={() => {}} padding="md">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-text-primary truncate">{s.client}</p>
-                <p className="text-sm text-text-secondary mt-0.5">{s.date} · {s.type}</p>
-              </div>
-              <Badge variant={STATUS_MAP[s.status].variant}>
-                {STATUS_MAP[s.status].label}
-              </Badge>
+        {isLoading && Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} padding="md">
+            <div className="flex flex-col gap-2">
+              <div className="h-4 w-28 bg-surface-sunken rounded animate-pulse" />
+              <div className="h-3 w-40 bg-surface-sunken rounded animate-pulse" />
             </div>
           </Card>
         ))}
+        {!isLoading && (data?.upcomingSchedules ?? []).length === 0 && (
+          <p className="text-sm text-text-tertiary text-center py-6">예정된 일정이 없어요.</p>
+        )}
+        {!isLoading && (data?.upcomingSchedules ?? []).map((s) => {
+          const statusInfo = STATUS_MAP[s.status] ?? { label: s.status, variant: 'info' as const }
+          return (
+            <Card key={s.id} onClick={() => {}} padding="md">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-text-primary truncate">{s.client?.name ?? '-'}</p>
+                  <p className="text-sm text-text-secondary mt-0.5">
+                    {formatScheduleDate(s.service_date, s.start_time)} · {s.service_type ?? '-'}
+                  </p>
+                </div>
+                <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+              </div>
+            </Card>
+          )
+        })}
       </div>
 
-      {/* 하단 여백 */}
       <div className="h-4" />
     </div>
   )

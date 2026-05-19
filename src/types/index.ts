@@ -24,6 +24,7 @@ export interface Business {
   registration_number: string | null
   address: string | null
   representative_name: string | null
+  request_slug: string | null
   created_at: string
   updated_at: string
 }
@@ -50,10 +51,62 @@ export interface Client {
   phone: string | null
   address: string | null
   type: string | null
+  service_type: string | null
+  is_favorite: boolean
   notes: string | null
+  // 현장 정보
+  elevator: string | null
+  building_access: string | null
+  access_method: string | null
+  parking: string | null
+  door_password: string | null
+  business_hours_start: string | null
+  business_hours_end: string | null
+  care_scope: string | null
+  // 방문 일정
+  visit_interval_days: number | null
+  next_visit_date: string | null
+  // 결제 정보
+  unit_price: number | null
+  billing_cycle: string | null
+  payment_method: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
+}
+
+// ─── 서비스 신청서 ────────────────────────────────────────────
+export type ServiceType = '1회성케어' | '정기딥케어' | '정기엔드케어'
+export type RequestStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface ServiceRequest {
+  id: string
+  business_id: string
+  client_name: string
+  client_phone: string
+  client_address: string
+  service_type: ServiceType
+  desired_date: string | null
+  desired_time: string | null
+  notes: string | null
+  status: RequestStatus
+  rejected_reason: string | null
+  converted_schedule_id: string | null
+  converted_client_id: string | null
+  // 현장 정보
+  elevator: string | null
+  building_access: string | null
+  access_method: string | null
+  parking: string | null
+  care_scope: string | null
+  business_hours_start: string | null
+  business_hours_end: string | null
+  // 담당자 정보
+  owner_name: string | null
+  email: string | null
+  business_number: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ─── 서비스 일정 ──────────────────────────────────────────────
@@ -74,6 +127,24 @@ export interface Schedule {
   deleted_at: string | null
 }
 
+// ─── 직원 연결 ────────────────────────────────────────────────
+export type ConnectionStatus = 'pending' | 'accepted'
+
+export interface Connection {
+  id: string
+  business_id: string
+  worker_profile_id: string | null
+  is_manual: boolean
+  manual_name: string | null
+  manual_phone: string | null
+  display_name: string
+  status: ConnectionStatus
+  invite_token: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
 // ─── 배정 ─────────────────────────────────────────────────────
 export type AssignmentStatus = 'pending' | 'accepted' | 'rejected' | 'completed'
 
@@ -81,8 +152,10 @@ export interface Assignment {
   id: string
   schedule_id: string
   worker_id: string
+  connection_id: string | null
   hourly_rate: number | null
   status: AssignmentStatus
+  attended_at: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null

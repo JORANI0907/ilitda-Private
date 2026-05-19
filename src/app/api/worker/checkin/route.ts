@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -32,8 +32,10 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const service = createServiceClient()
+
   // 용역자 확인
-  const { data: worker, error: workerError } = await supabase
+  const { data: worker, error: workerError } = await service
     .from('workers')
     .select('id')
     .eq('profile_id', user.id)
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 배정 확인 (내 배정인지 검증)
-  const { data: assignment, error: assignError } = await supabase
+  const { data: assignment, error: assignError } = await service
     .from('assignments')
     .select('id, status')
     .eq('id', assignmentId)
@@ -63,8 +65,8 @@ export async function POST(request: NextRequest) {
   const lngNum = typeof lng === 'number' ? lng : null
 
   // 기존 출퇴근 레코드 조회
-  const { data: existing } = await supabase
-    .from('attendances')
+  const { data: existing } = await service
+    .from('attendance')
     .select('id, checkin_at')
     .eq('assignment_id', assignmentId)
     .single()
@@ -72,8 +74,8 @@ export async function POST(request: NextRequest) {
   if (type === 'checkin') {
     if (existing) {
       // 이미 체크인 기록이 있으면 업데이트
-      const { error } = await supabase
-        .from('attendances')
+      const { error } = await service
+        .from('attendance')
         .update({ checkin_at: now, checkin_lat: latNum, checkin_lng: lngNum })
         .eq('id', existing.id)
 
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // 새 출퇴근 레코드 생성
-      const { error } = await supabase.from('attendances').insert({
+      const { error } = await service.from('attendance').insert({
         assignment_id: assignmentId,
         worker_id: worker.id,
         checkin_at: now,
@@ -93,14 +95,6 @@ export async function POST(request: NextRequest) {
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 })
       }
-    }
-
-    // 배정 상태 → in_progress 업데이트 (현재 accepted 상태인 경우만)
-    if (assignment.status === 'accepted') {
-      await supabase
-        .from('assignments')
-        .update({ status: 'accepted' })
-        .eq('id', assignmentId)
     }
   } else {
     // checkout
@@ -119,8 +113,8 @@ export async function POST(request: NextRequest) {
       totalMinutes = Math.round((checkoutMs - checkinMs) / 60000)
     }
 
-    const { error } = await supabase
-      .from('attendances')
+    const { error } = await service
+      .from('attendance')
       .update({
         checkout_at: now,
         checkout_lat: latNum,

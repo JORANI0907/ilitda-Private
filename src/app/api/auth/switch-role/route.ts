@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { ActiveRole } from '@/types'
 
 export async function PATCH(request: NextRequest) {
@@ -25,9 +25,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   const targetRole = role as ActiveRole
+  const service = createServiceClient()
 
   // 현재 프로필 조회 — 해당 역할 자격이 있는지 확인
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error: profileError } = await service
     .from('profiles')
     .select('id, active_role, is_business, is_worker')
     .eq('id', user.id)
@@ -55,7 +56,7 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { error } = await supabase
+  const { error } = await service
     .from('profiles')
     .update({ active_role: targetRole })
     .eq('id', user.id)

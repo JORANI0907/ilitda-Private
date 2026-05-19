@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Phone, MapPin, User,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users,
+  CreditCard, Users, Link2, Copy, Check,
 } from 'lucide-react'
+import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -31,6 +32,13 @@ export default function BusinessProfilePage() {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
+  // 신청 링크 slug 관련 상태
+  const [slug, setSlug] = useState('')
+  const [slugInput, setSlugInput] = useState('')
+  const [isSavingSlug, setIsSavingSlug] = useState(false)
+  const [slugError, setSlugError] = useState<string | null>(null)
+  const [isCopied, setIsCopied] = useState(false)
+
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true)
@@ -44,6 +52,9 @@ export default function BusinessProfilePage() {
         const json = await res.json()
         if (json.success) {
           setData(json.data)
+          const requestSlug = json.data.business?.request_slug ?? ''
+          setSlug(requestSlug)
+          setSlugInput(requestSlug)
         }
       } finally {
         setIsLoading(false)
@@ -61,6 +72,49 @@ export default function BusinessProfilePage() {
     } finally {
       setIsLoggingOut(false)
       setShowLogoutModal(false)
+    }
+  }
+
+  const handleSaveSlug = async () => {
+    const trimmed = slugInput.trim().toLowerCase()
+    if (!trimmed) {
+      setSlugError('슬러그를 입력해 주세요.')
+      return
+    }
+    if (!/^[a-z0-9-]{3,30}$/.test(trimmed)) {
+      setSlugError('영문 소문자, 숫자, 하이픈만 사용 가능하며 3~30자여야 합니다.')
+      return
+    }
+    setSlugError(null)
+    setIsSavingSlug(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_slug: trimmed }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setSlugError(json.error ?? '저장에 실패했습니다.')
+        return
+      }
+      setSlug(trimmed)
+    } catch {
+      setSlugError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setIsSavingSlug(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!slug) return
+    const link = `${window.location.origin}/request/${slug}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    } catch {
+      // clipboard API 실패 시 무시
     }
   }
 
@@ -213,6 +267,49 @@ export default function BusinessProfilePage() {
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
+        </div>
+      </Card>
+
+      {/* 신청 링크 설정 */}
+      <Card padding="md">
+        <SectionHeader title="신청 링크 설정" className="mb-3" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Link2 size={16} className="text-text-tertiary shrink-0" />
+            <p className="text-xs text-text-secondary break-all">
+              {slug
+                ? `${typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/${slug}`
+                : '링크를 설정하면 고객이 신청서를 보낼 수 있어요'}
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="영문/숫자/하이픈, 3~30자"
+                value={slugInput}
+                onChange={(e) => setSlugInput(e.target.value.toLowerCase())}
+              />
+            </div>
+            <Button size="md" onClick={handleSaveSlug} isLoading={isSavingSlug}>
+              저장
+            </Button>
+          </div>
+
+          {slugError && (
+            <p className="text-sm text-state-danger">{slugError}</p>
+          )}
+
+          {slug && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopyLink}
+            >
+              {isCopied ? <Check size={14} /> : <Copy size={14} />}
+              {isCopied ? '복사됨' : '링크 복사'}
+            </Button>
+          )}
         </div>
       </Card>
 

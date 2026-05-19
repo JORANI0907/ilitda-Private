@@ -33,7 +33,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   const isDev = process.env.NEXT_PUBLIC_APP_ENV === 'development'
   const otp = isDev ? '000000' : generateOtp()
 
-  await storeOtp(phone, otp)
+  try {
+    await storeOtp(phone, otp)
+  } catch (err) {
+    console.error('[send-otp] storeOtp 실패:', err)
+    return NextResponse.json(
+      { success: false, error: '인증번호 저장에 실패했습니다. 잠시 후 다시 시도해주세요' },
+      { status: 500 }
+    )
+  }
 
   if (!isDev) {
     try {

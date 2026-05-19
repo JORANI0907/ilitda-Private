@@ -146,6 +146,11 @@ export default function CustomersPage() {
             key={c.id}
             customer={c}
             onClick={() => router.push(`/business/ops/customers/${c.id}`)}
+            onFavoriteToggle={(id, newValue) => {
+              setCustomers((prev) =>
+                prev.map((item) => item.id === id ? { ...item, is_favorite: newValue } : item)
+              )
+            }}
           />
         ))}
       </div>

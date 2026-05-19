@@ -50,3 +50,8 @@ android/
 
 # Firebase
 google-services.json
+
+# Test artifacts
+/playwright-report/
+/test-results/
+/cap-web/

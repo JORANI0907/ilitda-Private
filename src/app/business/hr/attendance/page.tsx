@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { createClient } from '@/lib/supabase/client'
 
 interface AttendanceRow {
   id: string
@@ -37,50 +36,14 @@ export default function AttendancePage() {
   const fetchAttendance = useCallback(async () => {
     setIsLoading(true)
     setError(null)
-    const supabase = createClient()
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setRecords([])
-        setIsLoading(false)
+      const res = await fetch(`/api/business/attendance?date=${dateFilter}`)
+      const json = await res.json()
+      if (!json.success) {
+        setError(json.error ?? '데이터를 불러오지 못했습니다.')
         return
       }
-
-      const { data: business, error: bizError } = await supabase
-        .from('businesses')
-        .select('id')
-        .eq('profile_id', user.id)
-        .single()
-
-      if (bizError || !business) {
-        setError('사업자 정보를 찾을 수 없습니다.')
-        setIsLoading(false)
-        return
-      }
-
-      const { data, error: attError } = await supabase
-        .from('attendances')
-        .select(`
-          id, checkin_at, checkout_at, total_minutes,
-          assignment:assignments(
-            id,
-            schedule:schedules!inner(service_date, business_id),
-            worker:workers(
-              id,
-              profile:profiles(name)
-            )
-          )
-        `)
-        .eq('assignment.schedule.business_id', business.id)
-        .eq('assignment.schedule.service_date', dateFilter)
-        .order('checkin_at', { ascending: true })
-
-      if (attError) {
-        setError(attError.message)
-        return
-      }
-
-      setRecords((data ?? []) as unknown as AttendanceRow[])
+      setRecords(json.data ?? [])
     } catch {
       setError('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
@@ -88,9 +51,7 @@ export default function AttendancePage() {
     }
   }, [dateFilter])
 
-  useEffect(() => {
-    fetchAttendance()
-  }, [fetchAttendance])
+  useEffect(() => { fetchAttendance() }, [fetchAttendance])
 
   function formatTime(iso: string | null) {
     if (!iso) return '-'
@@ -101,7 +62,6 @@ export default function AttendancePage() {
     <div className="flex flex-col gap-5 px-4 pt-6">
       <SectionHeader title="출퇴근 기록" level="page" />
 
-      {/* 날짜 필터 */}
       <Input
         label="날짜"
         type="date"

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { verifyOtp } from '@/lib/otp/store'
+import { randomUUID } from 'crypto'
 import type { ApiResponse } from '@/types'
 
 interface VerifyOtpBody {
@@ -19,6 +21,87 @@ function isValidPhone(phone: string): boolean {
 
 function isValidOtp(otp: string): boolean {
   return /^\d{6}$/.test(otp)
+}
+
+function toE164(phone: string): string {
+  return '+82' + phone.slice(1)
+}
+
+// public 스키마 RPC + auth.admin 전용 클라이언트 (schema 오버라이드 없음)
+function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
+// ilitda.profiles에서 기존 사용자 ID 조회
+async function findProfileUserId(phone: string): Promise<string | null> {
+  const client = createAdminClient()
+  const { data, error } = await client.rpc('get_profile_id_by_phone', { p_phone: phone })
+  if (error) {
+    console.error('[verify-otp] get_profile_id_by_phone 실패:', error)
+    return null
+  }
+  return (data as string | null) ?? null
+}
+
+// auth.users에서 phone으로 기존 Auth 사용자 ID 조회
+async function findAuthUserId(phone: string): Promise<string | null> {
+  const client = createAdminClient()
+  const { data, error } = await client.rpc('get_auth_user_id_by_phone', { p_phone: phone })
+  if (error) {
+    console.error('[verify-otp] get_auth_user_id_by_phone 실패:', error)
+    return null
+  }
+  return (data as string | null) ?? null
+}
+
+// 임시 이메일+비밀번호를 통해 Supabase 세션을 수립하고 응답 쿠키에 주입
+// (Phone 로그인이 비활성화 상태이므로 이메일 방식 사용)
+async function establishSession(
+  userId: string,
+  request: NextRequest,
+  response: NextResponse
+): Promise<void> {
+  const admin = createAdminClient()
+  const tempEmail = `${userId}@phone.ilitda.internal`
+  const tempPassword = randomUUID()
+
+  const { error: setPwError } = await admin.auth.admin.updateUserById(userId, {
+    email: tempEmail,
+    email_confirm: true,
+    password: tempPassword,
+  })
+  if (setPwError) {
+    console.error('[verify-otp] 임시 인증 설정 실패:', setPwError)
+    return
+  }
+
+  const ssrClient = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const { error: signInError } = await ssrClient.auth.signInWithPassword({
+    email: tempEmail,
+    password: tempPassword,
+  })
+  if (signInError) {
+    console.error('[verify-otp] 세션 생성 실패:', signInError)
+  }
+  // 비밀번호를 재변경하지 않음: updateUserById는 updated_at을 갱신해 JWT를 즉시 무효화하기 때문
 }
 
 export async function POST(
@@ -48,7 +131,17 @@ export async function POST(
     )
   }
 
-  const isValid = await verifyOtp(phone, otp)
+  let isValid: boolean
+  try {
+    isValid = await verifyOtp(phone, otp)
+  } catch (err) {
+    console.error('[verify-otp] verifyOtp 실패:', err)
+    return NextResponse.json(
+      { success: false, error: '인증 처리 중 오류가 발생했습니다' },
+      { status: 500 }
+    )
+  }
+
   if (!isValid) {
     return NextResponse.json(
       { success: false, error: '인증번호가 올바르지 않거나 만료되었습니다' },
@@ -56,38 +149,47 @@ export async function POST(
     )
   }
 
-  const supabase = createServiceClient()
-
-  // 기존 사용자 조회 (phone으로 ilitda.profiles 확인)
-  const { data: existingProfile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('phone', phone)
-    .maybeSingle()
-
-  if (existingProfile) {
-    return NextResponse.json({
+  // 1. ilitda.profiles에 기존 사용자가 있는지 확인 (로그인 경로)
+  const profileUserId = await findProfileUserId(phone)
+  if (profileUserId) {
+    const response = NextResponse.json({
       success: true,
-      data: { userId: existingProfile.id, isNewUser: false },
+      data: { userId: profileUserId, isNewUser: false },
     })
+    await establishSession(profileUserId, request, response)
+    return response
   }
 
-  // 신규 사용자: Supabase Auth에 phone 기반 사용자 생성
-  const { data: newUser, error: createError } =
-    await supabase.auth.admin.createUser({
-      phone,
-      phone_confirm: true,
+  // 2. auth.users에 기존 사용자가 있는지 확인 (가입 미완료 재시도 경로)
+  const existingAuthId = await findAuthUserId(phone)
+  if (existingAuthId) {
+    const response = NextResponse.json({
+      success: true,
+      data: { userId: existingAuthId, isNewUser: true },
     })
+    await establishSession(existingAuthId, request, response)
+    return response
+  }
 
-  if (createError || !newUser.user) {
+  // 3. 완전 신규 사용자: Auth 사용자 생성
+  const admin = createAdminClient()
+  const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+    phone: toE164(phone),
+    phone_confirm: true,
+  })
+
+  if (createError || !newUser?.user) {
+    console.error('[verify-otp] createUser 실패:', createError)
     return NextResponse.json(
       { success: false, error: '사용자 생성에 실패했습니다' },
       { status: 500 }
     )
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     success: true,
     data: { userId: newUser.user.id, isNewUser: true },
   })
+  await establishSession(newUser.user.id, request, response)
+  return response
 }

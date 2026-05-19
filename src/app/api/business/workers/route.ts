@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(_request: NextRequest) {
   const supabase = await createClient()
@@ -9,18 +9,20 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ success: true, data: [], meta: { total: 0, page: 1, limit: 50 } })
   }
 
-  const { data: business, error: bizError } = await supabase
+  const service = createServiceClient()
+
+  const { data: business, error: bizError } = await service
     .from('businesses')
     .select('id')
     .eq('profile_id', user.id)
-    .single()
+    .maybeSingle()
 
   if (bizError || !business) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
   // 배정 이력 기준으로 해당 사업자와 관련된 작업자 목록 조회
-  const { data: assignmentData, error: assignmentError } = await supabase
+  const { data: assignmentData, error: assignmentError } = await service
     .from('assignments')
     .select(`
       worker_id,
