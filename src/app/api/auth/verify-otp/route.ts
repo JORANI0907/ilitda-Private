@@ -48,7 +48,7 @@ export async function POST(
     )
   }
 
-  const isValid = verifyOtp(phone, otp)
+  const isValid = await verifyOtp(phone, otp)
   if (!isValid) {
     return NextResponse.json(
       { success: false, error: '인증번호가 올바르지 않거나 만료되었습니다' },

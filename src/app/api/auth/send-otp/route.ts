@@ -33,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
   const isDev = process.env.NEXT_PUBLIC_APP_ENV === 'development'
   const otp = isDev ? '000000' : generateOtp()
 
-  storeOtp(phone, otp)
+  await storeOtp(phone, otp)
 
   if (!isDev) {
     try {

@@ -21,9 +21,7 @@ const config: CapacitorConfig = {
       style: 'DARK',
       backgroundColor: '#2563EB',
     },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
+    // PushNotifications: FCM 미사용 (1개월차 이후 추가 예정, Solapi SMS로 대체)
     Geolocation: {
       permissions: {
         location: 'whenInUse',
