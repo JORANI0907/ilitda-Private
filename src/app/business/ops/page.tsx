@@ -1,0 +1,52 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+
+type Segment = 'schedules' | 'customers'
+
+const SEGMENTS: { key: Segment; label: string; path: string }[] = [
+  { key: 'schedules', label: '일정', path: '/business/ops/schedules' },
+  { key: 'customers', label: '고객', path: '/business/ops/customers' },
+]
+
+export default function OpsPage() {
+  const router = useRouter()
+  const [active, setActive] = useState<Segment>('schedules')
+
+  function handleSegment(seg: typeof SEGMENTS[number]) {
+    setActive(seg.key)
+    router.push(seg.path)
+  }
+
+  return (
+    <div className="flex flex-col gap-6 px-4 pt-6">
+      <SectionHeader title="운영" level="page" />
+
+      {/* 세그먼트 컨트롤 */}
+      <div className="flex rounded-xl bg-surface-sunken p-1 gap-1">
+        {SEGMENTS.map((seg) => (
+          <button
+            key={seg.key}
+            type="button"
+            onClick={() => handleSegment(seg)}
+            className={`
+              flex-1 h-9 rounded-lg text-sm font-medium transition-colors
+              ${active === seg.key
+                ? 'bg-surface text-text-primary shadow-soft'
+                : 'text-text-secondary hover:text-text-primary'}
+            `}
+          >
+            {seg.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 안내 텍스트 */}
+      <p className="text-sm text-text-secondary text-center">
+        탭을 선택하면 해당 페이지로 이동합니다.
+      </p>
+    </div>
+  )
+}
