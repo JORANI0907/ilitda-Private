@@ -22,7 +22,7 @@ export default function HrPage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
-      <SectionHeader title="인사재무" level="page" />
+      <SectionHeader title="운영" level="page" />
 
       {/* 세그먼트 컨트롤 */}
       <div className="flex rounded-xl bg-surface-sunken p-1 gap-1">

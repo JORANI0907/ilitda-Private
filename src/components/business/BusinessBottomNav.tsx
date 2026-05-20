@@ -16,9 +16,9 @@ interface NavItem {
 
 const TABS: NavItem[] = [
   { href: '/business/home',         label: '홈',    icon: <Home size={22} /> },
-  { href: '/admin/applications',    label: '운영',  icon: <BarChart3 size={22} /> },
+  { href: '/admin/applications',    label: '일정',  icon: <BarChart3 size={22} /> },
   { href: '/business/ops/requests', label: '신청서', icon: <ClipboardList size={22} />, badgeKey: 'requests' },
-  { href: '/business/hr',           label: '인사',  icon: <Users size={22} /> },
+  { href: '/business/hr',           label: '운영',  icon: <Users size={22} /> },
   { href: '/business/market',       label: '마켓',  icon: <Store size={22} /> },
   { href: '/business/profile',      label: '프로필', icon: <User size={22} /> },
 ]
