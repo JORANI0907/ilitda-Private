@@ -63,6 +63,21 @@ export interface Business {
   form_config?: FormConfig
   notification_config?: NotificationConfig
   panel_config?: PanelConfig
+  // 연동 설정
+  solapi_from_phone?: string | null
+  solapi_phone_verified?: boolean
+  gmail_for_drive?: string | null
+  drive_root_folder_id?: string | null
+  plan_type?: string
+  daily_sms_count?: number
+  daily_sms_reset_date?: string | null
+}
+
+// ─── 플랜 발송 한도 ───────────────────────────────────────────
+export const PLAN_SMS_LIMITS: Record<string, number> = {
+  free:  20,
+  pro:   200,   // TODO: 비용 기반으로 확정
+  max:   1000,  // TODO: 비용 기반으로 확정
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────
