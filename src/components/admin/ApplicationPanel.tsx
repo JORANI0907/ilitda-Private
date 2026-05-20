@@ -256,6 +256,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       const json = await res.json()
       if (!json.success) { setDriveError(json.error ?? '폴더 생성 실패'); return }
       setDriveUrl(json.data.folderUrl)
+      onUpdate({ ...app, drive_folder_url: json.data.folderUrl })
     } catch { setDriveError('네트워크 오류') } finally { setIsDriveLoading(false) }
   }
 
