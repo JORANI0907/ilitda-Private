@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { DEFAULT_MSG_TEMPLATE } from '@/lib/settings-defaults'
 import { sendSMS } from '@/lib/solapi/client'
+import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
 import type { ApiResponse, NotificationConfig, NotificationRule, ServiceApplication } from '@/types'
 
 const CRON_SECRET = 'BBK_CRON_2024_xK9mPqR3vLwZnYeA'
@@ -10,6 +11,9 @@ interface AutoDispatchBusiness {
   id: string
   profile_id: string
   notification_config: NotificationConfig | null
+  solapi_from_phone: string | null
+  solapi_phone_verified: boolean
+  plan_type: string
 }
 
 interface DispatchResult {
@@ -60,7 +64,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
   const { data: businesses, error: bizError } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, profile_id, notification_config')
+    .select('id, profile_id, notification_config, solapi_from_phone, solapi_phone_verified, plan_type')
 
   if (bizError) {
     return NextResponse.json({ success: false, error: bizError.message }, { status: 500 })
@@ -96,7 +100,15 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
         const message = buildMessage(rule, app)
 
         try {
-          await sendSMS(app.phone, message)
+          // SMS 발송 한도 확인 및 증가
+          const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
+          if (!limitResult.allowed) {
+            results.push({ business_id: biz.id, application_id: app.id, type: rule.type, status: 'failed', error: '오늘 발송 한도 초과' })
+            continue
+          }
+
+          const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
+          await sendSMS(app.phone, message, fromPhone)
 
           const existing = (app.notification_log ?? []) as Array<{ type: string; sent_at: string; method?: string }>
           const updatedLog = [
