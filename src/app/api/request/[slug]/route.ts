@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
+import type { FormConfig } from '@/types'
 
 type RouteContext = { params: Promise<{ slug: string }> }
 
@@ -14,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
   const { data: business, error } = await service
     .from('businesses')
-    .select('id, business_name, request_slug')
+    .select('id, business_name, request_slug, form_config')
     .eq('request_slug', slug)
     .maybeSingle()
 
@@ -25,9 +27,23 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     )
   }
 
+  const saved = business.form_config as FormConfig | null
+  const formConfig: FormConfig = {
+    ...DEFAULT_FORM_CONFIG,
+    ...(saved ?? {}),
+    show_fields: {
+      ...DEFAULT_FORM_CONFIG.show_fields,
+      ...(saved?.show_fields ?? {}),
+    },
+  }
+
   return NextResponse.json({
     success: true,
-    data: { businessName: business.business_name, slug: business.request_slug },
+    data: {
+      businessName: business.business_name,
+      slug: business.request_slug,
+      formConfig,
+    },
   })
 }
 
