@@ -73,3 +73,76 @@ export const SHOW_FIELD_LABELS: Record<string, string> = {
   building_access: '건물출입신청여부',
   access_method: '출입 방법 상세',
 }
+
+// ─── 패널 필드 정의 ───────────────────────────────────────────
+
+export interface PanelFieldDef {
+  key: string
+  label: string
+  placeholder: string
+  type: 'text' | 'number' | 'date' | 'time' | 'dropdown' | 'textarea'
+  options?: string[]
+  section: string
+  readOnly?: boolean
+}
+
+export const PANEL_SECTIONS = [
+  { id: 'basic',    title: '기본 정보', color: 'blue'   },
+  { id: 'site',     title: '현장 정보', color: 'green'  },
+  { id: 'schedule', title: '일정',     color: 'violet' },
+  { id: 'request',  title: '요청사항', color: 'amber'  },
+  { id: 'payment',  title: '결제 정보', color: 'teal'   },
+  { id: 'misc',     title: '기타',     color: 'gray'   },
+] as const
+
+export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
+  // 기본 정보
+  { key: 'business_name',    label: '업체명',     placeholder: '업체명',              type: 'text',     section: 'basic'    },
+  { key: 'owner_name',       label: '담당자명',   placeholder: '홍길동',              type: 'text',     section: 'basic'    },
+  { key: 'platform_nickname',label: '닉네임',     placeholder: '플랫폼 닉네임',       type: 'text',     section: 'basic'    },
+  { key: 'phone',            label: '연락처',     placeholder: '010-0000-0000',       type: 'text',     section: 'basic'    },
+  { key: 'email',            label: '이메일',     placeholder: 'example@email.com',   type: 'text',     section: 'basic'    },
+  { key: 'business_number',  label: '사업자번호', placeholder: '000-00-00000',        type: 'text',     section: 'basic'    },
+  { key: 'address',          label: '주소',       placeholder: '주소',                type: 'text',     section: 'basic'    },
+  // 현장 정보
+  { key: 'elevator',         label: '엘리베이터', placeholder: '선택',                type: 'dropdown', options: ['있음', '없음', '계단 전용'], section: 'site' },
+  { key: 'parking',          label: '주차',       placeholder: '선택',                type: 'dropdown', options: ['가능', '불가', '유료 주차'],  section: 'site' },
+  { key: 'building_access',  label: '건물출입',   placeholder: '선택',                type: 'dropdown', options: ['자유출입', '사전출입신청'],   section: 'site' },
+  { key: 'access_method',    label: '출입방법',   placeholder: '예: 비밀번호 입력',   type: 'text',     section: 'site'    },
+  { key: 'door_password',    label: '도어락',     placeholder: '예: 1234#',           type: 'text',     section: 'site'    },
+  // 일정
+  { key: 'construction_date',label: '시공일',     placeholder: '',                    type: 'date',     section: 'schedule' },
+  { key: 'construction_time',label: '시공시간',   placeholder: '',                    type: 'time',     section: 'schedule' },
+  // 요청사항
+  { key: 'care_scope',          label: '청소 범위',   placeholder: '청소 범위 입력',          type: 'textarea', section: 'request'  },
+  { key: 'request_notes',       label: '고객 요청',   placeholder: '고객 요청사항',           type: 'textarea', section: 'request'  },
+  { key: 'admin_request_notes', label: '관리자 추가', placeholder: '관리자 추가 요청사항',    type: 'textarea', section: 'request'  },
+  // 결제 정보
+  { key: 'payment_method',  label: '결제방법', placeholder: '선택', type: 'dropdown', options: ['현금(세금계산서)', '카드결제', '현금(비과세X)'], section: 'payment' },
+  { key: 'account_number',  label: '계좌번호', placeholder: '은행 + 계좌번호', type: 'text',   section: 'payment'  },
+  { key: 'supply_amount',   label: '공급가액', placeholder: '0',               type: 'number', section: 'payment'  },
+  { key: 'vat',             label: '부가세',   placeholder: '0',               type: 'number', section: 'payment'  },
+  { key: 'supply_total',    label: '공급대가', placeholder: '',                type: 'number', section: 'payment', readOnly: true },
+  { key: 'balance',         label: '잔금',     placeholder: '0',               type: 'number', section: 'payment'  },
+  // 기타
+  { key: 'disposition', label: '고객 성향',  placeholder: '선택',   type: 'dropdown', options: ['호의', '보통', '주의'], section: 'misc' },
+  { key: 'admin_notes', label: '관리자 메모', placeholder: '내부 메모', type: 'textarea', section: 'misc'    },
+]
+
+export const SECTION_BORDER_COLOR: Record<string, string> = {
+  blue:   'border-blue-200',
+  green:  'border-green-200',
+  violet: 'border-violet-200',
+  amber:  'border-amber-200',
+  teal:   'border-teal-200',
+  gray:   'border-gray-200',
+}
+
+export const SECTION_TITLE_COLOR: Record<string, string> = {
+  blue:   'text-blue-600',
+  green:  'text-green-600',
+  violet: 'text-violet-600',
+  amber:  'text-amber-600',
+  teal:   'text-teal-600',
+  gray:   'text-gray-500',
+}
