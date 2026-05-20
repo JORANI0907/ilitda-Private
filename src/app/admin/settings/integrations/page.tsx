@@ -267,8 +267,13 @@ export default function IntegrationsPage() {
         badge={<StatusBadge verified={!!biz?.gmail_for_drive} label={biz?.gmail_for_drive ?? ''} />}
       >
         <p className="text-xs text-text-tertiary leading-relaxed">
-          입력한 Gmail로 업체 전용 드라이브 폴더가 공유됩니다. 고객 서류·사진을 해당 폴더에서 관리할 수 있습니다.
+          입력한 Gmail로 업체 전용 드라이브 폴더가 공유됩니다. 연동 후 신청서에서 작업 폴더를 생성하면 자동으로 <span className="font-medium text-text-secondary">작업전 / 작업후</span> 폴더가 만들어지며, 작업자는 로그인 없이 링크로 사진을 업로드할 수 있습니다.
         </p>
+        <div className="text-xs text-text-tertiary bg-surface-sunken rounded-xl px-3 py-2 leading-relaxed">
+          <p className="font-medium text-text-secondary mb-1">📁 폴더 구조</p>
+          <p>일잇다 → <span className="text-text-primary">업체명</span> → <span className="text-text-primary">고객명_날짜</span> → 작업전 / 작업후</p>
+          <p className="mt-1">신청서 상세 화면 → <span className="font-medium text-text-primary">작업 폴더 생성</span> 버튼을 누르면 생성됩니다.</p>
+        </div>
 
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
