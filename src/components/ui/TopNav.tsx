@@ -17,11 +17,11 @@ interface NavItem {
 }
 
 const BUSINESS_TABS: NavItem[] = [
-  { href: '/business/home',    label: '홈',       icon: <Home size={18} /> },
-  { href: '/business/ops',     label: '운영',     icon: <BarChart3 size={18} /> },
-  { href: '/business/hr',      label: '인사·재무', icon: <Users size={18} /> },
-  { href: '/business/market',  label: '마켓',     icon: <Store size={18} /> },
-  { href: '/business/profile', label: '프로필',   icon: <User size={18} /> },
+  { href: '/business/home',       label: '홈',       icon: <Home size={18} /> },
+  { href: '/admin/applications',  label: '운영',     icon: <BarChart3 size={18} /> },
+  { href: '/business/hr',         label: '인사·재무', icon: <Users size={18} /> },
+  { href: '/business/market',     label: '마켓',     icon: <Store size={18} /> },
+  { href: '/business/profile',    label: '프로필',   icon: <User size={18} /> },
 ]
 
 const WORKER_TABS: NavItem[] = [
@@ -65,7 +65,9 @@ export function TopNav({ role }: TopNavProps) {
         {/* 탭 메뉴 */}
         <nav className="flex items-center gap-0.5 flex-1">
           {tabs.map((tab) => {
-            const isActive = pathname.startsWith(tab.href)
+            const isActive = tab.href === '/admin/applications'
+              ? pathname.startsWith('/admin')
+              : pathname.startsWith(tab.href)
             return (
               <Link
                 key={tab.href}
