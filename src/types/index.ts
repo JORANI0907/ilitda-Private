@@ -205,6 +205,60 @@ export interface Payroll {
   updated_at: string
 }
 
+// ─── 서비스 신청 (관리자용 영업관리) ──────────────────────────
+export type ApplicationStatus =
+  '신규' | '견적발송' | '예약확정' | '예약1일전' | '예약당일' | '작업완료' |
+  '결제' | '결제완료' | '결제완료(잔금)' | '계산서발행완료' | '비과세' |
+  '카드결제 완료' | '예약금환급완료' | '예약금 입금' | '예약취소' | 'A/S방문' | '방문견적'
+
+export interface NotifyLog {
+  type: string
+  sent_at: string
+  method?: 'auto' | 'manual'
+}
+
+export interface ServiceApplication {
+  id: string
+  created_at: string
+  updated_at: string
+  submitted_at: string | null
+  owner_name: string
+  platform_nickname: string | null
+  phone: string
+  email: string | null
+  business_name: string
+  business_number: string | null
+  address: string | null
+  business_hours_start: string | null
+  business_hours_end: string | null
+  elevator: string | null
+  building_access: string | null
+  access_method: string | null
+  parking: string | null
+  door_password: string | null
+  payment_method: string | null
+  account_number: string | null
+  deposit: number | null
+  supply_amount: number | null
+  vat: number | null
+  balance: number | null
+  unit_price_per_visit: number | null
+  request_notes: string | null
+  admin_request_notes: string | null
+  care_scope: string | null
+  status: ApplicationStatus
+  admin_notes: string | null
+  disposition: string | null
+  notification_log: NotifyLog[] | null
+  construction_date: string | null
+  construction_time: string | null
+  pre_meeting_at: string | null
+  drive_folder_url: string | null
+  notion_page_id: string | null
+  is_favorite: boolean
+  business_id: string | null
+}
+
 // ─── API 응답 공통 포맷 ───────────────────────────────────────
 export interface ApiResponse<T = unknown> {
   success: boolean
