@@ -235,7 +235,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/notifications')}
+            onClick={() => router.push('/admin/settings/app-notifications')}
           >
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
@@ -296,7 +296,7 @@ export default function BusinessProfilePage() {
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
               <div>
-                <span className="text-sm text-text-primary">알림 설정</span>
+                <span className="text-sm text-text-primary">서비스 알림 설정</span>
                 <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
               </div>
             </div>
