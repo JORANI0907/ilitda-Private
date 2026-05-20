@@ -1,33 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
-import crypto from 'crypto'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
+import { sendSMS } from '@/lib/solapi/client'
 import type { ApiResponse, NotifyLog } from '@/types'
 
-const API_KEY    = process.env.SOLAPI_API_KEY    ?? ''
-const API_SECRET = process.env.SOLAPI_API_SECRET ?? ''
-const FROM_PHONE = process.env.SOLAPI_FROM_PHONE ?? ''
-
 const MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
-  '예약확정알림':       (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n시공일: ${p.date} ${p.time}\n문의: ${FROM_PHONE}`,
-  '예약1일전알림':      (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}\n문의: ${FROM_PHONE}`,
-  '예약당일알림':       (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.\n문의: ${FROM_PHONE}`,
-  '작업완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 작업이 완료되었습니다.\n이용해 주셔서 감사합니다.\n문의: ${FROM_PHONE}`,
-  '결제알림':           (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}\n문의: ${FROM_PHONE}`,
-  '결제완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.\n문의: ${FROM_PHONE}`,
-  '결제완료알림(잔금)': (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.\n문의: ${FROM_PHONE}`,
-  '계산서발행완료알림': (p) => `[일잇다] ${p.name} 담당자님, 세금계산서가 발행되었습니다.\n문의: ${FROM_PHONE}`,
-  '예약금 입금완료 알림': (p) => `[일잇다] ${p.name} 담당자님, 예약금 입금이 확인되었습니다.\n문의: ${FROM_PHONE}`,
-  '예약금환급완료알림': (p) => `[일잇다] ${p.name} 담당자님, 예약금이 환급되었습니다.\n문의: ${FROM_PHONE}`,
-  '예약취소알림':       (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.\n문의: ${FROM_PHONE}`,
-  'A/S방문알림':        (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${FROM_PHONE}`,
-  '방문견적알림':       (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${FROM_PHONE}`,
-}
-
-function solapiAuth() {
-  const date = new Date().toISOString()
-  const salt = crypto.randomBytes(8).toString('hex')
-  const sig = crypto.createHmac('sha256', API_SECRET).update(date + salt).digest('hex')
-  return { Authorization: `HMAC-SHA256 ApiKey=${API_KEY}, Date=${date}, salt=${salt}, signature=${sig}` }
+  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n시공일: ${p.date} ${p.time}\n문의: ${p.contact}`,
+  '예약1일전알림':        (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}\n문의: ${p.contact}`,
+  '예약당일알림':         (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.\n문의: ${p.contact}`,
+  '작업완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업이 완료되었습니다.\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
+  '결제알림':             (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}\n문의: ${p.contact}`,
+  '결제완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,
+  '결제완료알림(잔금)':   (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,
+  '계산서발행완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 세금계산서가 발행되었습니다.\n문의: ${p.contact}`,
+  '예약금 입금완료 알림': (p) => `[일잇다] ${p.name} 담당자님, 예약금 입금이 확인되었습니다.\n문의: ${p.contact}`,
+  '예약금환급완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 예약금이 환급되었습니다.\n문의: ${p.contact}`,
+  '예약취소알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.\n문의: ${p.contact}`,
+  'A/S방문알림':          (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
+  '방문견적알림':         (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
 }
 
 export async function POST(
@@ -35,13 +25,29 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = createServiceClient()
+
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json<ApiResponse>({ success: false, error: '인증 필요' }, { status: 401 })
+  }
+
+  const service = createServiceClient()
+  const { data: biz } = await service
+    .schema('ilitda')
+    .from('businesses')
+    .select('id, solapi_from_phone, solapi_phone_verified, plan_type')
+    .eq('profile_id', user.id)
+    .maybeSingle()
+
+  if (!biz) {
+    return NextResponse.json<ApiResponse>({ success: false, error: '업체 정보를 찾을 수 없습니다.' }, { status: 403 })
+  }
 
   try {
     const { notifyType } = await req.json() as { notifyType: string }
 
-    // 신청서 조회
-    const { data: app, error: fetchErr } = await supabase
+    const { data: app, error: fetchErr } = await service
       .schema('ilitda')
       .from('service_applications')
       .select('owner_name,phone,construction_date,construction_time,balance,account_number')
@@ -54,38 +60,43 @@ export async function POST(
     const templateFn = MSG_TEMPLATE[notifyType]
     if (!templateFn) throw new Error('지원하지 않는 알림 유형입니다.')
 
+    // SMS 발송 한도 확인 및 증가
+    const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
+    if (!limitResult.allowed) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: `오늘 발송 한도(${limitResult.limit}건)에 도달했습니다.` },
+        { status: 429 }
+      )
+    }
+
+    const contactPhone = biz.solapi_phone_verified && biz.solapi_from_phone
+      ? biz.solapi_from_phone
+      : (process.env.SOLAPI_FROM_PHONE ?? '')
+
     const msgText = templateFn({
       name:    app.owner_name ?? '고객',
       date:    app.construction_date ?? '',
       time:    app.construction_time ?? '',
       amount:  app.balance?.toLocaleString('ko-KR') ?? '',
       account: app.account_number ?? '',
+      contact: contactPhone,
     })
 
-    // Solapi 발송
-    const solapiRes = await fetch('https://api.solapi.com/messages/v4/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...solapiAuth() },
-      body: JSON.stringify({
-        message: { to: app.phone, from: FROM_PHONE, text: msgText },
-      }),
-    })
-
-    if (!solapiRes.ok) {
-      const err = await solapiRes.text()
-      throw new Error(`Solapi 오류: ${err}`)
-    }
+    const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
+    await sendSMS(app.phone, msgText, fromPhone)
 
     // 알림 기록 append
     const newLog: NotifyLog = { type: notifyType, sent_at: new Date().toISOString(), method: 'manual' }
-    const { data: current } = await supabase
+    const { data: current } = await service
+      .schema('ilitda')
       .from('service_applications')
       .select('notification_log')
       .eq('id', id)
       .single()
 
     const prevLog: NotifyLog[] = (current?.notification_log as NotifyLog[]) ?? []
-    await supabase
+    await service
+      .schema('ilitda')
       .from('service_applications')
       .update({ notification_log: [...prevLog, newLog] })
       .eq('id', id)
