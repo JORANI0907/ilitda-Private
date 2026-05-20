@@ -37,6 +37,16 @@ async function shareFolder(folderId: string, gmail: string): Promise<void> {
   })
 }
 
+// 링크 아는 누구나 편집 가능하도록 설정 (작업자 사진 업로드용)
+async function setAnyoneWithLinkWriter(folderId: string): Promise<string> {
+  const drive = getDriveClient()
+  await drive.permissions.create({
+    fileId: folderId,
+    requestBody: { role: 'writer', type: 'anyone' },
+  })
+  return `https://drive.google.com/drive/folders/${folderId}`
+}
+
 // 업체 루트 폴더 생성 및 공유 (없으면 새로 생성)
 export async function createAndShareBusinessFolder(
   businessName: string,
@@ -61,13 +71,22 @@ export async function createAndShareBusinessFolder(
   return bizFolder
 }
 
-// 고객 서브폴더 생성 (신청서 단위)
-export async function createClientSubfolder(
-  parentFolderId: string,
+// 신청서 작업 폴더 생성 — 작업전/작업후 하위 폴더 포함, 링크 공개
+export async function createApplicationFolder(
+  rootFolderId: string,
   clientName: string,
   date: string,
 ): Promise<string> {
   const folderName = `${clientName}_${date}`
-  const folderId = await createFolder(folderName, parentFolderId)
-  return folderId
+  const appFolderId = await createFolder(folderName, rootFolderId)
+
+  // 작업전/작업후 하위 폴더 동시 생성
+  await Promise.all([
+    createFolder('작업전', appFolderId),
+    createFolder('작업후', appFolderId),
+  ])
+
+  // 링크 아는 누구나 업로드 가능 (작업자 사진 업로드용)
+  const folderUrl = await setAnyoneWithLinkWriter(appFolderId)
+  return folderUrl
 }
