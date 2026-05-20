@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import {
+  ArrowLeft, Building2, MapPin, Calendar,
+  CreditCard, ClipboardList, Settings2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { DEFAULT_PANEL_FIELDS } from '@/lib/settings-defaults'
+import { DEFAULT_PANEL_FIELDS, SECTION_BORDER_COLOR, SECTION_TITLE_COLOR } from '@/lib/settings-defaults'
 import type { PanelConfig } from '@/types'
 
 // ─── 상수 ────────────────────────────────────────────────────
@@ -15,47 +17,69 @@ const STATUS_OPTIONS = [
   '카드결제 완료', '예약금환급완료', '예약금 입금', '예약취소', 'A/S방문', '방문견적',
 ]
 
-// ─── 공통 컴포넌트 ────────────────────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider pt-4 pb-1">{children}</p>
-  )
+const SECTION_HEADER_BG: Record<string, string> = {
+  blue: 'bg-blue-50', green: 'bg-green-50', violet: 'bg-violet-50',
+  amber: 'bg-amber-50', teal: 'bg-teal-50', gray: 'bg-gray-50',
 }
 
-function SelectField({ label, value, onChange, options, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[]; placeholder?: string
+// ─── 서브 컴포넌트 ────────────────────────────────────────────
+function FormSection({ color, icon, title, children }: {
+  color: string; icon: React.ReactNode; title: string; children: React.ReactNode
 }) {
+  const border = SECTION_BORDER_COLOR[color] ?? 'border-gray-200'
+  const titleColor = SECTION_TITLE_COLOR[color] ?? 'text-gray-500'
+  const headerBg = SECTION_HEADER_BG[color] ?? 'bg-gray-50'
   return (
-    <div>
-      <label className="block text-sm font-medium text-text-primary mb-1.5">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full h-12 rounded-md bg-surface border border-border text-text-primary px-4 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-      >
-        {placeholder && <option value="">{placeholder}</option>}
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+    <div className={`bg-surface rounded-2xl border-2 ${border} shadow-flat overflow-hidden`}>
+      <div className={`flex items-center gap-2 px-4 py-2.5 ${headerBg}`}>
+        <span className={titleColor}>{icon}</span>
+        <p className={`text-xs font-bold uppercase tracking-wider ${titleColor}`}>{title}</p>
+      </div>
+      <div className="px-4 py-4 flex flex-col gap-3">
+        {children}
+      </div>
     </div>
   )
 }
 
-function TextareaField({ label, value, onChange, placeholder, rows = 3 }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; rows?: number
-}) {
+function FL({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-text-primary mb-1.5">{label}</label>
-      <textarea
-        value={value} rows={rows} placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="block w-full rounded-md bg-surface border border-border text-text-primary placeholder:text-text-tertiary px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-none"
-      />
-    </div>
+    <p className="text-xs font-medium text-text-tertiary mb-1.5">
+      {children}{required && <span className="ml-0.5 text-state-danger">*</span>}
+    </p>
   )
 }
 
-// ─── 메인 ────────────────────────────────────────────────────
+const inputCls = 'block w-full h-10 rounded-lg bg-surface-sunken border border-border text-text-primary text-sm px-3 placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500'
+
+function SI({ value, onChange, placeholder, type = 'text' }: {
+  value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; placeholder?: string; type?: string
+}) {
+  return <input type={type} value={value} placeholder={placeholder} onChange={onChange} className={inputCls} />
+}
+
+function SS({ value, onChange, options, placeholder }: {
+  value: string; onChange: (v: string) => void; options: string[]; placeholder?: string
+}) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map(o => <option key={o} value={o}>{o}</option>)}
+    </select>
+  )
+}
+
+function ST({ value, onChange, placeholder, rows = 2 }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; rows?: number
+}) {
+  return (
+    <textarea value={value} rows={rows} placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      className="block w-full rounded-lg bg-surface-sunken border border-border text-text-primary text-sm px-3 py-2.5 placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 resize-none" />
+  )
+}
+
+// ─── 타입 ────────────────────────────────────────────────────
 interface Form {
   business_name: string; owner_name: string; platform_nickname: string
   phone: string; email: string; business_number: string; address: string; status: string
@@ -81,6 +105,7 @@ const INITIAL: Form = {
 
 const NUMERIC: (keyof Form)[] = ['deposit', 'supply_amount', 'vat', 'balance', 'unit_price_per_visit']
 
+// ─── 메인 ────────────────────────────────────────────────────
 export default function NewApplicationPage() {
   const router = useRouter()
   const [form, setForm] = useState<Form>(INITIAL)
@@ -95,19 +120,17 @@ export default function NewApplicationPage() {
       .catch(() => {})
   }, [])
 
-  const setF = (key: keyof Form) => (v: string) => setForm((p) => ({ ...p, [key]: v }))
+  const setF = (key: keyof Form) => (v: string) => setForm(p => ({ ...p, [key]: v }))
   const setFE = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm((p) => ({ ...p, [key]: e.target.value }))
+    setForm(p => ({ ...p, [key]: e.target.value }))
 
-  const resolveLabel = (key: string): string => {
-    const override = panelConfig?.fields?.[key]?.label
-    if (override) return override
-    return DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.label ?? key
+  const lbl = (key: string): string => {
+    const ov = panelConfig?.fields?.[key]?.label
+    return ov ?? DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.label ?? key
   }
-
-  const resolveOptions = (key: string): string[] => {
-    const override = panelConfig?.fields?.[key]?.options
-    if (override?.length) return override
+  const opts = (key: string): string[] => {
+    const ov = panelConfig?.fields?.[key]?.options
+    if (ov?.length) return ov
     return DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.options ?? []
   }
 
@@ -133,76 +156,178 @@ export default function NewApplicationPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen pb-24">
-      {/* 헤더 */}
-      <div className="flex items-center gap-3 px-4 pt-6 pb-2 sticky top-0 bg-surface z-10 border-b border-border-subtle">
-        <button type="button" onClick={() => router.back()}
-          className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-xl font-bold text-text-primary">서비스 추가</h1>
+    <div className="min-h-screen bg-surface-sunken">
+      {/* 상단 헤더 */}
+      <div className="sticky top-0 z-10 bg-surface border-b border-border-subtle">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button type="button" onClick={() => router.back()}
+            className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <h1 className="text-lg font-bold text-text-primary flex-1">서비스 추가</h1>
+          <Button size="sm" onClick={handleSubmit} isLoading={isSubmitting}>저장</Button>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 px-4 pt-2">
-        <SectionLabel>기본 정보</SectionLabel>
-        <Input label={resolveLabel('business_name') + ' *'} value={form.business_name} placeholder="예: 스타벅스 강남점" onChange={setFE('business_name')} />
-        <Input label={resolveLabel('owner_name')} value={form.owner_name} placeholder="홍길동" onChange={setFE('owner_name')} />
-        <Input label={resolveLabel('platform_nickname')} value={form.platform_nickname} placeholder="플랫폼 닉네임" onChange={setFE('platform_nickname')} />
-        <Input label={resolveLabel('phone') + ' *'} type="tel" value={form.phone} placeholder="010-0000-0000" onChange={setFE('phone')} />
-        <Input label={resolveLabel('email')} type="email" value={form.email} placeholder="example@email.com" onChange={setFE('email')} />
-        <Input label={resolveLabel('business_number')} value={form.business_number} placeholder="000-00-00000" onChange={setFE('business_number')} />
-        <Input label={resolveLabel('address')} value={form.address} placeholder="주소 입력" onChange={setFE('address')} />
+      <div className="flex flex-col gap-3 px-4 pt-4 pb-28">
 
-        <SectionLabel>상태 / 일정</SectionLabel>
-        <SelectField label="진행 상태" value={form.status} onChange={setF('status')} options={STATUS_OPTIONS} />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label={resolveLabel('construction_date')} type="date" value={form.construction_date} onChange={setFE('construction_date')} />
-          <Input label={resolveLabel('construction_time')} type="time" value={form.construction_time} onChange={setFE('construction_time')} />
+        {/* 진행 상태 */}
+        <div className="bg-surface rounded-2xl border border-border-subtle shadow-flat px-4 py-3">
+          <FL>진행 상태</FL>
+          <SS value={form.status} onChange={setF('status')} options={STATUS_OPTIONS} />
         </div>
 
-        <SectionLabel>현장 정보</SectionLabel>
-        <SelectField label={resolveLabel('elevator')} value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
-        <SelectField label={resolveLabel('parking')} value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
-        <SelectField label={resolveLabel('building_access')} value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
-        <Input label={resolveLabel('access_method')} value={form.access_method} placeholder="예: 비밀번호 입력" onChange={setFE('access_method')} />
-        <Input label={resolveLabel('door_password')} value={form.door_password} placeholder="예: 1234#" onChange={setFE('door_password')} />
-        <div>
-          <label className="block text-sm font-medium text-text-primary mb-1.5">영업 시간</label>
-          <div className="flex items-center gap-2">
-            <input type="time" value={form.business_hours_start} onChange={setFE('business_hours_start')}
-              className="flex-1 h-12 rounded-md bg-surface border border-border text-text-primary px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
-            <span className="text-text-tertiary text-sm">~</span>
-            <input type="time" value={form.business_hours_end} onChange={setFE('business_hours_end')}
-              className="flex-1 h-12 rounded-md bg-surface border border-border text-text-primary px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
+        {/* 기본 정보 */}
+        <FormSection color="blue" icon={<Building2 size={14} />} title="기본 정보">
+          <div>
+            <FL required>{lbl('business_name')}</FL>
+            <SI value={form.business_name} onChange={setFE('business_name')} placeholder="예: 스타벅스 강남점" />
           </div>
-        </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FL>{lbl('owner_name')}</FL>
+              <SI value={form.owner_name} onChange={setFE('owner_name')} placeholder="홍길동" />
+            </div>
+            <div>
+              <FL>{lbl('platform_nickname')}</FL>
+              <SI value={form.platform_nickname} onChange={setFE('platform_nickname')} placeholder="닉네임" />
+            </div>
+          </div>
+          <div>
+            <FL required>{lbl('phone')}</FL>
+            <SI type="tel" value={form.phone} onChange={setFE('phone')} placeholder="010-0000-0000" />
+          </div>
+          <div>
+            <FL>{lbl('email')}</FL>
+            <SI type="email" value={form.email} onChange={setFE('email')} placeholder="example@email.com" />
+          </div>
+          <div>
+            <FL>{lbl('business_number')}</FL>
+            <SI value={form.business_number} onChange={setFE('business_number')} placeholder="000-00-00000" />
+          </div>
+          <div>
+            <FL>{lbl('address')}</FL>
+            <SI value={form.address} onChange={setFE('address')} placeholder="주소 입력" />
+          </div>
+        </FormSection>
 
-        <SectionLabel>결제 정보</SectionLabel>
-        <SelectField label={resolveLabel('payment_method')} value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
-        <Input label={resolveLabel('account_number')} value={form.account_number} placeholder="은행 + 계좌번호" onChange={setFE('account_number')} />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="단가 (원)" type="number" value={form.unit_price_per_visit} placeholder="0" onChange={setFE('unit_price_per_visit')} />
-          <Input label="예약금" type="number" value={form.deposit} placeholder="0" onChange={setFE('deposit')} />
-          <Input label={resolveLabel('supply_amount')} type="number" value={form.supply_amount} placeholder="0" onChange={setFE('supply_amount')} />
-          <Input label={resolveLabel('vat')} type="number" value={form.vat} placeholder="0" onChange={setFE('vat')} />
-          <Input label={resolveLabel('balance')} type="number" value={form.balance} placeholder="0" onChange={setFE('balance')} />
-        </div>
+        {/* 일정 */}
+        <FormSection color="violet" icon={<Calendar size={14} />} title="일정">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FL>{lbl('construction_date')}</FL>
+              <SI type="date" value={form.construction_date} onChange={setFE('construction_date')} />
+            </div>
+            <div>
+              <FL>{lbl('construction_time')}</FL>
+              <SI type="time" value={form.construction_time} onChange={setFE('construction_time')} />
+            </div>
+          </div>
+        </FormSection>
 
-        <SectionLabel>요청사항</SectionLabel>
-        <TextareaField label={resolveLabel('care_scope')} value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" />
-        <TextareaField label={resolveLabel('request_notes')} value={form.request_notes} onChange={setF('request_notes')} placeholder="고객 요청사항" />
-        <TextareaField label={resolveLabel('admin_request_notes')} value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder="관리자 추가 요청사항" />
+        {/* 현장 정보 */}
+        <FormSection color="green" icon={<MapPin size={14} />} title="현장 정보">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FL>{lbl('elevator')}</FL>
+              <SS value={form.elevator} onChange={setF('elevator')} options={opts('elevator')} placeholder="선택" />
+            </div>
+            <div>
+              <FL>{lbl('parking')}</FL>
+              <SS value={form.parking} onChange={setF('parking')} options={opts('parking')} placeholder="선택" />
+            </div>
+          </div>
+          <div>
+            <FL>{lbl('building_access')}</FL>
+            <SS value={form.building_access} onChange={setF('building_access')} options={opts('building_access')} placeholder="선택" />
+          </div>
+          <div>
+            <FL>{lbl('access_method')}</FL>
+            <SI value={form.access_method} onChange={setFE('access_method')} placeholder="예: 비밀번호 입력" />
+          </div>
+          <div>
+            <FL>{lbl('door_password')}</FL>
+            <SI value={form.door_password} onChange={setFE('door_password')} placeholder="예: 1234#" />
+          </div>
+          <div>
+            <FL>영업 시간</FL>
+            <div className="flex items-center gap-2">
+              <input type="time" value={form.business_hours_start} onChange={setFE('business_hours_start')} className={inputCls + ' flex-1'} />
+              <span className="text-text-tertiary text-sm shrink-0">~</span>
+              <input type="time" value={form.business_hours_end} onChange={setFE('business_hours_end')} className={inputCls + ' flex-1'} />
+            </div>
+          </div>
+        </FormSection>
 
-        <SectionLabel>기타</SectionLabel>
-        <SelectField label={resolveLabel('disposition')} value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
-        <TextareaField label={resolveLabel('admin_notes')} value={form.admin_notes} onChange={setF('admin_notes')} placeholder="내부 메모" />
+        {/* 결제 정보 */}
+        <FormSection color="teal" icon={<CreditCard size={14} />} title="결제 정보">
+          <div>
+            <FL>{lbl('payment_method')}</FL>
+            <SS value={form.payment_method} onChange={setF('payment_method')} options={opts('payment_method')} placeholder="선택" />
+          </div>
+          <div>
+            <FL>{lbl('account_number')}</FL>
+            <SI value={form.account_number} onChange={setFE('account_number')} placeholder="은행 + 계좌번호" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <FL>단가 (원)</FL>
+              <SI type="number" value={form.unit_price_per_visit} onChange={setFE('unit_price_per_visit')} placeholder="0" />
+            </div>
+            <div>
+              <FL>예약금</FL>
+              <SI type="number" value={form.deposit} onChange={setFE('deposit')} placeholder="0" />
+            </div>
+            <div>
+              <FL>{lbl('supply_amount')}</FL>
+              <SI type="number" value={form.supply_amount} onChange={setFE('supply_amount')} placeholder="0" />
+            </div>
+            <div>
+              <FL>{lbl('vat')}</FL>
+              <SI type="number" value={form.vat} onChange={setFE('vat')} placeholder="0" />
+            </div>
+            <div className="col-span-2">
+              <FL>{lbl('balance')}</FL>
+              <SI type="number" value={form.balance} onChange={setFE('balance')} placeholder="0" />
+            </div>
+          </div>
+        </FormSection>
 
-        {error && <p className="text-sm text-state-danger mt-1">{error}</p>}
+        {/* 요청사항 */}
+        <FormSection color="amber" icon={<ClipboardList size={14} />} title="요청사항">
+          <div>
+            <FL>{lbl('care_scope')}</FL>
+            <ST value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" />
+          </div>
+          <div>
+            <FL>{lbl('request_notes')}</FL>
+            <ST value={form.request_notes} onChange={setF('request_notes')} placeholder="고객 요청사항" />
+          </div>
+          <div>
+            <FL>{lbl('admin_request_notes')}</FL>
+            <ST value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder="관리자 추가 요청사항" />
+          </div>
+        </FormSection>
 
-        <div className="flex flex-col gap-2 mt-4">
-          <Button fullWidth onClick={handleSubmit} isLoading={isSubmitting}>저장하기</Button>
-          <Button variant="ghost" fullWidth onClick={() => router.back()}>취소</Button>
-        </div>
+        {/* 기타 */}
+        <FormSection color="gray" icon={<Settings2 size={14} />} title="기타">
+          <div>
+            <FL>{lbl('disposition')}</FL>
+            <SS value={form.disposition} onChange={setF('disposition')} options={opts('disposition')} placeholder="선택" />
+          </div>
+          <div>
+            <FL>{lbl('admin_notes')}</FL>
+            <ST value={form.admin_notes} onChange={setF('admin_notes')} placeholder="내부 메모" rows={3} />
+          </div>
+        </FormSection>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <p className="text-sm text-state-danger">{error}</p>
+          </div>
+        )}
+
+        <Button variant="ghost" fullWidth onClick={() => router.back()}>취소</Button>
       </div>
     </div>
   )
