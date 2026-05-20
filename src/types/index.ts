@@ -304,6 +304,10 @@ export interface PanelFieldOverride {
 
 export interface PanelConfig {
   fields: Record<string, PanelFieldOverride>
+  order?: {
+    sections?: string[]
+    fields?: Record<string, string[]>
+  }
 }
 
 // ─── API 응답 공통 포맷 ───────────────────────────────────────
