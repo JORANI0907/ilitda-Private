@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DEFAULT_PANEL_FIELDS } from '@/lib/settings-defaults'
+import type { PanelConfig } from '@/types'
 
 // ─── 상수 ────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -12,11 +14,6 @@ const STATUS_OPTIONS = [
   '결제', '결제완료', '결제완료(잔금)', '계산서발행완료', '비과세',
   '카드결제 완료', '예약금환급완료', '예약금 입금', '예약취소', 'A/S방문', '방문견적',
 ]
-const PAYMENT_OPTIONS = ['현금', '카드', '계좌이체', '현금(부가세 X)']
-const ELEVATOR_OPTIONS = ['있음', '없음', '계단 전용']
-const PARKING_OPTIONS = ['가능', '불가', '유료 주차']
-const ACCESS_OPTIONS = ['자유출입', '사전출입신청']
-const DISPOSITION_OPTIONS = ['호의', '보통', '주의']
 
 // ─── 공통 컴포넌트 ────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -60,25 +57,26 @@ function TextareaField({ label, value, onChange, placeholder, rows = 3 }: {
 
 // ─── 메인 ────────────────────────────────────────────────────
 interface Form {
-  business_name: string; owner_name: string; phone: string; email: string
-  business_number: string; address: string; status: string
+  business_name: string; owner_name: string; platform_nickname: string
+  phone: string; email: string; business_number: string; address: string; status: string
   elevator: string; parking: string; building_access: string
   access_method: string; door_password: string
   business_hours_start: string; business_hours_end: string
   payment_method: string; account_number: string
   deposit: string; supply_amount: string; vat: string; balance: string; unit_price_per_visit: string
   construction_date: string; construction_time: string
-  care_scope: string; request_notes: string; admin_notes: string
-  disposition: string
+  care_scope: string; request_notes: string; admin_request_notes: string
+  admin_notes: string; disposition: string
 }
 
 const INITIAL: Form = {
-  business_name: '', owner_name: '', phone: '', email: '', business_number: '', address: '',
-  status: '신규', elevator: '', parking: '', building_access: '', access_method: '', door_password: '',
+  business_name: '', owner_name: '', platform_nickname: '', phone: '', email: '',
+  business_number: '', address: '', status: '신규', elevator: '', parking: '',
+  building_access: '', access_method: '', door_password: '',
   business_hours_start: '', business_hours_end: '', payment_method: '', account_number: '',
   deposit: '', supply_amount: '', vat: '', balance: '', unit_price_per_visit: '',
-  construction_date: '', construction_time: '', care_scope: '', request_notes: '', admin_notes: '',
-  disposition: '',
+  construction_date: '', construction_time: '', care_scope: '', request_notes: '',
+  admin_request_notes: '', admin_notes: '', disposition: '',
 }
 
 const NUMERIC: (keyof Form)[] = ['deposit', 'supply_amount', 'vat', 'balance', 'unit_price_per_visit']
@@ -86,12 +84,32 @@ const NUMERIC: (keyof Form)[] = ['deposit', 'supply_amount', 'vat', 'balance', '
 export default function NewApplicationPage() {
   const router = useRouter()
   const [form, setForm] = useState<Form>(INITIAL)
+  const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/settings/panel')
+      .then(r => r.json())
+      .then(json => { if (json.success && json.data?.panel_config) setPanelConfig(json.data.panel_config) })
+      .catch(() => {})
+  }, [])
 
   const setF = (key: keyof Form) => (v: string) => setForm((p) => ({ ...p, [key]: v }))
   const setFE = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((p) => ({ ...p, [key]: e.target.value }))
+
+  const resolveLabel = (key: string): string => {
+    const override = panelConfig?.fields?.[key]?.label
+    if (override) return override
+    return DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.label ?? key
+  }
+
+  const resolveOptions = (key: string): string[] => {
+    const override = panelConfig?.fields?.[key]?.options
+    if (override?.length) return override
+    return DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.options ?? []
+  }
 
   async function handleSubmit() {
     setError(null)
@@ -127,26 +145,27 @@ export default function NewApplicationPage() {
 
       <div className="flex flex-col gap-3 px-4 pt-2">
         <SectionLabel>기본 정보</SectionLabel>
-        <Input label="업체명 *" value={form.business_name} placeholder="예: 스타벅스 강남점" onChange={setFE('business_name')} />
-        <Input label="담당자명" value={form.owner_name} placeholder="홍길동" onChange={setFE('owner_name')} />
-        <Input label="연락처 *" type="tel" value={form.phone} placeholder="010-0000-0000" onChange={setFE('phone')} />
-        <Input label="이메일" type="email" value={form.email} placeholder="example@email.com" onChange={setFE('email')} />
-        <Input label="사업자번호" value={form.business_number} placeholder="000-00-00000" onChange={setFE('business_number')} />
-        <Input label="주소" value={form.address} placeholder="주소 입력" onChange={setFE('address')} />
+        <Input label={resolveLabel('business_name') + ' *'} value={form.business_name} placeholder="예: 스타벅스 강남점" onChange={setFE('business_name')} />
+        <Input label={resolveLabel('owner_name')} value={form.owner_name} placeholder="홍길동" onChange={setFE('owner_name')} />
+        <Input label={resolveLabel('platform_nickname')} value={form.platform_nickname} placeholder="플랫폼 닉네임" onChange={setFE('platform_nickname')} />
+        <Input label={resolveLabel('phone') + ' *'} type="tel" value={form.phone} placeholder="010-0000-0000" onChange={setFE('phone')} />
+        <Input label={resolveLabel('email')} type="email" value={form.email} placeholder="example@email.com" onChange={setFE('email')} />
+        <Input label={resolveLabel('business_number')} value={form.business_number} placeholder="000-00-00000" onChange={setFE('business_number')} />
+        <Input label={resolveLabel('address')} value={form.address} placeholder="주소 입력" onChange={setFE('address')} />
 
         <SectionLabel>상태 / 일정</SectionLabel>
         <SelectField label="진행 상태" value={form.status} onChange={setF('status')} options={STATUS_OPTIONS} />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="시공일" type="date" value={form.construction_date} onChange={setFE('construction_date')} />
-          <Input label="시공시간" type="time" value={form.construction_time} onChange={setFE('construction_time')} />
+          <Input label={resolveLabel('construction_date')} type="date" value={form.construction_date} onChange={setFE('construction_date')} />
+          <Input label={resolveLabel('construction_time')} type="time" value={form.construction_time} onChange={setFE('construction_time')} />
         </div>
 
         <SectionLabel>현장 정보</SectionLabel>
-        <SelectField label="엘리베이터" value={form.elevator} onChange={setF('elevator')} options={ELEVATOR_OPTIONS} placeholder="선택" />
-        <SelectField label="주차" value={form.parking} onChange={setF('parking')} options={PARKING_OPTIONS} placeholder="선택" />
-        <SelectField label="건물출입" value={form.building_access} onChange={setF('building_access')} options={ACCESS_OPTIONS} placeholder="선택" />
-        <Input label="출입 방법" value={form.access_method} placeholder="예: 비밀번호 입력" onChange={setFE('access_method')} />
-        <Input label="도어락" value={form.door_password} placeholder="예: 1234#" onChange={setFE('door_password')} />
+        <SelectField label={resolveLabel('elevator')} value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
+        <SelectField label={resolveLabel('parking')} value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
+        <SelectField label={resolveLabel('building_access')} value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
+        <Input label={resolveLabel('access_method')} value={form.access_method} placeholder="예: 비밀번호 입력" onChange={setFE('access_method')} />
+        <Input label={resolveLabel('door_password')} value={form.door_password} placeholder="예: 1234#" onChange={setFE('door_password')} />
         <div>
           <label className="block text-sm font-medium text-text-primary mb-1.5">영업 시간</label>
           <div className="flex items-center gap-2">
@@ -159,23 +178,24 @@ export default function NewApplicationPage() {
         </div>
 
         <SectionLabel>결제 정보</SectionLabel>
-        <SelectField label="결제 방법" value={form.payment_method} onChange={setF('payment_method')} options={PAYMENT_OPTIONS} placeholder="선택" />
-        <Input label="계좌번호" value={form.account_number} placeholder="은행 + 계좌번호" onChange={setFE('account_number')} />
+        <SelectField label={resolveLabel('payment_method')} value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
+        <Input label={resolveLabel('account_number')} value={form.account_number} placeholder="은행 + 계좌번호" onChange={setFE('account_number')} />
         <div className="grid grid-cols-2 gap-3">
           <Input label="단가 (원)" type="number" value={form.unit_price_per_visit} placeholder="0" onChange={setFE('unit_price_per_visit')} />
           <Input label="예약금" type="number" value={form.deposit} placeholder="0" onChange={setFE('deposit')} />
-          <Input label="공급가" type="number" value={form.supply_amount} placeholder="0" onChange={setFE('supply_amount')} />
-          <Input label="부가세" type="number" value={form.vat} placeholder="0" onChange={setFE('vat')} />
-          <Input label="잔금" type="number" value={form.balance} placeholder="0" onChange={setFE('balance')} />
+          <Input label={resolveLabel('supply_amount')} type="number" value={form.supply_amount} placeholder="0" onChange={setFE('supply_amount')} />
+          <Input label={resolveLabel('vat')} type="number" value={form.vat} placeholder="0" onChange={setFE('vat')} />
+          <Input label={resolveLabel('balance')} type="number" value={form.balance} placeholder="0" onChange={setFE('balance')} />
         </div>
 
         <SectionLabel>요청사항</SectionLabel>
-        <TextareaField label="청소 범위" value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" />
-        <TextareaField label="고객 요청사항" value={form.request_notes} onChange={setF('request_notes')} placeholder="고객 요청사항" />
+        <TextareaField label={resolveLabel('care_scope')} value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" />
+        <TextareaField label={resolveLabel('request_notes')} value={form.request_notes} onChange={setF('request_notes')} placeholder="고객 요청사항" />
+        <TextareaField label={resolveLabel('admin_request_notes')} value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder="관리자 추가 요청사항" />
 
         <SectionLabel>기타</SectionLabel>
-        <SelectField label="고객 성향" value={form.disposition} onChange={setF('disposition')} options={DISPOSITION_OPTIONS} placeholder="선택" />
-        <TextareaField label="관리자 메모" value={form.admin_notes} onChange={setF('admin_notes')} placeholder="내부 메모" />
+        <SelectField label={resolveLabel('disposition')} value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
+        <TextareaField label={resolveLabel('admin_notes')} value={form.admin_notes} onChange={setF('admin_notes')} placeholder="내부 메모" />
 
         {error && <p className="text-sm text-state-danger mt-1">{error}</p>}
 
