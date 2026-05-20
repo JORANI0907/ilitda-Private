@@ -50,6 +50,14 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, handleClose])
 
+  useEffect(() => {
+    if (!open) return
+    window.history.pushState({ modal: true }, '')
+    const onPop = () => handleClose()
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [open, handleClose])
+
   if (!open) return null
 
   return (

@@ -235,7 +235,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/app-notifications')}
+            onClick={() => router.push('/business/profile/settings/app-notifications')}
           >
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
@@ -247,7 +247,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/integrations')}
+            onClick={() => router.push('/business/profile/settings/integrations')}
           >
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
@@ -259,7 +259,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/business')}
+            onClick={() => router.push('/business/profile/settings/business')}
           >
             <div className="flex items-center gap-3">
               <Users size={16} className="text-text-tertiary" />
@@ -277,7 +277,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/form')}
+            onClick={() => router.push('/business/profile/settings/form')}
           >
             <div className="flex items-center gap-3">
               <FileText size={16} className="text-text-tertiary" />
@@ -291,7 +291,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/notifications')}
+            onClick={() => router.push('/business/profile/settings/notifications')}
           >
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
@@ -305,7 +305,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/panel')}
+            onClick={() => router.push('/business/profile/settings/panel')}
           >
             <div className="flex items-center gap-3">
               <LayoutList size={16} className="text-text-tertiary" />
