@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Phone, MapPin, User,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users, Link2, Copy, Check, FileText,
+  CreditCard, Users, Link2, Copy, Check, FileText, LayoutList,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -298,6 +298,20 @@ export default function BusinessProfilePage() {
               <div>
                 <span className="text-sm text-text-primary">알림 설정</span>
                 <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-between py-3 text-left"
+            onClick={() => router.push('/admin/settings/panel')}
+          >
+            <div className="flex items-center gap-3">
+              <LayoutList size={16} className="text-text-tertiary" />
+              <div>
+                <span className="text-sm text-text-primary">서비스 관리 화면 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">필드 제목, 예시 텍스트, 드롭다운 옵션 커스텀</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
