@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { use } from 'react'
-import { CheckCircle, User, Building2, PenLine } from 'lucide-react'
+import { CheckCircle, User, Building2, PenLine, Shield } from 'lucide-react'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -37,6 +37,45 @@ const INITIAL_FORM: RequestForm = {
 }
 
 const PAYMENT_OPTIONS = ['현금', '카드', '계좌이체', '현금(부가세 X)']
+
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2).toString().padStart(2, '0')
+  const m = i % 2 === 0 ? '00' : '30'
+  return `${h}:${m}`
+})
+
+const PRIVACY_TEXT = `■ 개인정보 수집·이용에 관한 안내
+
+수집 항목
+• 업체명/이름, 담당자명, 연락처, 이메일
+• 사업자번호, 주소, 희망 방문 일시
+• 청소 범위, 요청사항 등 서비스 신청 관련 정보
+
+수집 목적
+서비스 신청 접수 및 처리, 견적 안내, 담당자 연락
+
+보유 기간
+서비스 신청일로부터 3년
+(단, 관련 법령에 따라 보유 기간이 달라질 수 있습니다)
+
+귀하는 개인정보 수집·이용에 동의를 거부할 권리가 있습니다.
+단, 동의 거부 시 서비스 신청이 불가합니다.`
+
+const MARKETING_TEXT = `■ 서비스 마케팅 활용 동의
+
+수집된 연락처(문자/이메일)를 통해 아래 정보를 수신하는 것에 동의합니다.
+
+수신 정보
+• 일잇다 서비스 소식 및 신규 기능 안내
+• 이벤트, 할인 혜택, 프로모션 정보
+• 맞춤 서비스 추천
+
+수신 방법
+SMS/MMS, 이메일
+
+동의 철회
+동의 후에도 언제든지 수신 거부가 가능합니다.
+(마케팅 동의 철회는 담당자에게 문의해 주세요)`
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '')
@@ -97,6 +136,34 @@ function OptionGroup({
   )
 }
 
+function ConsentModal({ title, content, onClose }: {
+  title: string; content: string; onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.5)' }}
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full max-w-xl rounded-t-2xl sm:rounded-2xl p-6 max-h-[70vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base font-bold text-slate-800 mb-4">{title}</h3>
+        <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{content}</div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full py-3 rounded-xl text-white font-bold text-sm"
+          style={{ background: '#2563EB' }}
+        >
+          확인
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function RequestPage({ params }: PageProps) {
   const { slug } = use(params)
 
@@ -104,11 +171,13 @@ export default function RequestPage({ params }: PageProps) {
   const [splashHide, setSplashHide] = useState(false)
   const [appVisible, setAppVisible] = useState(false)
 
-  const [businessName, setBusinessName] = useState<string | null>(null)
   const [pageError, setPageError] = useState<string | null>(null)
   const [isPageLoading, setIsPageLoading] = useState(true)
 
   const [form, setForm] = useState<RequestForm>(INITIAL_FORM)
+  const [consentPrivacy, setConsentPrivacy] = useState(false)
+  const [consentMarketing, setConsentMarketing] = useState(false)
+  const [showModal, setShowModal] = useState<'privacy' | 'marketing' | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDone, setIsDone] = useState(false)
@@ -120,8 +189,7 @@ export default function RequestPage({ params }: PageProps) {
     fetch(`/api/request/${slug}`)
       .then((r) => r.json())
       .then((json) => {
-        if (json.success) setBusinessName(json.data.businessName)
-        else setPageError(json.error ?? '존재하지 않는 신청 페이지입니다.')
+        if (!json.success) setPageError(json.error ?? '존재하지 않는 신청 페이지입니다.')
       })
       .catch(() => setPageError('페이지를 불러오는 중 오류가 발생했습니다.'))
       .finally(() => setIsPageLoading(false))
@@ -134,9 +202,14 @@ export default function RequestPage({ params }: PageProps) {
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {}
-    if (!form.client_name.trim()) e.client_name = '업체명/이름을 입력해 주세요.'
-    if (!form.client_phone.trim()) e.client_phone = '연락처를 입력해 주세요.'
+    if (!form.client_name.trim())   e.client_name = '업체명/이름을 입력해 주세요.'
+    if (!form.client_phone.trim())  e.client_phone = '연락처를 입력해 주세요.'
     if (!form.client_address.trim()) e.client_address = '주소를 입력해 주세요.'
+    if (!form.desired_date)         e.desired_date = '희망 방문일을 선택해 주세요.'
+    if (!form.desired_time)         e.desired_time = '희망 시간을 선택해 주세요.'
+    if (!form.care_scope.trim())    e.care_scope = '청소 범위를 입력해 주세요.'
+    if (!consentPrivacy)            e.consent_privacy = '개인정보 제공에 동의해 주세요.'
+    if (!consentMarketing)          e.consent_marketing = '서비스 마케팅 활용에 동의해 주세요.'
     return e
   }
 
@@ -168,7 +241,7 @@ export default function RequestPage({ params }: PageProps) {
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5"
           style={{
-            background: '#0f172a',
+            background: 'linear-gradient(135deg, #1E40AF, #2563EB)',
             opacity: splashHide ? 0 : 1,
             transform: splashHide ? 'scale(1.03)' : 'scale(1)',
             transition: 'opacity 0.55s ease, transform 0.55s ease',
@@ -180,7 +253,7 @@ export default function RequestPage({ params }: PageProps) {
           <div style={{ animation: 'itdFade 0.5s ease 0.35s both' }}>
             <p
               className="text-xs font-medium text-center"
-              style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '3px' }}
+              style={{ color: 'rgba(255,255,255,0.7)', letterSpacing: '3px' }}
             >
               SERVICE PLATFORM
             </p>
@@ -188,7 +261,7 @@ export default function RequestPage({ params }: PageProps) {
           <div
             className="absolute bottom-0 left-0 right-0 h-[3px]"
             style={{
-              background: 'linear-gradient(90deg, transparent, #2563eb, #818cf8, transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.6), rgba(255,255,255,0.3), transparent)',
               animation: 'itdBar 1.2s ease 0.1s both',
             }}
           />
@@ -223,7 +296,7 @@ export default function RequestPage({ params }: PageProps) {
       >
         {/* Hero */}
         <div style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e293b 100%)',
+          background: 'linear-gradient(135deg, #1D4ED8 0%, #2563EB 50%, #3B82F6 100%)',
           padding: '48px 20px 56px',
           textAlign: 'center',
           position: 'relative',
@@ -231,25 +304,25 @@ export default function RequestPage({ params }: PageProps) {
         }}>
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(37,99,235,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255,255,255,0.1) 0%, transparent 70%)',
           }} />
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0, height: 3,
-            background: 'linear-gradient(90deg, transparent, #2563eb, #818cf8, transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), rgba(255,255,255,0.3), transparent)',
           }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div style={{
               display: 'inline-block',
-              background: 'rgba(37,99,235,0.2)', border: '1px solid rgba(37,99,235,0.4)',
-              color: '#93c5fd', fontSize: 11, fontWeight: 600,
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+              color: 'rgba(255,255,255,0.95)', fontSize: 11, fontWeight: 600,
               padding: '4px 14px', borderRadius: 999, letterSpacing: 1, marginBottom: 14,
             }}>
               SERVICE INQUIRY
             </div>
             <p style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px', whiteSpace: 'pre-line' }}>
-              {isPageLoading ? '...' : (pageError ? '서비스 신청' : `${businessName}\n서비스를 신청하세요`)}
+              {isPageLoading ? '...' : (pageError ? '서비스 신청' : '일잇다\n서비스를 신청하세요')}
             </p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
               아래 정보를 입력하시면<br />담당자가 빠르게 연락드리겠습니다.
             </p>
           </div>
@@ -258,7 +331,10 @@ export default function RequestPage({ params }: PageProps) {
         {/* 상태별 분기 */}
         {isPageLoading ? (
           <div className="flex justify-center py-16">
-            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <div
+              className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: '#2563EB', borderTopColor: 'transparent' }}
+            />
           </div>
         ) : pageError ? (
           <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
@@ -275,7 +351,7 @@ export default function RequestPage({ params }: PageProps) {
             </div>
             <h2 className="text-xl font-black text-slate-800 mb-3">신청 완료!</h2>
             <p className="text-sm text-slate-500 leading-relaxed mb-2 break-keep">
-              {businessName}에서 확인 후 담당자가 연락드리겠습니다.
+              일잇다 담당자가 확인 후 빠르게 연락드리겠습니다.
             </p>
           </div>
         ) : (
@@ -285,8 +361,8 @@ export default function RequestPage({ params }: PageProps) {
             {/* 기본 정보 */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50">
-                  <User size={16} className="text-blue-600" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#EFF6FF' }}>
+                  <User size={16} style={{ color: '#2563EB' }} />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-800">기본 정보</p>
@@ -373,21 +449,25 @@ export default function RequestPage({ params }: PageProps) {
                   onChange={(e) => set('client_address')(e.target.value)}
                 />
               </Field>
-              <Field label="희망 방문일">
+              <Field label="희망 방문일" required error={errors.desired_date}>
                 <input
                   type="date"
-                  className={inputCls()}
+                  className={inputCls(errors.desired_date)}
                   value={form.desired_date}
                   onChange={(e) => set('desired_date')(e.target.value)}
                 />
               </Field>
-              <Field label="희망 시간">
-                <input
-                  type="time"
-                  className={inputCls()}
+              <Field label="희망 시간" required error={errors.desired_time}>
+                <select
+                  className={inputCls(errors.desired_time)}
                   value={form.desired_time}
                   onChange={(e) => set('desired_time')(e.target.value)}
-                />
+                >
+                  <option value="">시간을 선택해 주세요</option>
+                  {TIME_OPTIONS.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </Field>
               <OptionGroup
                 label="엘리베이터"
@@ -415,11 +495,11 @@ export default function RequestPage({ params }: PageProps) {
                   onChange={(e) => set('access_method')(e.target.value)}
                 />
               </Field>
-              <Field label="청소 범위">
+              <Field label="청소 범위" required error={errors.care_scope}>
                 <textarea
                   rows={3}
-                  className={`${inputCls()} resize-y`}
-                  placeholder="예: 주방 후드, 환풍구, 에어컨 실내기 3대"
+                  className={`${inputCls(errors.care_scope)} resize-y`}
+                  placeholder="예: 주방 후드, 환풍기, 에어컨 실내기 3대"
                   value={form.care_scope}
                   onChange={(e) => set('care_scope')(e.target.value)}
                 />
@@ -449,6 +529,87 @@ export default function RequestPage({ params }: PageProps) {
               </Field>
             </div>
 
+            {/* 동의사항 */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#FEF3C7' }}>
+                  <Shield size={16} style={{ color: '#D97706' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-800">동의사항</p>
+                  <p className="text-xs text-slate-400">아래 항목에 동의해 주세요</p>
+                </div>
+              </div>
+
+              {/* 개인정보 동의 */}
+              <div className={`flex items-start gap-3 p-3.5 rounded-xl mb-1 border transition-colors ${
+                consentPrivacy
+                  ? 'border-blue-200 bg-blue-50'
+                  : errors.consent_privacy
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-slate-200 bg-slate-50'
+              }`}>
+                <input
+                  type="checkbox"
+                  id="consent-privacy"
+                  checked={consentPrivacy}
+                  onChange={(e) => setConsentPrivacy(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 flex-shrink-0 accent-blue-600"
+                />
+                <div className="flex-1 min-w-0">
+                  <label htmlFor="consent-privacy" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    개인정보 수집·이용 동의 <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">서비스 신청 접수 및 처리를 위한 개인정보 수집에 동의합니다.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal('privacy')}
+                  className="text-xs font-medium flex-shrink-0 hover:underline"
+                  style={{ color: '#2563EB' }}
+                >
+                  보기
+                </button>
+              </div>
+              {errors.consent_privacy && (
+                <p className="text-xs text-red-500 mb-3 pl-1">{errors.consent_privacy}</p>
+              )}
+
+              {/* 마케팅 동의 */}
+              <div className={`flex items-start gap-3 p-3.5 rounded-xl mt-3 border transition-colors ${
+                consentMarketing
+                  ? 'border-blue-200 bg-blue-50'
+                  : errors.consent_marketing
+                  ? 'border-red-200 bg-red-50'
+                  : 'border-slate-200 bg-slate-50'
+              }`}>
+                <input
+                  type="checkbox"
+                  id="consent-marketing"
+                  checked={consentMarketing}
+                  onChange={(e) => setConsentMarketing(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 flex-shrink-0 accent-blue-600"
+                />
+                <div className="flex-1 min-w-0">
+                  <label htmlFor="consent-marketing" className="text-sm font-semibold text-slate-700 cursor-pointer">
+                    서비스 마케팅 활용 동의 <span className="text-red-500">*</span>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-0.5">일잇다의 서비스 안내, 이벤트, 프로모션 정보 수신에 동의합니다.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal('marketing')}
+                  className="text-xs font-medium flex-shrink-0 hover:underline"
+                  style={{ color: '#2563EB' }}
+                >
+                  보기
+                </button>
+              </div>
+              {errors.consent_marketing && (
+                <p className="text-xs text-red-500 mt-1 pl-1">{errors.consent_marketing}</p>
+              )}
+            </div>
+
             {/* 제출 */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
               {errors._global && (
@@ -460,7 +621,7 @@ export default function RequestPage({ params }: PageProps) {
                 disabled={isSubmitting}
                 className="w-full py-4 rounded-xl text-white text-base font-black flex items-center justify-center gap-2 transition-all"
                 style={{
-                  background: isSubmitting ? '#94a3b8' : 'linear-gradient(135deg,#2563eb,#4f46e5)',
+                  background: isSubmitting ? '#94a3b8' : 'linear-gradient(135deg, #1D4ED8, #2563EB)',
                   boxShadow: isSubmitting ? 'none' : '0 4px 20px rgba(37,99,235,0.35)',
                 }}
               >
@@ -484,6 +645,15 @@ export default function RequestPage({ params }: PageProps) {
 
         <div className="text-center py-5 text-xs text-slate-400">© 2025 일잇다. All rights reserved.</div>
       </div>
+
+      {/* 동의 내용 모달 */}
+      {showModal && (
+        <ConsentModal
+          title={showModal === 'privacy' ? '개인정보 수집·이용 동의' : '서비스 마케팅 활용 동의'}
+          content={showModal === 'privacy' ? PRIVACY_TEXT : MARKETING_TEXT}
+          onClose={() => setShowModal(null)}
+        />
+      )}
     </>
   )
 }
