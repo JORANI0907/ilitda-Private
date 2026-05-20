@@ -16,6 +16,39 @@ export interface Profile {
   deleted_at: string | null
 }
 
+// ─── 폼 설정 ─────────────────────────────────────────────────
+export interface FormConfig {
+  payment_options: string[]
+  show_fields: {
+    owner_name: boolean
+    email: boolean
+    business_number: boolean
+    account_number: boolean
+    elevator: boolean
+    parking: boolean
+    building_access: boolean
+    access_method: boolean
+  }
+  worker_notify_fields: string[]
+  hero_subtitle: string
+}
+
+export interface NotificationRule {
+  type: string
+  enabled: boolean
+  mode: 'manual' | 'auto'
+  trigger?: {
+    base: 'construction_date'
+    offset_days: number
+    send_time: string
+  }
+  template?: string | null
+}
+
+export interface NotificationConfig {
+  rules: NotificationRule[]
+}
+
 // ─── 사업자 프로필 ────────────────────────────────────────────
 export interface Business {
   id: string
@@ -27,6 +60,8 @@ export interface Business {
   request_slug: string | null
   created_at: string
   updated_at: string
+  form_config?: FormConfig
+  notification_config?: NotificationConfig
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────
