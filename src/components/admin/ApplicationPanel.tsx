@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown } from 'lucide-react'
+import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
   DEFAULT_PANEL_FIELDS,
@@ -192,6 +192,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [isSendingNotify, setIsSendingNotify] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [driveUrl, setDriveUrl] = useState<string | null>(app.drive_folder_url ?? null)
+  const [isDriveLoading, setIsDriveLoading] = useState(false)
+  const [driveError, setDriveError] = useState<string | null>(null)
 
   const setF = (key: keyof FormState) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }))
@@ -243,6 +246,17 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     setIsDeleting(true)
     await fetch(`/api/admin/applications/${app.id}`, { method: 'DELETE' })
     onDelete(app.id)
+  }
+
+  async function handleCreateDriveFolder() {
+    setDriveError(null)
+    setIsDriveLoading(true)
+    try {
+      const res = await fetch(`/api/admin/applications/${app.id}/drive`, { method: 'POST' })
+      const json = await res.json()
+      if (!json.success) { setDriveError(json.error ?? '폴더 생성 실패'); return }
+      setDriveUrl(json.data.folderUrl)
+    } catch { setDriveError('네트워크 오류') } finally { setIsDriveLoading(false) }
   }
 
   async function handleNotify() {
@@ -432,6 +446,38 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             <FieldRow label={resolveLabel('admin_notes')}>
               <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
             </FieldRow>
+          </div>
+
+          {/* 구글 드라이브 */}
+          <SectionTitle>작업 폴더 (Google Drive)</SectionTitle>
+          <div className="bg-surface rounded-2xl border border-border-subtle p-3 shadow-flat flex flex-col gap-2">
+            {driveUrl ? (
+              <>
+                <a
+                  href={driveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-brand-600 font-medium hover:underline"
+                >
+                  <FolderOpen size={15} />
+                  폴더 열기 (작업전 / 작업후)
+                  <ExternalLink size={13} className="opacity-60" />
+                </a>
+                <p className="text-xs text-text-tertiary">링크 아는 누구나 업로드 가능 · 작업자에게 링크를 공유하세요</p>
+                <Button size="sm" variant="ghost" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
+                  폴더 재생성
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-text-tertiary">생성하면 작업전/작업후 폴더가 자동으로 만들어집니다.</p>
+                <Button size="sm" variant="secondary" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
+                  <FolderOpen size={14} />
+                  작업 폴더 생성
+                </Button>
+              </>
+            )}
+            {driveError && <p className="text-xs text-state-danger">{driveError}</p>}
           </div>
 
           {/* 알림 발송 */}
