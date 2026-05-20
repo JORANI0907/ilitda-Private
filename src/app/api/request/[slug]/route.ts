@@ -69,6 +69,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!client_address || typeof client_address !== 'string' || !client_address.trim()) {
     return NextResponse.json({ success: false, error: '주소를 입력해 주세요.' }, { status: 400 })
   }
+  if (!desired_date || typeof desired_date !== 'string' || !desired_date.trim()) {
+    return NextResponse.json({ success: false, error: '희망 방문일을 선택해 주세요.' }, { status: 400 })
+  }
+  if (!desired_time || typeof desired_time !== 'string' || !desired_time.trim()) {
+    return NextResponse.json({ success: false, error: '희망 시간을 선택해 주세요.' }, { status: 400 })
+  }
+  if (!care_scope || typeof care_scope !== 'string' || !care_scope.trim()) {
+    return NextResponse.json({ success: false, error: '청소 범위를 입력해 주세요.' }, { status: 400 })
+  }
 
   const service = createServiceClient()
 
@@ -85,25 +94,24 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     )
   }
 
-  const { error } = await service.from('service_requests').insert({
-    business_id: business.id,
-    client_name: (client_name as string).trim(),
-    client_phone: (client_phone as string).trim(),
-    client_address: (client_address as string).trim(),
-    desired_date: strOrNull(desired_date),
-    desired_time: strOrNull(desired_time),
-    notes: strOrNull(notes),
-    status: 'pending',
-    owner_name: strOrNull(owner_name),
-    email: strOrNull(email),
-    business_number: strOrNull(business_number),
-    account_number: strOrNull(account_number),
-    payment_method: strOrNull(payment_method),
-    elevator: strOrNull(elevator),
-    parking: strOrNull(parking),
-    building_access: strOrNull(building_access),
-    access_method: strOrNull(access_method),
-    care_scope: strOrNull(care_scope),
+  const { error } = await service.from('service_applications').insert({
+    business_name:     (client_name as string).trim(),
+    phone:             (client_phone as string).trim(),
+    address:           (client_address as string).trim(),
+    construction_date: (desired_date as string).trim(),
+    construction_time: (desired_time as string).trim(),
+    request_notes:     strOrNull(notes),
+    status:            '신규',
+    owner_name:        strOrNull(owner_name),
+    email:             strOrNull(email),
+    business_number:   strOrNull(business_number),
+    account_number:    strOrNull(account_number),
+    payment_method:    strOrNull(payment_method),
+    elevator:          strOrNull(elevator),
+    parking:           strOrNull(parking),
+    building_access:   strOrNull(building_access),
+    access_method:     strOrNull(access_method),
+    care_scope:        strOrNull(care_scope),
   })
 
   if (error) {
