@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Phone, MapPin, User,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users, Link2, Copy, Check,
+  CreditCard, Users, Link2, Copy, Check, FileText,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -235,7 +235,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => {/* 알림 설정 — 추후 구현 */}}
+            onClick={() => router.push('/admin/settings/notifications')}
           >
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
@@ -247,7 +247,7 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => {/* 발신번호 설정 — 추후 구현 */}}
+            onClick={() => router.push('/admin/settings/business')}
           >
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
@@ -259,11 +259,46 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => {/* 직원 권한 설정 — 추후 구현 */}}
+            onClick={() => router.push('/admin/settings/business')}
           >
             <div className="flex items-center gap-3">
               <Users size={16} className="text-text-tertiary" />
               <span className="text-sm text-text-primary">직원 권한 설정</span>
+            </div>
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </button>
+        </div>
+      </Card>
+
+      {/* 서비스 설정 */}
+      <Card padding="md">
+        <SectionHeader title="서비스 설정" className="mb-3" />
+        <div className="flex flex-col divide-y divide-border-subtle">
+          <button
+            type="button"
+            className="flex items-center justify-between py-3 text-left"
+            onClick={() => router.push('/admin/settings/form')}
+          >
+            <div className="flex items-center gap-3">
+              <FileText size={16} className="text-text-tertiary" />
+              <div>
+                <span className="text-sm text-text-primary">신청서 폼 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">결제 방법, 표시 항목, 작업자 전달 필드</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-between py-3 text-left"
+            onClick={() => router.push('/admin/settings/notifications')}
+          >
+            <div className="flex items-center gap-3">
+              <Bell size={16} className="text-text-tertiary" />
+              <div>
+                <span className="text-sm text-text-primary">알림 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
+              </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
