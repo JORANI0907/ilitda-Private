@@ -62,6 +62,7 @@ export interface Business {
   updated_at: string
   form_config?: FormConfig
   notification_config?: NotificationConfig
+  panel_config?: PanelConfig
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────
@@ -292,6 +293,17 @@ export interface ServiceApplication {
   notion_page_id: string | null
   is_favorite: boolean
   business_id: string | null
+}
+
+// ─── 패널 필드 커스터마이징 ───────────────────────────────────
+export interface PanelFieldOverride {
+  label?: string
+  placeholder?: string
+  options?: string[]
+}
+
+export interface PanelConfig {
+  fields: Record<string, PanelFieldOverride>
 }
 
 // ─── API 응답 공통 포맷 ───────────────────────────────────────
