@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
+const CLIENT_ALLOWED = [
+  'name', 'phone', 'address', 'type', 'service_type', 'notes', 'is_favorite',
+  'owner_name', 'email', 'business_number', 'account_number',
+  'elevator', 'parking', 'building_access', 'access_method', 'care_scope',
+  'door_password', 'business_hours_start', 'business_hours_end',
+  'visit_interval_days', 'next_visit_date',
+  'unit_price', 'billing_cycle', 'payment_method',
+  'deposit', 'supply_amount', 'vat', 'balance',
+  'status', 'contract_start_date', 'contract_end_date',
+  'disposition', 'admin_notes',
+] as const
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -11,6 +23,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const q = searchParams.get('q') ?? ''
+  const status = searchParams.get('status') ?? ''
+  const service_type = searchParams.get('service_type') ?? ''
+  const favorites = searchParams.get('favorites') === '1'
 
   const service = createServiceClient()
 
@@ -33,6 +48,15 @@ export async function GET(request: NextRequest) {
 
   if (q.trim()) {
     query = query.ilike('name', `%${q.trim()}%`)
+  }
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
+  if (service_type && service_type !== 'all') {
+    query = query.eq('service_type', service_type)
+  }
+  if (favorites) {
+    query = query.eq('is_favorite', true)
   }
 
   const { data, error, count } = await query
@@ -73,12 +97,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '요청 형식이 올바르지 않습니다.' }, { status: 400 })
   }
 
-  const ALLOWED = ['name', 'phone', 'address', 'type', 'notes'] as const
+  const b = body as Record<string, unknown>
   const updates: Record<string, unknown> = { business_id: business.id }
-  for (const key of ALLOWED) {
-    if (key in (body as Record<string, unknown>)) {
-      updates[key] = (body as Record<string, unknown>)[key]
-    }
+  for (const key of CLIENT_ALLOWED) {
+    if (key in b) updates[key] = b[key]
   }
 
   if (!updates.name) {

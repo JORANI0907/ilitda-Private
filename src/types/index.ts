@@ -70,6 +70,16 @@ export interface Client {
   unit_price: number | null
   billing_cycle: string | null
   payment_method: string | null
+  deposit: number | null
+  supply_amount: number | null
+  vat: number | null
+  balance: number | null
+  // 계약 관리
+  status: string | null          // 'active' | 'paused' | 'terminated'
+  contract_start_date: string | null
+  contract_end_date: string | null
+  disposition: string | null     // '호의' | '보통' | '주의'
+  admin_notes: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null
