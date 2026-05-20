@@ -286,6 +286,125 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return SECTION_BORDER_COLOR[sec?.color ?? 'gray'] ?? 'border-gray-200'
   }
 
+  // panelConfig.order.sections 순서 적용 (미설정 시 기본 순서)
+  const orderedSectionIds = (() => {
+    const defaults = PANEL_SECTIONS.map(s => s.id as string)
+    const configured = panelConfig?.order?.sections
+    if (!configured?.length) return defaults
+    const ordered = configured.filter(id => PANEL_SECTIONS.some(s => s.id === id))
+    const remaining = defaults.filter(id => !ordered.includes(id))
+    return [...ordered, ...remaining]
+  })()
+
+  const getSectionContent = (sectionId: string) => {
+    switch (sectionId) {
+      case 'basic': return (
+        <>
+          <FieldRow label={resolveLabel('business_name')}>
+            <EditInput value={form.business_name} onChange={setF('business_name')} placeholder={resolvePlaceholder('business_name')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('owner_name')}>
+            <EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder={resolvePlaceholder('owner_name')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('platform_nickname')}>
+            <EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder={resolvePlaceholder('platform_nickname')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('phone')}>
+            <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('email')}>
+            <EditInput value={form.email} onChange={setF('email')} type="email" placeholder={resolvePlaceholder('email')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('business_number')}>
+            <EditInput value={form.business_number} onChange={setF('business_number')} placeholder={resolvePlaceholder('business_number')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('address')}>
+            <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+          </FieldRow>
+        </>
+      )
+      case 'site': return (
+        <>
+          <FieldRow label={resolveLabel('elevator')}>
+            <EditSelect value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('parking')}>
+            <EditSelect value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('building_access')}>
+            <EditSelect value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('access_method')}>
+            <EditInput value={form.access_method} onChange={setF('access_method')} placeholder={resolvePlaceholder('access_method')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('door_password')}>
+            <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
+          </FieldRow>
+        </>
+      )
+      case 'schedule': return (
+        <>
+          <FieldRow label={resolveLabel('construction_date')}>
+            <EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('construction_time')}>
+            <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
+          </FieldRow>
+        </>
+      )
+      case 'request': return (
+        <>
+          <FieldRow label={resolveLabel('care_scope')}>
+            <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder={resolvePlaceholder('care_scope')} rows={2} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('request_notes')}>
+            <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder={resolvePlaceholder('request_notes')} rows={2} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('admin_request_notes')}>
+            <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
+          </FieldRow>
+        </>
+      )
+      case 'payment': return (
+        <>
+          <FieldRow label={resolveLabel('payment_method')}>
+            <EditSelect value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('account_number')}>
+            <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('supply_amount')}>
+            <EditInput value={form.supply_amount} onChange={setF('supply_amount')} type="number" placeholder={resolvePlaceholder('supply_amount')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('vat')}>
+            <EditInput value={form.vat} onChange={setF('vat')} type="number" placeholder={resolvePlaceholder('vat')} />
+          </FieldRow>
+          <FieldRow label={resolveLabel('supply_total')}>
+            <span className="text-sm text-text-primary font-medium">
+              {form.supply_amount || form.vat
+                ? supplyTotal.toLocaleString('ko-KR') + '원'
+                : '-'}
+            </span>
+          </FieldRow>
+          <FieldRow label={resolveLabel('balance')}>
+            <EditInput value={form.balance} onChange={setF('balance')} type="number" placeholder={resolvePlaceholder('balance')} />
+          </FieldRow>
+        </>
+      )
+      case 'misc': return (
+        <>
+          <FieldRow label={resolveLabel('disposition')}>
+            <EditSelect value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
+          </FieldRow>
+          <FieldRow label={resolveLabel('admin_notes')}>
+            <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
+          </FieldRow>
+        </>
+      )
+      default: return null
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex">
       {/* 배경 */}
@@ -328,126 +447,19 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             <ChevronDown size={14} className="absolute right-3 top-3 text-text-tertiary pointer-events-none" />
           </div>
 
-          {/* 기본 정보 */}
-          <SectionTitle color="blue">
-            {PANEL_SECTIONS.find((s) => s.id === 'basic')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('basic')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('business_name')}>
-              <EditInput value={form.business_name} onChange={setF('business_name')} placeholder={resolvePlaceholder('business_name')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('owner_name')}>
-              <EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder={resolvePlaceholder('owner_name')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('platform_nickname')}>
-              <EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder={resolvePlaceholder('platform_nickname')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('phone')}>
-              <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('email')}>
-              <EditInput value={form.email} onChange={setF('email')} type="email" placeholder={resolvePlaceholder('email')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('business_number')}>
-              <EditInput value={form.business_number} onChange={setF('business_number')} placeholder={resolvePlaceholder('business_number')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('address')}>
-              <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
-            </FieldRow>
-          </div>
-
-          {/* 현장 정보 */}
-          <SectionTitle color="green">
-            {PANEL_SECTIONS.find((s) => s.id === 'site')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('site')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('elevator')}>
-              <EditSelect value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('parking')}>
-              <EditSelect value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('building_access')}>
-              <EditSelect value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('access_method')}>
-              <EditInput value={form.access_method} onChange={setF('access_method')} placeholder={resolvePlaceholder('access_method')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('door_password')}>
-              <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
-            </FieldRow>
-          </div>
-
-          {/* 일정 */}
-          <SectionTitle color="violet">
-            {PANEL_SECTIONS.find((s) => s.id === 'schedule')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('schedule')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('construction_date')}>
-              <EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('construction_time')}>
-              <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
-            </FieldRow>
-          </div>
-
-          {/* 요청사항 */}
-          <SectionTitle color="amber">
-            {PANEL_SECTIONS.find((s) => s.id === 'request')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('request')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('care_scope')}>
-              <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder={resolvePlaceholder('care_scope')} rows={2} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('request_notes')}>
-              <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder={resolvePlaceholder('request_notes')} rows={2} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('admin_request_notes')}>
-              <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
-            </FieldRow>
-          </div>
-
-          {/* 결제 정보 */}
-          <SectionTitle color="teal">
-            {PANEL_SECTIONS.find((s) => s.id === 'payment')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('payment')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('payment_method')}>
-              <EditSelect value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('account_number')}>
-              <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('supply_amount')}>
-              <EditInput value={form.supply_amount} onChange={setF('supply_amount')} type="number" placeholder={resolvePlaceholder('supply_amount')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('vat')}>
-              <EditInput value={form.vat} onChange={setF('vat')} type="number" placeholder={resolvePlaceholder('vat')} />
-            </FieldRow>
-            <FieldRow label={resolveLabel('supply_total')}>
-              <span className="text-sm text-text-primary font-medium">
-                {form.supply_amount || form.vat
-                  ? supplyTotal.toLocaleString('ko-KR') + '원'
-                  : '-'}
-              </span>
-            </FieldRow>
-            <FieldRow label={resolveLabel('balance')}>
-              <EditInput value={form.balance} onChange={setF('balance')} type="number" placeholder={resolvePlaceholder('balance')} />
-            </FieldRow>
-          </div>
-
-          {/* 기타 */}
-          <SectionTitle color="gray">
-            {PANEL_SECTIONS.find((s) => s.id === 'misc')?.title}
-          </SectionTitle>
-          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('misc')} px-3 shadow-flat`}>
-            <FieldRow label={resolveLabel('disposition')}>
-              <EditSelect value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
-            </FieldRow>
-            <FieldRow label={resolveLabel('admin_notes')}>
-              <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
-            </FieldRow>
-          </div>
+          {/* 섹션 (panelConfig.order.sections 순서 적용) */}
+          {orderedSectionIds.map(sectionId => {
+            const sec = PANEL_SECTIONS.find(s => s.id === sectionId)
+            if (!sec) return null
+            return (
+              <div key={sectionId}>
+                <SectionTitle color={sec.color}>{sec.title}</SectionTitle>
+                <div className={`bg-surface rounded-2xl border-2 ${sectionBorder(sectionId)} px-3 shadow-flat`}>
+                  {getSectionContent(sectionId)}
+                </div>
+              </div>
+            )
+          })}
 
           {/* 구글 드라이브 */}
           <SectionTitle>작업 폴더 (Google Drive)</SectionTitle>
