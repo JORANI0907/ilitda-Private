@@ -1,0 +1,22 @@
+{
+  "name": "일잇다",
+  "short_name": "일잇다",
+  "description": "청소 사업자와 작업자를 연결하는 모바일 매칭 플랫폼",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2563EB",
+  "theme_color": "#2563EB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/brand/logo-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/logo-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
