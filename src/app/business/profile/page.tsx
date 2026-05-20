@@ -247,11 +247,11 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left"
-            onClick={() => router.push('/admin/settings/business')}
+            onClick={() => router.push('/admin/settings/integrations')}
           >
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
-              <span className="text-sm text-text-primary">발신번호 관리</span>
+              <span className="text-sm text-text-primary">발신번호 · 드라이브 연동</span>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
