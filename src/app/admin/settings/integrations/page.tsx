@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, BarChart2, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, BarChart2, CheckCircle2, XCircle, Loader2, FolderOpen } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -288,6 +288,17 @@ export default function IntegrationsPage() {
               {biz?.gmail_for_drive ? '재연동' : '연동'}
             </Button>
           </div>
+          {biz?.drive_root_folder_id && (
+            <a
+              href={`https://drive.google.com/drive/folders/${biz.drive_root_folder_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 h-9 rounded-lg border border-border text-sm font-medium text-brand-600 hover:bg-surface-sunken transition-colors"
+            >
+              <FolderOpen size={15} />
+              내 업체 폴더 열기
+            </a>
+          )}
           {biz?.gmail_for_drive && (
             <Button variant="ghost" size="sm" onClick={handleRemoveDrive} isLoading={driveLoading}>
               연동 해제
