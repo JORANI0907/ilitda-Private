@@ -14,7 +14,6 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ScheduleStatusBadge } from '@/components/ui/Badge'
 
 // ─── 상수 ────────────────────────────────────────────────────
-const SERVICE_TYPES = ['1회성케어', '정기딥케어', '정기엔드케어']
 const BILLING_CYCLES = ['월간', '격주', '주간', '연간']
 const PAYMENT_METHODS = ['현금', '카드', '계좌이체', '현금(부가세 X)']
 const ELEVATOR_OPTIONS = ['있음', '없음', '계단 전용']
@@ -31,12 +30,6 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   active:     { label: '활성',     className: 'bg-emerald-100 text-emerald-700' },
   paused:     { label: '일시중지', className: 'bg-amber-100 text-amber-700' },
   terminated: { label: '해지',     className: 'bg-state-danger-bg text-state-danger' },
-}
-
-const SERVICE_BADGE: Record<string, string> = {
-  '1회성케어':    'bg-surface-sunken text-text-secondary',
-  '정기딥케어':   'bg-brand-100 text-brand-700',
-  '정기엔드케어': 'bg-purple-100 text-purple-700',
 }
 
 // ─── 타입 ────────────────────────────────────────────────────
@@ -95,7 +88,7 @@ interface EditForm {
   name: string
   phone: string
   address: string
-  service_type: string
+  type: string
   status: string
   owner_name: string
   email: string
@@ -126,7 +119,7 @@ interface EditForm {
 }
 
 const EMPTY_EDIT: EditForm = {
-  name: '', phone: '', address: '', service_type: '', status: 'active',
+  name: '', phone: '', address: '', type: '', status: 'active',
   owner_name: '', email: '', business_number: '', account_number: '',
   elevator: '', parking: '', building_access: '', access_method: '',
   care_scope: '', door_password: '', business_hours_start: '', business_hours_end: '',
@@ -216,7 +209,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
       name: client.name,
       phone: client.phone ?? '',
       address: client.address ?? '',
-      service_type: client.service_type ?? '',
+      type: client.type ?? '',
       status: client.status ?? 'active',
       owner_name: client.owner_name ?? '',
       email: client.email ?? '',
@@ -321,7 +314,6 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
     (a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime()
   )
   const statusInfo = client.status ? STATUS_BADGE[client.status] : null
-  const serviceCls = client.service_type ? SERVICE_BADGE[client.service_type] : null
   const totalAmount = (client.supply_amount ?? 0) + (client.vat ?? 0)
 
   return (
@@ -347,9 +339,9 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
 
       {/* 배지 */}
       <div className="flex items-center gap-2 flex-wrap">
-        {serviceCls && (
-          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${serviceCls}`}>
-            {client.service_type}
+        {client.type && (
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-sunken text-text-secondary">
+            {client.type}
           </span>
         )}
         {statusInfo && (
@@ -389,7 +381,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           <BadgeCheck size={16} className="text-text-tertiary" />
           <p className="text-sm font-semibold text-text-primary">계약 정보</p>
         </div>
-        <Row label="서비스 유형" value={client.service_type} />
+        <Row label="고객 유형" value={client.type} />
         <Row label="계약 상태" value={statusInfo?.label} />
         <Row label="청구 주기" value={client.billing_cycle} />
         <Row label="단가" value={client.unit_price ? `${client.unit_price.toLocaleString('ko-KR')}원/회` : null} />
@@ -530,8 +522,8 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
           <Input label="고객명 *" value={editForm.name} onChange={setEInput('name')} />
           <Input label="전화번호" type="tel" value={editForm.phone} onChange={setEInput('phone')} />
           <Input label="주소" value={editForm.address} onChange={setEInput('address')} />
-          <SelectField label="서비스 유형" value={editForm.service_type} onChange={setE('service_type')}
-            options={SERVICE_TYPES} placeholder="선택 안 함" />
+          <Input label="고객 유형" value={editForm.type}
+            placeholder="예: VIP, 정기, 신규" onChange={setEInput('type')} />
           <SelectField label="계약 상태" value={editForm.status} onChange={setE('status')}
             options={STATUS_OPTIONS.map((o) => o.label)}
             optionValues={STATUS_OPTIONS.map((o) => o.value)}
