@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
 import { ApplicationPanel } from '@/components/admin/ApplicationPanel'
 import { useRouter } from 'next/navigation'
-import type { ServiceApplication, ApplicationStatus } from '@/types'
+import type { ServiceApplication, ApplicationStatus, PanelConfig } from '@/types'
 
 // ─── 상수 ────────────────────────────────────────────────────
 const STATUS_BADGE: Record<string, { label: string; bg: string }> = {
@@ -153,6 +153,22 @@ export default function ApplicationsPage() {
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [panelConfig, setPanelConfig] = useState<PanelConfig | undefined>(undefined)
+
+  useEffect(() => {
+    const loadPanelConfig = async () => {
+      try {
+        const res = await fetch('/api/admin/settings/panel')
+        const json = await res.json()
+        if (json.success && json.data) {
+          setPanelConfig(json.data as PanelConfig)
+        }
+      } catch {
+        // panelConfig 로드 실패 시 기본값으로 동작
+      }
+    }
+    loadPanelConfig()
+  }, [])
 
   const fetchApps = useCallback(async () => {
     setIsLoading(true)
@@ -267,6 +283,7 @@ export default function ApplicationsPage() {
           onClose={() => setSelectedId(null)}
           onUpdate={handleUpdate}
           onDelete={handleDelete}
+          panelConfig={panelConfig}
         />
       )}
     </div>
