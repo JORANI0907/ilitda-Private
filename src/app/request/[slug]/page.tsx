@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { use } from 'react'
 import { CheckCircle, User, Building2, PenLine, Shield } from 'lucide-react'
+import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
+import type { FormConfig } from '@/types'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -35,8 +37,6 @@ const INITIAL_FORM: RequestForm = {
   elevator: '', parking: '', building_access: '',
   access_method: '', care_scope: '',
 }
-
-const PAYMENT_OPTIONS = ['현금', '카드', '계좌이체', '현금(부가세 X)']
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2).toString().padStart(2, '0')
@@ -173,6 +173,7 @@ export default function RequestPage({ params }: PageProps) {
 
   const [pageError, setPageError] = useState<string | null>(null)
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const [formConfig, setFormConfig] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
 
   const [form, setForm] = useState<RequestForm>(INITIAL_FORM)
   const [consentPrivacy, setConsentPrivacy] = useState(false)
@@ -189,7 +190,11 @@ export default function RequestPage({ params }: PageProps) {
     fetch(`/api/request/${slug}`)
       .then((r) => r.json())
       .then((json) => {
-        if (!json.success) setPageError(json.error ?? '존재하지 않는 신청 페이지입니다.')
+        if (!json.success) {
+          setPageError(json.error ?? '존재하지 않는 신청 페이지입니다.')
+        } else if (json.data?.formConfig) {
+          setFormConfig(json.data.formConfig as FormConfig)
+        }
       })
       .catch(() => setPageError('페이지를 불러오는 중 오류가 발생했습니다.'))
       .finally(() => setIsPageLoading(false))
@@ -322,8 +327,8 @@ export default function RequestPage({ params }: PageProps) {
             <p style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px', whiteSpace: 'pre-line' }}>
               {isPageLoading ? '...' : (pageError ? '서비스 신청' : '일잇다\n서비스를 신청하세요')}
             </p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
-              아래 정보를 입력하시면<br />담당자가 빠르게 연락드리겠습니다.
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+              {formConfig.hero_subtitle}
             </p>
           </div>
         </div>
@@ -388,42 +393,50 @@ export default function RequestPage({ params }: PageProps) {
                   maxLength={13}
                 />
               </Field>
-              <Field label="담당자명">
-                <input
-                  className={inputCls()}
-                  placeholder="예: 홍길동"
-                  value={form.owner_name}
-                  onChange={(e) => set('owner_name')(e.target.value)}
-                />
-              </Field>
-              <Field label="이메일">
-                <input
-                  type="email"
-                  className={inputCls()}
-                  placeholder="example@email.com"
-                  value={form.email}
-                  onChange={(e) => set('email')(e.target.value)}
-                />
-              </Field>
-              <Field label="사업자번호">
-                <input
-                  className={inputCls()}
-                  placeholder="000-00-00000"
-                  value={form.business_number}
-                  onChange={(e) => set('business_number')(e.target.value)}
-                />
-              </Field>
-              <Field label="계좌번호">
-                <input
-                  className={inputCls()}
-                  placeholder="예: 국민은행 123-456-789012"
-                  value={form.account_number}
-                  onChange={(e) => set('account_number')(e.target.value)}
-                />
-              </Field>
+              {formConfig.show_fields.owner_name && (
+                <Field label="담당자명">
+                  <input
+                    className={inputCls()}
+                    placeholder="예: 홍길동"
+                    value={form.owner_name}
+                    onChange={(e) => set('owner_name')(e.target.value)}
+                  />
+                </Field>
+              )}
+              {formConfig.show_fields.email && (
+                <Field label="이메일">
+                  <input
+                    type="email"
+                    className={inputCls()}
+                    placeholder="example@email.com"
+                    value={form.email}
+                    onChange={(e) => set('email')(e.target.value)}
+                  />
+                </Field>
+              )}
+              {formConfig.show_fields.business_number && (
+                <Field label="사업자번호">
+                  <input
+                    className={inputCls()}
+                    placeholder="000-00-00000"
+                    value={form.business_number}
+                    onChange={(e) => set('business_number')(e.target.value)}
+                  />
+                </Field>
+              )}
+              {formConfig.show_fields.account_number && (
+                <Field label="계좌번호">
+                  <input
+                    className={inputCls()}
+                    placeholder="예: 국민은행 123-456-789012"
+                    value={form.account_number}
+                    onChange={(e) => set('account_number')(e.target.value)}
+                  />
+                </Field>
+              )}
               <OptionGroup
                 label="결제 방법"
-                options={PAYMENT_OPTIONS}
+                options={formConfig.payment_options}
                 value={form.payment_method}
                 onChange={set('payment_method')}
               />
@@ -469,32 +482,40 @@ export default function RequestPage({ params }: PageProps) {
                   ))}
                 </select>
               </Field>
-              <OptionGroup
-                label="엘리베이터"
-                options={['있음', '없음', '계단 전용']}
-                value={form.elevator}
-                onChange={set('elevator')}
-              />
-              <OptionGroup
-                label="주차"
-                options={['가능', '불가', '유료 주차']}
-                value={form.parking}
-                onChange={set('parking')}
-              />
-              <OptionGroup
-                label="건물출입신청여부"
-                options={['자유출입', '사전출입신청']}
-                value={form.building_access}
-                onChange={set('building_access')}
-              />
-              <Field label="출입 방법 상세">
-                <input
-                  className={inputCls()}
-                  placeholder="예: 비밀번호 1234, 1층 경비실 문의"
-                  value={form.access_method}
-                  onChange={(e) => set('access_method')(e.target.value)}
+              {formConfig.show_fields.elevator && (
+                <OptionGroup
+                  label="엘리베이터"
+                  options={['있음', '없음', '계단 전용']}
+                  value={form.elevator}
+                  onChange={set('elevator')}
                 />
-              </Field>
+              )}
+              {formConfig.show_fields.parking && (
+                <OptionGroup
+                  label="주차"
+                  options={['가능', '불가', '유료 주차']}
+                  value={form.parking}
+                  onChange={set('parking')}
+                />
+              )}
+              {formConfig.show_fields.building_access && (
+                <OptionGroup
+                  label="건물출입신청여부"
+                  options={['자유출입', '사전출입신청']}
+                  value={form.building_access}
+                  onChange={set('building_access')}
+                />
+              )}
+              {formConfig.show_fields.access_method && (
+                <Field label="출입 방법 상세">
+                  <input
+                    className={inputCls()}
+                    placeholder="예: 비밀번호 1234, 1층 경비실 문의"
+                    value={form.access_method}
+                    onChange={(e) => set('access_method')(e.target.value)}
+                  />
+                </Field>
+              )}
               <Field label="청소 범위" required error={errors.care_scope}>
                 <textarea
                   rows={3}
