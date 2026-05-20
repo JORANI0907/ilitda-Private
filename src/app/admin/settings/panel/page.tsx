@@ -6,7 +6,6 @@ import { ArrowLeft, X, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { Input } from '@/components/ui/Input'
 import {
   DEFAULT_PANEL_FIELDS,
   PANEL_SECTIONS,
