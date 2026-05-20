@@ -1,9 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Star, Phone, ExternalLink, Megaphone, Save, Trash2, ChevronDown } from 'lucide-react'
+import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import type { ServiceApplication, ApplicationStatus, NotifyLog } from '@/types'
+import {
+  DEFAULT_PANEL_FIELDS,
+  PANEL_SECTIONS,
+  SECTION_BORDER_COLOR,
+  SECTION_TITLE_COLOR,
+} from '@/lib/settings-defaults'
+import type { ServiceApplication, ApplicationStatus, NotifyLog, PanelConfig } from '@/types'
 
 // ─── 상수 ────────────────────────────────────────────────────
 const ALL_STATUSES: ApplicationStatus[] = [
@@ -13,23 +19,23 @@ const ALL_STATUSES: ApplicationStatus[] = [
 ]
 
 const STATUS_BADGE: Record<ApplicationStatus, string> = {
-  '신규':          'bg-brand-100 text-brand-700',
-  '견적발송':      'bg-indigo-100 text-indigo-700',
-  '예약확정':      'bg-green-100 text-green-800',
-  '예약1일전':     'bg-sky-100 text-sky-700',
-  '예약당일':      'bg-blue-100 text-blue-800',
-  '작업완료':      'bg-orange-100 text-orange-700',
-  '결제':          'bg-amber-100 text-amber-700',
-  '결제완료':      'bg-gray-100 text-gray-600',
+  '신규':           'bg-brand-100 text-brand-700',
+  '견적발송':       'bg-indigo-100 text-indigo-700',
+  '예약확정':       'bg-green-100 text-green-800',
+  '예약1일전':      'bg-sky-100 text-sky-700',
+  '예약당일':       'bg-blue-100 text-blue-800',
+  '작업완료':       'bg-orange-100 text-orange-700',
+  '결제':           'bg-amber-100 text-amber-700',
+  '결제완료':       'bg-gray-100 text-gray-600',
   '결제완료(잔금)': 'bg-emerald-100 text-emerald-700',
   '계산서발행완료': 'bg-gray-100 text-gray-500',
-  '비과세':        'bg-gray-100 text-gray-500',
-  '카드결제 완료': 'bg-gray-100 text-gray-500',
+  '비과세':         'bg-gray-100 text-gray-500',
+  '카드결제 완료':  'bg-gray-100 text-gray-500',
   '예약금환급완료': 'bg-gray-100 text-gray-500',
-  '예약금 입금':   'bg-teal-100 text-teal-700',
-  '예약취소':      'bg-red-100 text-red-600',
-  'A/S방문':       'bg-yellow-100 text-yellow-700',
-  '방문견적':      'bg-purple-100 text-purple-700',
+  '예약금 입금':    'bg-teal-100 text-teal-700',
+  '예약취소':       'bg-red-100 text-red-600',
+  'A/S방문':        'bg-yellow-100 text-yellow-700',
+  '방문견적':       'bg-purple-100 text-purple-700',
 }
 
 const NOTIFY_TYPES = [
@@ -38,18 +44,6 @@ const NOTIFY_TYPES = [
   '예약금 입금완료 알림', '예약금환급완료알림',
   '예약취소알림', 'A/S방문알림', '방문견적알림',
 ]
-
-const DISPOSITION_OPTIONS = ['호의', '보통', '주의']
-const ELEVATOR_OPTIONS = ['있음', '없음', '계단 전용']
-const PARKING_OPTIONS = ['가능', '불가', '유료 주차']
-const ACCESS_OPTIONS = ['자유출입', '사전출입신청']
-const PAYMENT_OPTIONS = ['현금', '카드', '계좌이체', '현금(부가세 X)']
-
-// ─── 유틸 ────────────────────────────────────────────────────
-function fmtMoney(v: number | null) {
-  if (v == null) return '-'
-  return v.toLocaleString('ko-KR') + '원'
-}
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -104,22 +98,20 @@ function EditTextarea({
   )
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+interface SectionTitleProps {
+  children: React.ReactNode
+  color?: string
+}
+function SectionTitle({ children, color = 'gray' }: SectionTitleProps) {
+  const colorClass = SECTION_TITLE_COLOR[color] ?? 'text-text-tertiary'
   return (
-    <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider pt-4 pb-1">
+    <p className={`text-xs font-bold uppercase tracking-wider pt-4 pb-1 ${colorClass}`}>
       {children}
     </p>
   )
 }
 
-// ─── 메인 패널 ────────────────────────────────────────────────
-interface Props {
-  app: ServiceApplication
-  onClose: () => void
-  onUpdate: (updated: ServiceApplication) => void
-  onDelete: (id: string) => void
-}
-
+// ─── FormState ───────────────────────────────────────────────
 type FormState = {
   owner_name: string
   platform_nickname: string
@@ -133,8 +125,6 @@ type FormState = {
   access_method: string
   parking: string
   door_password: string
-  business_hours_start: string
-  business_hours_end: string
   payment_method: string
   account_number: string
   deposit: string
@@ -149,44 +139,50 @@ type FormState = {
   admin_notes: string
   construction_date: string
   construction_time: string
-  drive_folder_url: string
 }
 
 function toForm(app: ServiceApplication): FormState {
   return {
-    owner_name:         app.owner_name ?? '',
-    platform_nickname:  app.platform_nickname ?? '',
-    phone:              app.phone ?? '',
-    email:              app.email ?? '',
-    business_name:      app.business_name ?? '',
-    business_number:    app.business_number ?? '',
-    address:            app.address ?? '',
-    elevator:           app.elevator ?? '',
-    building_access:    app.building_access ?? '',
-    access_method:      app.access_method ?? '',
-    parking:            app.parking ?? '',
-    door_password:      app.door_password ?? '',
-    business_hours_start: app.business_hours_start ?? '',
-    business_hours_end:   app.business_hours_end ?? '',
-    payment_method:     app.payment_method ?? '',
-    account_number:     app.account_number ?? '',
-    deposit:            app.deposit?.toString() ?? '',
-    supply_amount:      app.supply_amount?.toString() ?? '',
-    vat:                app.vat?.toString() ?? '',
-    balance:            app.balance?.toString() ?? '',
+    owner_name:           app.owner_name ?? '',
+    platform_nickname:    app.platform_nickname ?? '',
+    phone:                app.phone ?? '',
+    email:                app.email ?? '',
+    business_name:        app.business_name ?? '',
+    business_number:      app.business_number ?? '',
+    address:              app.address ?? '',
+    elevator:             app.elevator ?? '',
+    building_access:      app.building_access ?? '',
+    access_method:        app.access_method ?? '',
+    parking:              app.parking ?? '',
+    door_password:        app.door_password ?? '',
+    payment_method:       app.payment_method ?? '',
+    account_number:       app.account_number ?? '',
+    deposit:              app.deposit?.toString() ?? '',
+    supply_amount:        app.supply_amount?.toString() ?? '',
+    vat:                  app.vat?.toString() ?? '',
+    balance:              app.balance?.toString() ?? '',
     unit_price_per_visit: app.unit_price_per_visit?.toString() ?? '',
-    request_notes:      app.request_notes ?? '',
-    admin_request_notes: app.admin_request_notes ?? '',
-    care_scope:         app.care_scope ?? '',
-    disposition:        app.disposition ?? '',
-    admin_notes:        app.admin_notes ?? '',
-    construction_date:  app.construction_date ?? '',
-    construction_time:  app.construction_time ?? '',
-    drive_folder_url:   app.drive_folder_url ?? '',
+    request_notes:        app.request_notes ?? '',
+    admin_request_notes:  app.admin_request_notes ?? '',
+    care_scope:           app.care_scope ?? '',
+    disposition:          app.disposition ?? '',
+    admin_notes:          app.admin_notes ?? '',
+    construction_date:    app.construction_date ?? '',
+    construction_time:    app.construction_time ?? '',
   }
 }
 
-export function ApplicationPanel({ app, onClose, onUpdate, onDelete }: Props) {
+// ─── Props ───────────────────────────────────────────────────
+interface Props {
+  app: ServiceApplication
+  onClose: () => void
+  onUpdate: (updated: ServiceApplication) => void
+  onDelete: (id: string) => void
+  panelConfig?: PanelConfig
+}
+
+// ─── 메인 패널 ────────────────────────────────────────────────
+export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig }: Props) {
   const [form, setForm] = useState<FormState>(() => toForm(app))
   const [status, setStatus] = useState<ApplicationStatus>(app.status)
   const [isFavorite, setIsFavorite] = useState(app.is_favorite)
@@ -200,11 +196,33 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete }: Props) {
   const setF = (key: keyof FormState) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }))
 
+  // ─── panelConfig 헬퍼 ─────────────────────────────────────
+  const resolveLabel = (key: string): string => {
+    const override = panelConfig?.fields?.[key]?.label
+    if (override) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.label ?? key
+  }
+
+  const resolvePlaceholder = (key: string): string => {
+    const override = panelConfig?.fields?.[key]?.placeholder
+    if (override !== undefined) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.placeholder ?? ''
+  }
+
+  const resolveOptions = (key: string): string[] => {
+    const override = panelConfig?.fields?.[key]?.options
+    if (override?.length) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.options ?? []
+  }
+
+  // ─── 저장 ─────────────────────────────────────────────────
   async function handleSave() {
     setError(null)
     setIsSaving(true)
     try {
-      const numericKeys: (keyof FormState)[] = ['deposit', 'supply_amount', 'vat', 'balance', 'unit_price_per_visit']
+      const numericKeys: (keyof FormState)[] = [
+        'deposit', 'supply_amount', 'vat', 'balance', 'unit_price_per_visit',
+      ]
       const payload: Record<string, unknown> = { status, is_favorite: isFavorite }
       for (const [k, v] of Object.entries(form) as [keyof FormState, string][]) {
         payload[k] = numericKeys.includes(k) ? (v.trim() ? Number(v) : null) : (v.trim() || null)
@@ -243,6 +261,15 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete }: Props) {
   }
 
   const notifyLogs: NotifyLog[] = (app.notification_log as NotifyLog[]) ?? []
+
+  // ─── 결제 공급대가 자동 계산 ──────────────────────────────
+  const supplyTotal = (Number(form.supply_amount) || 0) + (Number(form.vat) || 0)
+
+  // ─── 섹션별 border color ──────────────────────────────────
+  const sectionBorder = (sectionId: string): string => {
+    const sec = PANEL_SECTIONS.find((s) => s.id === sectionId)
+    return SECTION_BORDER_COLOR[sec?.color ?? 'gray'] ?? 'border-gray-200'
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -287,90 +314,123 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete }: Props) {
           </div>
 
           {/* 기본 정보 */}
-          <SectionTitle>기본 정보</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="업체명"><EditInput value={form.business_name} onChange={setF('business_name')} placeholder="업체명" /></FieldRow>
-            <FieldRow label="담당자명"><EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder="홍길동" /></FieldRow>
-            <FieldRow label="닉네임"><EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder="플랫폼 닉네임" /></FieldRow>
-            <FieldRow label="연락처"><EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder="010-0000-0000" /></FieldRow>
-            <FieldRow label="이메일"><EditInput value={form.email} onChange={setF('email')} type="email" placeholder="example@email.com" /></FieldRow>
-            <FieldRow label="사업자번호"><EditInput value={form.business_number} onChange={setF('business_number')} placeholder="000-00-00000" /></FieldRow>
-            <FieldRow label="주소"><EditInput value={form.address} onChange={setF('address')} placeholder="주소" /></FieldRow>
+          <SectionTitle color="blue">
+            {PANEL_SECTIONS.find((s) => s.id === 'basic')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('basic')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('business_name')}>
+              <EditInput value={form.business_name} onChange={setF('business_name')} placeholder={resolvePlaceholder('business_name')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('owner_name')}>
+              <EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder={resolvePlaceholder('owner_name')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('platform_nickname')}>
+              <EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder={resolvePlaceholder('platform_nickname')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('phone')}>
+              <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('email')}>
+              <EditInput value={form.email} onChange={setF('email')} type="email" placeholder={resolvePlaceholder('email')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('business_number')}>
+              <EditInput value={form.business_number} onChange={setF('business_number')} placeholder={resolvePlaceholder('business_number')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('address')}>
+              <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+            </FieldRow>
           </div>
 
           {/* 현장 정보 */}
-          <SectionTitle>현장 정보</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="엘리베이터"><EditSelect value={form.elevator} onChange={setF('elevator')} options={ELEVATOR_OPTIONS} placeholder="선택" /></FieldRow>
-            <FieldRow label="주차"><EditSelect value={form.parking} onChange={setF('parking')} options={PARKING_OPTIONS} placeholder="선택" /></FieldRow>
-            <FieldRow label="건물출입"><EditSelect value={form.building_access} onChange={setF('building_access')} options={ACCESS_OPTIONS} placeholder="선택" /></FieldRow>
-            <FieldRow label="출입방법"><EditInput value={form.access_method} onChange={setF('access_method')} placeholder="예: 비밀번호 입력" /></FieldRow>
-            <FieldRow label="도어락"><EditInput value={form.door_password} onChange={setF('door_password')} placeholder="예: 1234#" /></FieldRow>
-            <FieldRow label="영업시간">
-              <div className="flex items-center gap-2">
-                <input type="time" value={form.business_hours_start} onChange={(e) => setF('business_hours_start')(e.target.value)}
-                  className="flex-1 h-9 rounded-md bg-surface border border-border text-sm text-text-primary px-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
-                <span className="text-text-tertiary text-xs">~</span>
-                <input type="time" value={form.business_hours_end} onChange={(e) => setF('business_hours_end')(e.target.value)}
-                  className="flex-1 h-9 rounded-md bg-surface border border-border text-sm text-text-primary px-2 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500" />
-              </div>
+          <SectionTitle color="green">
+            {PANEL_SECTIONS.find((s) => s.id === 'site')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('site')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('elevator')}>
+              <EditSelect value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
+            </FieldRow>
+            <FieldRow label={resolveLabel('parking')}>
+              <EditSelect value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
+            </FieldRow>
+            <FieldRow label={resolveLabel('building_access')}>
+              <EditSelect value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
+            </FieldRow>
+            <FieldRow label={resolveLabel('access_method')}>
+              <EditInput value={form.access_method} onChange={setF('access_method')} placeholder={resolvePlaceholder('access_method')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('door_password')}>
+              <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
             </FieldRow>
           </div>
 
           {/* 일정 */}
-          <SectionTitle>일정</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="시공일"><EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" /></FieldRow>
-            <FieldRow label="시공시간"><EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" /></FieldRow>
-          </div>
-
-          {/* 청소 범위 / 요청사항 */}
-          <SectionTitle>요청사항</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="청소 범위">
-              <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" rows={2} />
+          <SectionTitle color="violet">
+            {PANEL_SECTIONS.find((s) => s.id === 'schedule')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('schedule')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('construction_date')}>
+              <EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" />
             </FieldRow>
-            <FieldRow label="고객 요청">
-              <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder="고객 요청사항" rows={2} />
-            </FieldRow>
-            <FieldRow label="관리자 추가">
-              <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder="관리자 추가 요청사항" rows={2} />
+            <FieldRow label={resolveLabel('construction_time')}>
+              <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
             </FieldRow>
           </div>
 
-          {/* 결제 */}
-          <SectionTitle>결제 정보</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="결제 방법"><EditSelect value={form.payment_method} onChange={setF('payment_method')} options={PAYMENT_OPTIONS} placeholder="선택" /></FieldRow>
-            <FieldRow label="계좌번호"><EditInput value={form.account_number} onChange={setF('account_number')} placeholder="은행 + 계좌번호" /></FieldRow>
-            <FieldRow label="단가"><EditInput value={form.unit_price_per_visit} onChange={setF('unit_price_per_visit')} type="number" placeholder="0" /></FieldRow>
-            <FieldRow label="예약금"><EditInput value={form.deposit} onChange={setF('deposit')} type="number" placeholder="0" /></FieldRow>
-            <FieldRow label="공급가"><EditInput value={form.supply_amount} onChange={setF('supply_amount')} type="number" placeholder="0" /></FieldRow>
-            <FieldRow label="부가세"><EditInput value={form.vat} onChange={setF('vat')} type="number" placeholder="0" /></FieldRow>
-            <FieldRow label="잔금"><EditInput value={form.balance} onChange={setF('balance')} type="number" placeholder="0" /></FieldRow>
+          {/* 요청사항 */}
+          <SectionTitle color="amber">
+            {PANEL_SECTIONS.find((s) => s.id === 'request')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('request')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('care_scope')}>
+              <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder={resolvePlaceholder('care_scope')} rows={2} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('request_notes')}>
+              <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder={resolvePlaceholder('request_notes')} rows={2} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('admin_request_notes')}>
+              <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
+            </FieldRow>
           </div>
 
-          {/* 드라이브 */}
-          <SectionTitle>구글 드라이브</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="폴더 URL">
-              <div className="flex items-center gap-2">
-                <div className="flex-1"><EditInput value={form.drive_folder_url} onChange={setF('drive_folder_url')} placeholder="https://drive.google.com/..." /></div>
-                {form.drive_folder_url && (
-                  <a href={form.drive_folder_url} target="_blank" rel="noopener noreferrer" className="shrink-0 p-1 text-brand-600">
-                    <ExternalLink size={16} />
-                  </a>
-                )}
-              </div>
+          {/* 결제 정보 */}
+          <SectionTitle color="teal">
+            {PANEL_SECTIONS.find((s) => s.id === 'payment')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('payment')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('payment_method')}>
+              <EditSelect value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
+            </FieldRow>
+            <FieldRow label={resolveLabel('account_number')}>
+              <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('supply_amount')}>
+              <EditInput value={form.supply_amount} onChange={setF('supply_amount')} type="number" placeholder={resolvePlaceholder('supply_amount')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('vat')}>
+              <EditInput value={form.vat} onChange={setF('vat')} type="number" placeholder={resolvePlaceholder('vat')} />
+            </FieldRow>
+            <FieldRow label={resolveLabel('supply_total')}>
+              <span className="text-sm text-text-primary font-medium">
+                {form.supply_amount || form.vat
+                  ? supplyTotal.toLocaleString('ko-KR') + '원'
+                  : '-'}
+              </span>
+            </FieldRow>
+            <FieldRow label={resolveLabel('balance')}>
+              <EditInput value={form.balance} onChange={setF('balance')} type="number" placeholder={resolvePlaceholder('balance')} />
             </FieldRow>
           </div>
 
           {/* 기타 */}
-          <SectionTitle>기타</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle px-3 shadow-flat">
-            <FieldRow label="고객 성향"><EditSelect value={form.disposition} onChange={setF('disposition')} options={DISPOSITION_OPTIONS} placeholder="선택" /></FieldRow>
-            <FieldRow label="관리자 메모">
-              <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder="내부 메모" rows={3} />
+          <SectionTitle color="gray">
+            {PANEL_SECTIONS.find((s) => s.id === 'misc')?.title}
+          </SectionTitle>
+          <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('misc')} px-3 shadow-flat`}>
+            <FieldRow label={resolveLabel('disposition')}>
+              <EditSelect value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
+            </FieldRow>
+            <FieldRow label={resolveLabel('admin_notes')}>
+              <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
             </FieldRow>
           </div>
 
