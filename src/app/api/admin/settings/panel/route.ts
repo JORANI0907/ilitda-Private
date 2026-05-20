@@ -24,10 +24,9 @@ export async function GET(): Promise<NextResponse<ApiResponse<PanelConfig>>> {
     return NextResponse.json({ success: true, data: EMPTY })
   }
 
-  return NextResponse.json({
-    success: true,
-    data: (biz?.panel_config as PanelConfig) ?? EMPTY,
-  })
+  const raw = biz?.panel_config as PanelConfig | undefined
+  const data: PanelConfig = raw?.fields ? raw : EMPTY
+  return NextResponse.json({ success: true, data })
 }
 
 export async function PATCH(req: NextRequest): Promise<NextResponse<ApiResponse>> {

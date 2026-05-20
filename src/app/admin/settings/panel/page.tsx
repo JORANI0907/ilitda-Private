@@ -165,7 +165,8 @@ export default function PanelSettingsPage() {
         const res = await fetch('/api/admin/settings/panel')
         const json = await res.json()
         if (json.success && json.data) {
-          setConfig(json.data as PanelConfig)
+          const d = json.data as PanelConfig
+          setConfig(d.fields ? d : { fields: {} })
         }
       } finally {
         setIsLoading(false)
@@ -256,7 +257,7 @@ export default function PanelSettingsPage() {
                 <FieldEditorRow
                   key={field.key}
                   field={field}
-                  override={config.fields[field.key] ?? {}}
+                  override={config.fields?.[field.key] ?? {}}
                   onChange={handleFieldChange}
                 />
               ))}
