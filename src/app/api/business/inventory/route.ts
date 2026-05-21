@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '요청 형식이 올바르지 않습니다.' }, { status: 400 })
   }
 
-  const { name, unit, min_qty } = body as Record<string, unknown>
+  const { name, unit, min_qty, category } = body as Record<string, unknown>
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ success: false, error: '재고명을 입력해 주세요.' }, { status: 400 })
   }
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       unit: unit && typeof unit === 'string' ? unit.trim() || null : null,
       current_qty: 0,
       min_qty: min_qty && !isNaN(Number(min_qty)) ? Number(min_qty) : null,
+      category: category && typeof category === 'string' && category.trim() ? category.trim() : '기타',
     })
     .select()
     .single()

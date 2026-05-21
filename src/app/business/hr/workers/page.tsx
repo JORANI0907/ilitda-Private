@@ -1,36 +1,47 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Trash2, Check } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Badge } from '@/components/ui/Badge'
 import type { Connection } from '@/types'
 
-type AddMode = 'manual' | 'invite'
+type AddMode = 'invite' | 'manual'
+type FilterTab = 'all' | 'accepted' | 'pending' | 'manual'
 
-function StatusBadge({ connection }: { connection: Connection }) {
+const FILTER_TABS: { key: FilterTab; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'accepted', label: '연결됨' },
+  { key: 'pending', label: '대기중' },
+  { key: 'manual', label: '수동등록' },
+]
+
+const AVATAR_COLORS = [
+  'bg-brand-100 text-brand-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-purple-100 text-purple-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+]
+
+function getAvatarColor(name: string): string {
+  const idx = name.charCodeAt(0) % AVATAR_COLORS.length
+  return AVATAR_COLORS[idx]
+}
+
+function ConnectionBadge({ connection }: { connection: Connection }) {
   if (connection.is_manual) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-sunken text-text-secondary">
-        수동
-      </span>
-    )
+    return <Badge variant="default">수동등록</Badge>
   }
   if (connection.status === 'pending') {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-        초대 대기
-      </span>
-    )
+    return <Badge variant="warning">초대중</Badge>
   }
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-      앱 연결됨
-    </span>
-  )
+  return <Badge variant="success">연결됨</Badge>
 }
 
 function formatPhone(value: string): string {
@@ -40,20 +51,39 @@ function formatPhone(value: string): string {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`
 }
 
+interface AddForm {
+  name: string
+  phone: string
+  account_bank: string
+  account_number: string
+  registration_number: string
+  company_name: string
+}
+
+const EMPTY_FORM: AddForm = {
+  name: '',
+  phone: '',
+  account_bank: '',
+  account_number: '',
+  registration_number: '',
+  company_name: '',
+}
+
 export default function WorkersPage() {
+  const router = useRouter()
   const [connections, setConnections] = useState<Connection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<FilterTab>('all')
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [addMode, setAddMode] = useState<AddMode>('manual')
-  const [addName, setAddName] = useState('')
-  const [addPhone, setAddPhone] = useState('')
+  const [form, setForm] = useState<AddForm>(EMPTY_FORM)
   const [isAdding, setIsAdding] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState(false)
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const fetchConnections = useCallback(async () => {
     setIsLoading(true)
@@ -77,9 +107,21 @@ export default function WorkersPage() {
     fetchConnections()
   }, [fetchConnections])
 
+  const filteredConnections = connections.filter((c) => {
+    if (activeTab === 'all') return true
+    if (activeTab === 'manual') return c.is_manual
+    if (activeTab === 'accepted') return !c.is_manual && c.status === 'accepted'
+    if (activeTab === 'pending') return !c.is_manual && c.status === 'pending'
+    return true
+  })
+
   const handleAdd = async () => {
-    if (!addName.trim()) {
+    if (!form.name.trim()) {
       setAddError('이름을 입력해 주세요.')
+      return
+    }
+    if (addMode === 'invite' && !form.phone.trim()) {
+      setAddError('초대할 전화번호를 입력해 주세요.')
       return
     }
     setIsAdding(true)
@@ -89,9 +131,13 @@ export default function WorkersPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          display_name: addName.trim(),
-          phone: addPhone.trim() || null,
-          is_manual: addMode === 'manual',
+          type: addMode,
+          name: form.name.trim(),
+          phone: form.phone.trim() || null,
+          account_bank: form.account_bank.trim() || null,
+          account_number: form.account_number.trim() || null,
+          registration_number: form.registration_number.trim() || null,
+          company_name: form.company_name.trim() || null,
         }),
       })
       const json = await res.json()
@@ -100,30 +146,17 @@ export default function WorkersPage() {
         return
       }
 
-      if (addMode === 'invite' && json.data?.invite_token) {
-        const link = `${window.location.origin}/connect/${json.data.invite_token}`
-        try {
-          await navigator.clipboard.writeText(link)
-        } catch {
-          // clipboard write failed silently
-        }
+      if (addMode === 'invite') {
+        setInviteSent(true)
+      } else {
+        setConnections((prev) => [json.data, ...prev])
+        resetAddModal()
       }
-
-      setConnections((prev) => [json.data, ...prev])
-      resetAddModal()
     } catch {
       setAddError('네트워크 오류가 발생했습니다.')
     } finally {
       setIsAdding(false)
     }
-  }
-
-  const resetAddModal = () => {
-    setShowAddModal(false)
-    setAddName('')
-    setAddPhone('')
-    setAddMode('manual')
-    setAddError(null)
   }
 
   const handleCopyLink = async (connection: Connection) => {
@@ -133,44 +166,59 @@ export default function WorkersPage() {
       setCopiedId(connection.id)
       setTimeout(() => setCopiedId(null), 2000)
     } catch {
-      // fallback: alert
       alert(`초대 링크: ${link}`)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id)
-    try {
-      await fetch(`/api/business/hr/connections/${id}`, { method: 'DELETE' })
-      setConnections((prev) => prev.filter((c) => c.id !== id))
-    } catch {
-      // silent fail — refresh will fix state
-    } finally {
-      setDeletingId(null)
-    }
+  const resetAddModal = () => {
+    setShowAddModal(false)
+    setAddMode('manual')
+    setForm(EMPTY_FORM)
+    setAddError(null)
+    setInviteSent(false)
+  }
+
+  const setField = (key: keyof AddForm, value: string) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
       <div className="flex items-center justify-between">
         <SectionHeader
-          title="직원 관리"
+          title="작업자 관리"
           level="page"
-          description="함께 일하는 직원을 관리합니다"
+          description="함께 일하는 작업자를 관리합니다"
         />
-        <Button
-          size="sm"
-          onClick={() => setShowAddModal(true)}
-          className="shrink-0"
-        >
-          <UserPlus size={15} className="mr-1.5" />
-          직원 추가
+        <Button size="sm" onClick={() => setShowAddModal(true)} className="shrink-0">
+          <UserPlus size={15} className="mr-1" />
+          작업자 추가
         </Button>
       </div>
 
+      {/* 탭 */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {FILTER_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`
+              shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
+              ${activeTab === tab.key
+                ? 'bg-brand-600 text-white'
+                : 'bg-surface-sunken text-text-secondary hover:bg-border'}
+            `}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 목록 */}
       <div className="flex flex-col gap-3">
         {isLoading && Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 bg-surface rounded-2xl animate-pulse" />
+          <div key={i} className="h-20 bg-surface rounded-2xl animate-pulse border border-border-subtle" />
         ))}
 
         {!isLoading && error && (
@@ -180,35 +228,37 @@ export default function WorkersPage() {
           </div>
         )}
 
-        {!isLoading && !error && connections.length === 0 && (
+        {!isLoading && !error && filteredConnections.length === 0 && (
           <EmptyState
             icon={<Users size={40} />}
-            title="등록된 직원이 없어요"
-            description="직원을 수동으로 추가하거나 초대 링크를 공유하세요."
+            title="작업자가 없어요"
+            description="작업자를 수동으로 추가하거나 초대 SMS를 발송하세요."
             bordered
           />
         )}
 
-        {!isLoading && !error && connections.map((conn) => (
-          <div
+        {!isLoading && !error && filteredConnections.map((conn) => (
+          <button
             key={conn.id}
-            className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-4 flex items-center gap-3"
+            type="button"
+            onClick={() => router.push(`/business/hr/workers/${conn.id}`)}
+            className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-4 flex items-center gap-3 text-left cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all w-full"
           >
-            <div className="w-10 h-10 rounded-full bg-surface-sunken flex items-center justify-center shrink-0">
-              <span className="text-sm font-semibold text-text-secondary">
-                {conn.display_name.charAt(0)}
-              </span>
+            <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-base font-bold ${getAvatarColor(conn.display_name)}`}>
+              {conn.display_name.charAt(0)}
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-text-primary text-sm">{conn.display_name}</span>
-                <StatusBadge connection={conn} />
+                <ConnectionBadge connection={conn} />
               </div>
-              {conn.manual_phone && (
+              {(conn.manual_phone ?? conn.profiles?.phone) && (
                 <div className="flex items-center gap-1 mt-0.5">
                   <Phone size={11} className="text-text-tertiary shrink-0" />
-                  <span className="text-xs text-text-secondary">{conn.manual_phone}</span>
+                  <span className="text-xs text-text-secondary">
+                    {conn.manual_phone ?? conn.profiles?.phone}
+                  </span>
                 </div>
               )}
             </div>
@@ -217,7 +267,7 @@ export default function WorkersPage() {
               {!conn.is_manual && conn.status === 'pending' && (
                 <button
                   type="button"
-                  onClick={() => handleCopyLink(conn)}
+                  onClick={(e) => { e.stopPropagation(); handleCopyLink(conn) }}
                   className="p-2 rounded-lg text-text-secondary hover:bg-surface-sunken transition-colors"
                   aria-label="초대 링크 복사"
                   title="초대 링크 복사"
@@ -229,81 +279,119 @@ export default function WorkersPage() {
                   )}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => handleDelete(conn.id)}
-                disabled={deletingId === conn.id}
-                className="p-2 rounded-lg text-text-tertiary hover:bg-red-50 hover:text-state-danger transition-colors disabled:opacity-50"
-                aria-label="삭제"
-              >
-                <Trash2 size={16} />
-              </button>
+              <ChevronRight size={16} className="text-text-tertiary" />
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
-      {/* 직원 추가 모달 */}
+      {/* 작업자 추가 모달 */}
       <Modal
         open={showAddModal}
         onClose={resetAddModal}
-        title="직원 추가"
+        title="작업자 추가"
         footer={
-          <Button
-            fullWidth
-            onClick={handleAdd}
-            isLoading={isAdding}
-          >
-            {addMode === 'manual' ? '추가하기' : '링크 생성 및 복사'}
-          </Button>
+          inviteSent ? (
+            <Button fullWidth onClick={() => { fetchConnections(); resetAddModal() }}>
+              확인
+            </Button>
+          ) : (
+            <Button fullWidth onClick={handleAdd} isLoading={isAdding}>
+              {addMode === 'invite' ? 'SMS 초대 발송' : '등록하기'}
+            </Button>
+          )
         }
       >
-        <div className="flex flex-col gap-4">
-          {/* 모드 탭 */}
-          <div className="flex rounded-xl bg-surface-sunken p-1 gap-1">
-            {(['manual', 'invite'] as AddMode[]).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => { setAddMode(mode); setAddError(null) }}
-                className={`
-                  flex-1 h-9 rounded-lg text-sm font-medium transition-colors
-                  ${addMode === mode
-                    ? 'bg-surface text-text-primary shadow-soft'
-                    : 'text-text-secondary hover:text-text-primary'}
-                `}
-              >
-                {mode === 'manual' ? '수동 추가' : '링크 초대'}
-              </button>
-            ))}
-          </div>
-
-          {addMode === 'invite' && (
-            <p className="text-xs text-text-secondary bg-surface-sunken rounded-xl p-3 break-keep">
-              생성된 초대 링크를 직원에게 공유하세요. 직원이 링크를 통해 앱에 로그인하면 자동으로 연결됩니다.
+        {inviteSent ? (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-state-success-bg flex items-center justify-center">
+              <Check size={28} className="text-state-success" />
+            </div>
+            <p className="font-semibold text-text-primary">초대 링크를 발송했습니다</p>
+            <p className="text-sm text-text-secondary break-keep">
+              {form.phone}으로 초대 SMS가 발송되었습니다.
+              작업자가 링크를 통해 앱에 접속하면 자동으로 연결됩니다.
             </p>
-          )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* 모드 탭 */}
+            <div className="flex rounded-xl bg-surface-sunken p-1 gap-1">
+              {(['invite', 'manual'] as AddMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => { setAddMode(mode); setAddError(null) }}
+                  className={`
+                    flex-1 h-9 rounded-lg text-sm font-medium transition-colors
+                    ${addMode === mode
+                      ? 'bg-surface text-text-primary shadow-soft'
+                      : 'text-text-secondary hover:text-text-primary'}
+                  `}
+                >
+                  {mode === 'invite' ? '초대하기' : '직접 등록'}
+                </button>
+              ))}
+            </div>
 
-          <Input
-            label="이름 *"
-            placeholder={addMode === 'manual' ? '예: 홍길동' : '직원 이름'}
-            value={addName}
-            onChange={(e) => setAddName(e.target.value)}
-          />
+            {addMode === 'invite' && (
+              <p className="text-xs text-text-secondary bg-surface-sunken rounded-xl p-3 break-keep leading-relaxed">
+                전화번호로 SMS 초대 링크를 발송합니다. 작업자가 링크를 수락하면 앱 계정과 자동으로 연결됩니다.
+              </p>
+            )}
 
-          <Input
-            label="전화번호"
-            type="tel"
-            placeholder="010-0000-0000"
-            value={addPhone}
-            onChange={(e) => setAddPhone(formatPhone(e.target.value))}
-            maxLength={13}
-          />
+            <Input
+              label="이름 *"
+              placeholder="예: 홍길동"
+              value={form.name}
+              onChange={(e) => setField('name', e.target.value)}
+            />
 
-          {addError && (
-            <p className="text-sm text-state-danger">{addError}</p>
-          )}
-        </div>
+            <Input
+              label={addMode === 'invite' ? '전화번호 *' : '전화번호'}
+              type="tel"
+              placeholder="010-0000-0000"
+              value={form.phone}
+              onChange={(e) => setField('phone', formatPhone(e.target.value))}
+              maxLength={13}
+            />
+
+            {addMode === 'manual' && (
+              <>
+                <div className="flex gap-3">
+                  <Input
+                    label="은행"
+                    placeholder="예: 국민은행"
+                    value={form.account_bank}
+                    onChange={(e) => setField('account_bank', e.target.value)}
+                  />
+                  <Input
+                    label="계좌번호"
+                    placeholder="계좌번호"
+                    value={form.account_number}
+                    onChange={(e) => setField('account_number', e.target.value)}
+                  />
+                </div>
+                <Input
+                  label="사업자등록번호"
+                  placeholder="000-00-00000"
+                  value={form.registration_number}
+                  onChange={(e) => setField('registration_number', e.target.value)}
+                />
+                <Input
+                  label="상호명"
+                  placeholder="예: 홍길동 청소"
+                  value={form.company_name}
+                  onChange={(e) => setField('company_name', e.target.value)}
+                />
+              </>
+            )}
+
+            {addError && (
+              <p className="text-sm text-state-danger">{addError}</p>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   )

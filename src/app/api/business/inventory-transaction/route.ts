@@ -19,11 +19,11 @@ export async function POST(request: NextRequest) {
   if (!inventory_id || typeof inventory_id !== 'string') {
     return NextResponse.json({ success: false, error: '항목을 선택해 주세요.' }, { status: 400 })
   }
-  if (type !== 'in' && type !== 'out') {
-    return NextResponse.json({ success: false, error: '입출고 유형이 올바르지 않습니다.' }, { status: 400 })
+  if (type !== 'in' && type !== 'out' && type !== 'adjust') {
+    return NextResponse.json({ success: false, error: '유형이 올바르지 않습니다.' }, { status: 400 })
   }
   const qty = Number(rawQty)
-  if (!rawQty || isNaN(qty) || qty <= 0) {
+  if (rawQty === undefined || rawQty === '' || isNaN(qty) || qty < 0) {
     return NextResponse.json({ success: false, error: '수량을 올바르게 입력해 주세요.' }, { status: 400 })
   }
 
@@ -52,9 +52,12 @@ export async function POST(request: NextRequest) {
   }
 
   // 트랜잭션 기록 + 수량 업데이트
+  // adjust는 qty를 절대값으로 설정, in/out은 delta 처리
   const newQty = type === 'in'
     ? item.current_qty + qty
-    : Math.max(0, item.current_qty - qty)
+    : type === 'out'
+    ? Math.max(0, item.current_qty - qty)
+    : qty
 
   const [txResult, updateResult] = await Promise.all([
     service.from('inventory_transactions').insert({

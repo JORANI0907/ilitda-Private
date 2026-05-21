@@ -150,6 +150,9 @@ export default function SetupPage() {
       if (isBusiness && !businessInfo.business_name.trim()) {
         return '상호명을 입력해주세요.'
       }
+      if (isBusiness && !businessInfo.registration_number.trim()) {
+        return '사업자번호를 입력해주세요.'
+      }
     }
     if (step === 3) {
       if (!terms.terms) return '이용약관에 동의해주세요.'
@@ -304,7 +307,7 @@ export default function SetupPage() {
                   name="business_name"
                 />
                 <Input
-                  label="사업자번호 (선택)"
+                  label="사업자번호"
                   placeholder="000-00-00000"
                   value={businessInfo.registration_number}
                   onChange={e =>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import {
@@ -11,9 +11,17 @@ import {
 } from '@/lib/settings-defaults'
 import type { ServiceApplication, ApplicationStatus, NotifyLog, PanelConfig } from '@/types'
 
+// ─── 타입 ────────────────────────────────────────────────────
+interface ConnectionOption {
+  id: string
+  display_name: string
+  manual_phone: string | null
+  profiles?: { name: string; phone: string } | null
+}
+
 // ─── 상수 ────────────────────────────────────────────────────
 const ALL_STATUSES: ApplicationStatus[] = [
-  '신규', '견적발송', '예약확정', '예약1일전', '예약당일', '작업완료',
+  '신규', '견적발송', '예약확정', '예약1일전', '예약당일', '서비스완료',
   '결제', '결제완료', '결제완료(잔금)', '계산서발행완료', '비과세',
   '카드결제 완료', '예약금환급완료', '예약금 입금', '예약취소', 'A/S방문', '방문견적',
 ]
@@ -24,7 +32,7 @@ const STATUS_BADGE: Record<ApplicationStatus, string> = {
   '예약확정':       'bg-green-100 text-green-800',
   '예약1일전':      'bg-sky-100 text-sky-700',
   '예약당일':       'bg-blue-100 text-blue-800',
-  '작업완료':       'bg-orange-100 text-orange-700',
+  '서비스완료':     'bg-orange-100 text-orange-700',
   '결제':           'bg-amber-100 text-amber-700',
   '결제완료':       'bg-gray-100 text-gray-600',
   '결제완료(잔금)': 'bg-emerald-100 text-emerald-700',
@@ -39,14 +47,14 @@ const STATUS_BADGE: Record<ApplicationStatus, string> = {
 }
 
 const NOTIFY_TYPES = [
-  '예약확정알림', '예약1일전알림', '예약당일알림', '작업완료알림',
+  '예약확정알림', '예약1일전알림', '예약당일알림', '서비스완료알림',
   '결제알림', '결제완료알림', '결제완료알림(잔금)', '계산서발행완료알림',
   '예약금 입금완료 알림', '예약금환급완료알림',
   '예약취소알림', 'A/S방문알림', '방문견적알림',
 ]
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2 py-2 border-b border-border-subtle last:border-0">
       <span className="text-xs font-medium text-text-tertiary w-24 shrink-0 pt-0.5">{label}</span>
@@ -188,6 +196,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [isFavorite, setIsFavorite] = useState(app.is_favorite)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [connections, setConnections] = useState<ConnectionOption[]>([])
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>(app.assigned_connection_ids ?? [])
+  const [savingWorkers, setSavingWorkers] = useState(false)
   const [notifyType, setNotifyType] = useState(NOTIFY_TYPES[0])
   const [isSendingNotify, setIsSendingNotify] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
@@ -195,9 +206,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [driveUrl, setDriveUrl] = useState<string | null>(app.drive_folder_url ?? null)
   const [isDriveLoading, setIsDriveLoading] = useState(false)
   const [driveError, setDriveError] = useState<string | null>(null)
+  const [vatEnabled, setVatEnabled] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/business/hr/connections?status=accepted')
+      .then(r => r.json())
+      .then(d => { if (d.success) setConnections(d.data ?? []) })
+      .catch(() => {})
+  }, [])
 
   const setF = (key: keyof FormState) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }))
+
+  // ─── 결제 자동 계산 ───────────────────────────────────────
+  const unitPrice = Number(form.unit_price_per_visit) || 0
+  const vatAmount = vatEnabled ? Math.round(unitPrice * 0.1) : 0
+  const totalAmount = unitPrice + vatAmount
+  const depositAmount = Number(form.deposit) || 0
+  const balanceAmount = totalAmount - depositAmount
 
   // ─── panelConfig 헬퍼 ─────────────────────────────────────
   const resolveLabel = (key: string): string => {
@@ -218,6 +244,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.options ?? []
   }
 
+  // ─── 작업자 배정 ──────────────────────────────────────────
+  async function handleSaveWorkers(workerIds: string[]) {
+    setSavingWorkers(true)
+    try {
+      const res = await fetch(`/api/business/hr/applications/${app.id}/workers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connection_ids: workerIds }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error ?? '저장 실패')
+    } catch {
+      // silent - worker assignment is non-critical
+    } finally {
+      setSavingWorkers(false)
+    }
+  }
+
   // ─── 저장 ─────────────────────────────────────────────────
   async function handleSave() {
     setError(null)
@@ -230,6 +274,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       for (const [k, v] of Object.entries(form) as [keyof FormState, string][]) {
         payload[k] = numericKeys.includes(k) ? (v.trim() ? Number(v) : null) : (v.trim() || null)
       }
+      payload.vat = vatAmount
+      payload.supply_amount = totalAmount
+      payload.balance = balanceAmount
       const res = await fetch(`/api/admin/applications/${app.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -276,9 +323,6 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   }
 
   const notifyLogs: NotifyLog[] = (app.notification_log as NotifyLog[]) ?? []
-
-  // ─── 결제 공급대가 자동 계산 ──────────────────────────────
-  const supplyTotal = (Number(form.supply_amount) || 0) + (Number(form.vat) || 0)
 
   // ─── 섹션별 border color ──────────────────────────────────
   const sectionBorder = (sectionId: string): string => {
@@ -373,21 +417,41 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           <FieldRow label={resolveLabel('account_number')}>
             <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
           </FieldRow>
-          <FieldRow label={resolveLabel('supply_amount')}>
-            <EditInput value={form.supply_amount} onChange={setF('supply_amount')} type="number" placeholder={resolvePlaceholder('supply_amount')} />
+          <FieldRow label="단가 (원)">
+            <EditInput value={form.unit_price_per_visit} onChange={setF('unit_price_per_visit')} type="number" placeholder="0" />
           </FieldRow>
-          <FieldRow label={resolveLabel('vat')}>
-            <EditInput value={form.vat} onChange={setF('vat')} type="number" placeholder={resolvePlaceholder('vat')} />
+          <FieldRow label="예약금">
+            <EditInput value={form.deposit} onChange={setF('deposit')} type="number" placeholder="0" />
           </FieldRow>
-          <FieldRow label={resolveLabel('supply_total')}>
-            <span className="text-sm text-text-primary font-medium">
-              {form.supply_amount || form.vat
-                ? supplyTotal.toLocaleString('ko-KR') + '원'
-                : '-'}
+          <FieldRow
+            label={
+              <span className="flex items-center gap-1.5">
+                부가세
+                <label className="flex items-center gap-1 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={vatEnabled}
+                    onChange={(e) => setVatEnabled(e.target.checked)}
+                    className="w-3 h-3 rounded accent-brand-600"
+                  />
+                  <span className="text-[10px] text-text-tertiary">10%</span>
+                </label>
+              </span>
+            }
+          >
+            <span className="text-sm text-text-secondary">
+              {vatAmount.toLocaleString('ko-KR')}원
             </span>
           </FieldRow>
-          <FieldRow label={resolveLabel('balance')}>
-            <EditInput value={form.balance} onChange={setF('balance')} type="number" placeholder={resolvePlaceholder('balance')} />
+          <FieldRow label="총액">
+            <span className="text-sm font-semibold text-brand-600">
+              {totalAmount.toLocaleString('ko-KR')}원
+            </span>
+          </FieldRow>
+          <FieldRow label="잔금">
+            <span className={`text-sm font-medium ${balanceAmount > 0 ? 'text-state-warning' : 'text-text-tertiary'}`}>
+              {balanceAmount.toLocaleString('ko-KR')}원
+            </span>
           </FieldRow>
         </>
       )
@@ -460,6 +524,60 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               </div>
             )
           })}
+
+          {/* 작업자 배정 */}
+          <SectionTitle>작업자 배정</SectionTitle>
+          <div className="bg-surface rounded-2xl border border-border-subtle p-3 shadow-flat flex flex-col gap-2">
+            <select
+              value=""
+              onChange={(e) => {
+                const id = e.target.value
+                if (!id) return
+                const next = [...selectedWorkers, id]
+                setSelectedWorkers(next)
+                handleSaveWorkers(next)
+              }}
+              disabled={savingWorkers || connections.length === 0}
+              className="w-full h-9 rounded-lg bg-surface border border-border text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
+            >
+              <option value="">
+                {connections.length === 0 ? '연결된 작업자 없음' : '작업자 추가…'}
+              </option>
+              {connections
+                .filter(c => !selectedWorkers.includes(c.id))
+                .map(c => (
+                  <option key={c.id} value={c.id}>{c.display_name}</option>
+                ))
+              }
+            </select>
+
+            {selectedWorkers.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {selectedWorkers.map(id => {
+                  const conn = connections.find(c => c.id === id)
+                  if (!conn) return null
+                  return (
+                    <span key={id} className="inline-flex items-center gap-1 text-xs text-text-secondary bg-surface-sunken rounded-full px-2.5 py-1 border border-border-subtle">
+                      {conn.display_name}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = selectedWorkers.filter(w => w !== id)
+                          setSelectedWorkers(next)
+                          handleSaveWorkers(next)
+                        }}
+                        disabled={savingWorkers}
+                        className="text-text-tertiary hover:text-state-danger transition-colors disabled:opacity-40"
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  )
+                })}
+                {savingWorkers && <span className="text-[11px] text-text-tertiary">저장 중…</span>}
+              </div>
+            )}
+          </div>
 
           {/* 구글 드라이브 */}
           <SectionTitle>작업 폴더 (Google Drive)</SectionTitle>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardList, MapPin, Phone, CalendarClock } from 'lucide-react'
+import { ClipboardList, MapPin, Phone, CalendarClock, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useRouter } from 'next/navigation'
-import type { ServiceRequest, RequestStatus, ServiceType } from '@/types'
+import type { ServiceRequest, RequestStatus, ServiceType, Connection } from '@/types'
 
 type Tab = 'all' | RequestStatus
 
@@ -52,6 +52,15 @@ function formatDateTime(date: string | null, time: string | null): string {
   return `${month}월 ${day}일 ${time.slice(0, 5)}`
 }
 
+// Worker assignment chip
+function WorkerChip({ name }: { name: string }) {
+  return (
+    <span className="inline-flex items-center h-6 px-2 rounded-full bg-brand-100 text-brand-700 text-xs font-medium break-keep">
+      {name}
+    </span>
+  )
+}
+
 export default function RequestsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<Tab>('all')
@@ -66,6 +75,13 @@ export default function RequestsPage() {
   const [rejectForm, setRejectForm] = useState<RejectForm>({ rejected_reason: '' })
   const [modalError, setModalError] = useState<string | null>(null)
   const [isModalSubmitting, setIsModalSubmitting] = useState(false)
+
+  // Worker assignment state
+  const [connections, setConnections] = useState<Connection[]>([])
+  const [assignTarget, setAssignTarget] = useState<ServiceRequest | null>(null)
+  const [selectedWorkers, setSelectedWorkers] = useState<string[]>([])
+  const [isAssigning, setIsAssigning] = useState(false)
+  const [assignError, setAssignError] = useState<string | null>(null)
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true)
@@ -90,9 +106,25 @@ export default function RequestsPage() {
     }
   }, [activeTab])
 
+  const fetchConnections = useCallback(async () => {
+    try {
+      const res = await fetch('/api/business/hr/connections?status=accepted')
+      const json = await res.json()
+      if (json.success) {
+        setConnections(json.data ?? [])
+      }
+    } catch {
+      // silent
+    }
+  }, [])
+
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
+
+  useEffect(() => {
+    fetchConnections()
+  }, [fetchConnections])
 
   const handleAccept = async () => {
     if (!acceptTarget) return
@@ -156,6 +188,45 @@ export default function RequestsPage() {
       setModalError('네트워크 오류가 발생했습니다.')
     } finally {
       setIsModalSubmitting(false)
+    }
+  }
+
+  const openAssignModal = (req: ServiceRequest) => {
+    setAssignTarget(req)
+    setSelectedWorkers(req.assigned_connection_ids ?? [])
+    setAssignError(null)
+  }
+
+  const toggleWorker = (id: string) => {
+    setSelectedWorkers((prev) =>
+      prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]
+    )
+  }
+
+  const handleAssignSave = async () => {
+    if (!assignTarget) return
+    setIsAssigning(true)
+    setAssignError(null)
+    try {
+      const res = await fetch(`/api/business/hr/requests/${assignTarget.id}/workers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connection_ids: selectedWorkers }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setAssignError(json.error ?? '저장에 실패했습니다.')
+        return
+      }
+      // Update local state
+      setRequests((prev) => prev.map((r) =>
+        r.id === assignTarget.id ? { ...r, assigned_connection_ids: selectedWorkers } : r
+      ))
+      setAssignTarget(null)
+    } catch {
+      setAssignError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setIsAssigning(false)
     }
   }
 
@@ -224,15 +295,24 @@ export default function RequestsPage() {
 
         {!isLoading && !error && requests.map((req) => {
           const statusInfo = STATUS_BADGE[req.status]
-          const serviceInfo = SERVICE_BADGE[req.service_type]
+          const serviceInfo = req.service_type && req.service_type in SERVICE_BADGE
+            ? SERVICE_BADGE[req.service_type as ServiceType]
+            : { className: 'bg-surface-sunken text-text-secondary' }
+
+          const assignedNames = (req.assigned_connection_ids ?? [])
+            .map((cid) => connections.find((c) => c.id === cid)?.display_name)
+            .filter((n): n is string => Boolean(n))
+
           return (
             <Card key={req.id} padding="md">
               <div className="flex flex-col gap-3">
                 {/* 상단 배지 */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${serviceInfo.className}`}>
-                    {req.service_type}
-                  </span>
+                  {req.service_type && (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${serviceInfo.className}`}>
+                      {req.service_type}
+                    </span>
+                  )}
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.className}`}>
                     {statusInfo.label}
                   </span>
@@ -263,11 +343,32 @@ export default function RequestsPage() {
                   )}
                 </div>
 
-                {/* 액션 버튼 (pending만) */}
-                {req.status === 'pending' && (
-                  <>
-                    <div className="border-t border-border-subtle" />
-                    <div className="flex gap-2">
+                {/* 배정된 작업자 칩 표시 */}
+                {assignedNames.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <Users size={13} className="text-text-tertiary shrink-0" />
+                    {assignedNames.map((name) => (
+                      <WorkerChip key={name} name={name} />
+                    ))}
+                  </div>
+                )}
+
+                {/* 작업자 배정 버튼 */}
+                <div className="border-t border-border-subtle" />
+                <div className="flex gap-2 flex-wrap">
+                  {req.status === 'accepted' || req.status === 'pending' ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => openAssignModal(req)}
+                    >
+                      <Users size={14} />
+                      작업자 배정
+                    </Button>
+                  ) : null}
+
+                  {req.status === 'pending' && (
+                    <>
                       <Button
                         size="sm"
                         onClick={() => {
@@ -289,9 +390,9 @@ export default function RequestsPage() {
                       >
                         거절
                       </Button>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
               </div>
             </Card>
           )
@@ -364,6 +465,87 @@ export default function RequestsPage() {
             />
           </div>
           {modalError && <p className="text-sm text-state-danger">{modalError}</p>}
+        </div>
+      </Modal>
+
+      {/* 작업자 배정 모달 */}
+      <Modal
+        open={!!assignTarget}
+        onClose={() => { setAssignTarget(null); setAssignError(null) }}
+        title="작업자 배정"
+        footer={
+          <>
+            <Button fullWidth onClick={handleAssignSave} isLoading={isAssigning}>저장</Button>
+            <Button variant="ghost" fullWidth onClick={() => setAssignTarget(null)}>취소</Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-secondary break-keep">
+            {assignTarget?.client_name} 신청서에 배정할 작업자를 선택하세요.
+          </p>
+
+          {connections.length === 0 ? (
+            <div className="text-sm text-text-tertiary text-center py-4">
+              연결된 작업자가 없습니다.
+              작업자 관리에서 작업자를 추가해 주세요.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {connections.map((conn) => {
+                const isSelected = selectedWorkers.includes(conn.id)
+                return (
+                  <button
+                    key={conn.id}
+                    type="button"
+                    onClick={() => toggleWorker(conn.id)}
+                    className={`
+                      flex items-center gap-3 p-3 rounded-xl border transition-colors text-left
+                      ${isSelected
+                        ? 'border-brand-600 bg-brand-50'
+                        : 'border-border bg-surface hover:bg-surface-sunken'}
+                    `}
+                  >
+                    <div className={`
+                      w-5 h-5 rounded border-2 flex items-center justify-center shrink-0
+                      ${isSelected ? 'border-brand-600 bg-brand-600' : 'border-border'}
+                    `}>
+                      {isSelected && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-text-primary">{conn.display_name}</span>
+                      {(conn.manual_phone ?? conn.profiles?.phone) && (
+                        <p className="text-xs text-text-tertiary">{conn.manual_phone ?? conn.profiles?.phone}</p>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <Badge variant="primary">선택됨</Badge>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {selectedWorkers.length > 0 && (
+            <div className="bg-brand-50 rounded-xl p-3">
+              <p className="text-xs text-brand-700 font-medium mb-1">선택된 작업자</p>
+              <div className="flex flex-wrap gap-1">
+                {selectedWorkers.map((wid) => {
+                  const name = connections.find((c) => c.id === wid)?.display_name ?? wid
+                  return <WorkerChip key={wid} name={name} />
+                })}
+              </div>
+            </div>
+          )}
+
+          {assignError && (
+            <p className="text-sm text-state-danger">{assignError}</p>
+          )}
         </div>
       </Modal>
 

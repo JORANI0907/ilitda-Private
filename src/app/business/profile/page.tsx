@@ -5,20 +5,29 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Phone, MapPin, User,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users, Link2, Copy, Check, FileText, LayoutList,
+  CreditCard, Users, Link2, Copy, Check, FileText, LayoutList, ShieldCheck,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Modal } from '@/components/ui/Modal'
+import { PlanBadge } from '@/components/ui/PlanChip'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
-import type { Profile, Business } from '@/types'
+import type { Profile, Business, Worker } from '@/types'
+
+const PLAN_LABEL: Record<string, string> = {
+  free: 'Free',
+  basic: 'Basic',
+  pro: 'Pro',
+  max: 'Max',
+}
 
 interface ProfileData {
   profile: Profile
   business: Business | null
+  worker: Worker | null
 }
 
 export default function BusinessProfilePage() {
@@ -151,7 +160,7 @@ export default function BusinessProfilePage() {
     )
   }
 
-  const { profile, business } = data
+  const { profile, business, worker } = data
   const canSwitchToWorker = profile.is_worker
 
   return (
@@ -209,10 +218,93 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
+      {/* 가입 정보 */}
+      <Card padding="md">
+        <SectionHeader title="가입 정보" className="mb-3" />
+        <div className="flex flex-col gap-0">
+          {/* 내 정보 */}
+          <div className="flex flex-col gap-2 pb-3 border-b border-border-subtle">
+            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">내 정보</p>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary w-16 shrink-0">이름</span>
+                <span className="text-sm text-text-primary">{profile.name || '미입력'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary w-16 shrink-0">전화번호</span>
+                <span className="text-sm text-text-primary">{profile.phone || '미입력'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary w-16 shrink-0">가입일</span>
+                <span className="text-sm text-text-primary">{profile.created_at.slice(0, 10)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-tertiary w-16 shrink-0">역할</span>
+                <div className="flex gap-1.5">
+                  {profile.is_business && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-light text-brand-700">
+                      사업자
+                    </span>
+                  )}
+                  {profile.is_worker && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-state-success-bg text-state-success">
+                      용역자
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 사업체 정보 */}
+          {profile.is_business && business && (
+            <div className="flex flex-col gap-2 py-3 border-b border-border-subtle">
+              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">사업체 정보</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">상호명</span>
+                  <span className="text-sm text-text-primary">{business.business_name || '미입력'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">사업자번호</span>
+                  <span className="text-sm text-text-primary">{business.registration_number || '미입력'}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0 mt-0.5">주소</span>
+                  <span className="text-sm text-text-primary break-keep">{business.address || '미입력'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 용역자 정보 */}
+          {profile.is_worker && worker && (
+            <div className="flex flex-col gap-2 pt-3">
+              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">용역자 정보</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">생년월일</span>
+                  <span className="text-sm text-text-primary">{worker.birthdate || '미입력'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">은행명</span>
+                  <span className="text-sm text-text-primary">{worker.account_bank || '미입력'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">계좌번호</span>
+                  <span className="text-sm text-text-primary">{worker.account_number || '미입력'}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {/* 역할 전환 */}
       {canSwitchToWorker && (
         <Card
           padding="md"
+          className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
           onClick={() => setShowRoleSwitcher(true)}
         >
           <div className="flex items-center justify-between gap-3">
@@ -228,13 +320,36 @@ export default function BusinessProfilePage() {
         </Card>
       )}
 
+      {/* 구독 플랜 */}
+      <Card
+        padding="md"
+        className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
+        onClick={() => router.push('/business/settings/plan')}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CreditCard size={16} className="text-text-tertiary shrink-0" />
+            <div>
+              <p className="text-xs text-text-tertiary">구독 플랜</p>
+              <p className="text-sm font-semibold text-text-primary">
+                {PLAN_LABEL[business?.plan ?? 'free'] ?? 'Free'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <PlanBadge plan={business?.plan ?? 'free'} />
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </div>
+        </div>
+      </Card>
+
       {/* 설정 */}
       <Card padding="md">
         <SectionHeader title="설정" className="mb-3" />
         <div className="flex flex-col divide-y divide-border-subtle">
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/app-notifications')}
           >
             <div className="flex items-center gap-3">
@@ -246,7 +361,7 @@ export default function BusinessProfilePage() {
 
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/integrations')}
           >
             <div className="flex items-center gap-3">
@@ -258,7 +373,7 @@ export default function BusinessProfilePage() {
 
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/business')}
           >
             <div className="flex items-center gap-3">
@@ -276,7 +391,7 @@ export default function BusinessProfilePage() {
         <div className="flex flex-col divide-y divide-border-subtle">
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/form')}
           >
             <div className="flex items-center gap-3">
@@ -290,7 +405,7 @@ export default function BusinessProfilePage() {
           </button>
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/notifications')}
           >
             <div className="flex items-center gap-3">
@@ -304,7 +419,7 @@ export default function BusinessProfilePage() {
           </button>
           <button
             type="button"
-            className="flex items-center justify-between py-3 text-left"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
             onClick={() => router.push('/business/profile/settings/panel')}
           >
             <div className="flex items-center gap-3">
@@ -361,6 +476,60 @@ export default function BusinessProfilePage() {
           )}
         </div>
       </Card>
+
+      {/* 관리자 패널 (is_admin만 노출) */}
+      {profile.is_admin && (
+        <Card padding="md">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck size={16} className="text-brand-600" />
+            <SectionHeader title="관리자 패널" className="mb-0" />
+          </div>
+          <div className="flex flex-col divide-y divide-border-subtle">
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
+              onClick={() => router.push('/admin')}
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck size={16} className="text-brand-600" />
+                <div>
+                  <span className="text-sm text-text-primary">대시보드</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">계정 · 플랜 현황 요약</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-text-tertiary" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
+              onClick={() => router.push('/admin/accounts')}
+            >
+              <div className="flex items-center gap-3">
+                <Users size={16} className="text-text-tertiary" />
+                <div>
+                  <span className="text-sm text-text-primary">계정 관리</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">전체 가입 계정 및 플랜 확인</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-text-tertiary" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
+              onClick={() => router.push('/admin/payments')}
+            >
+              <div className="flex items-center gap-3">
+                <CreditCard size={16} className="text-brand-600" />
+                <div>
+                  <span className="text-sm text-text-primary">입금 확인</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">무통장입금 신청 승인 · 거절</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-text-tertiary" />
+            </button>
+          </div>
+        </Card>
+      )}
 
       {/* 로그아웃 */}
       <Button

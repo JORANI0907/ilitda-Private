@@ -9,6 +9,7 @@ export interface Profile {
   active_role: ActiveRole
   is_business: boolean
   is_worker: boolean
+  is_admin: boolean
   rating_avg: number
   rating_count: number
   created_at: string
@@ -69,6 +70,8 @@ export interface Business {
   gmail_for_drive?: string | null
   drive_root_folder_id?: string | null
   plan_type?: string
+  plan?: string
+  plan_expires_at?: string | null
   daily_sms_count?: number
   daily_sms_reset_date?: string | null
 }
@@ -168,6 +171,8 @@ export interface ServiceRequest {
   business_number: string | null
   created_at: string
   updated_at: string
+  assigned_connection_ids: string[] | null
+  worker_pay: Record<string, number> | null
 }
 
 // ─── 서비스 일정 ──────────────────────────────────────────────
@@ -198,12 +203,19 @@ export interface Connection {
   is_manual: boolean
   manual_name: string | null
   manual_phone: string | null
+  manual_account_bank: string | null
+  manual_account_number: string | null
+  manual_registration_number: string | null
+  manual_resident_number: string | null
+  manual_company_name: string | null
   display_name: string
   status: ConnectionStatus
   invite_token: string
   created_at: string
   updated_at: string
   deleted_at: string | null
+  // joined profile (optional)
+  profiles?: { name: string; phone: string } | null
 }
 
 // ─── 배정 ─────────────────────────────────────────────────────
@@ -258,7 +270,7 @@ export interface Payroll {
 
 // ─── 서비스 신청 (관리자용 영업관리) ──────────────────────────
 export type ApplicationStatus =
-  '신규' | '견적발송' | '예약확정' | '예약1일전' | '예약당일' | '작업완료' |
+  '신규' | '견적발송' | '예약확정' | '예약1일전' | '예약당일' | '서비스완료' |
   '결제' | '결제완료' | '결제완료(잔금)' | '계산서발행완료' | '비과세' |
   '카드결제 완료' | '예약금환급완료' | '예약금 입금' | '예약취소' | 'A/S방문' | '방문견적'
 
@@ -308,6 +320,8 @@ export interface ServiceApplication {
   notion_page_id: string | null
   is_favorite: boolean
   business_id: string | null
+  assigned_connection_ids: string[] | null
+  worker_pay: Record<string, number> | null
 }
 
 // ─── 패널 필드 커스터마이징 ───────────────────────────────────
@@ -323,6 +337,18 @@ export interface PanelConfig {
     sections?: string[]
     fields?: Record<string, string[]>
   }
+}
+
+// ─── 결제 ─────────────────────────────────────────────────────
+export interface Payment {
+  id: string
+  business_id: string
+  plan_name: string
+  amount: number
+  depositor_name: string
+  status: string
+  confirmed_at: string | null
+  created_at: string
 }
 
 // ─── API 응답 공통 포맷 ───────────────────────────────────────

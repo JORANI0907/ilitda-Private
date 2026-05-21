@@ -5,10 +5,10 @@ import { sendSMS } from '@/lib/solapi/client'
 import type { ApiResponse, NotifyLog } from '@/types'
 
 const MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
-  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n시공일: ${p.date} ${p.time}\n문의: ${p.contact}`,
+  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n서비스일: ${p.date} ${p.time}\n문의: ${p.contact}`,
   '예약1일전알림':        (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}\n문의: ${p.contact}`,
   '예약당일알림':         (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.\n문의: ${p.contact}`,
-  '작업완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업이 완료되었습니다.\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
+  '서비스완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 서비스가 완료되었습니다.\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
   '결제알림':             (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}\n문의: ${p.contact}`,
   '결제완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,
   '결제완료알림(잔금)':   (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,

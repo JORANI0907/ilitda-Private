@@ -1,0 +1,180 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { ChevronLeft, Users } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+
+interface BusinessAccount {
+  id: string
+  business_name: string
+  registration_number: string | null
+  plan: string
+  plan_expires_at: string | null
+  created_at: string
+  profile: {
+    name: string
+    phone: string
+  } | null
+}
+
+const PLAN_BADGE: Record<string, { label: string; className: string }> = {
+  free:  { label: 'Free',  className: 'bg-surface-sunken text-text-secondary border border-border' },
+  basic: { label: 'Basic', className: 'bg-blue-100 text-blue-700' },
+  pro:   { label: 'Pro',   className: 'bg-violet-100 text-violet-700' },
+}
+
+function PlanBadge({ plan }: { plan: string }) {
+  const badge = PLAN_BADGE[plan] ?? PLAN_BADGE.free
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.className}`}>
+      {badge.label}
+    </span>
+  )
+}
+
+function formatDate(dateStr: string) {
+  return dateStr.slice(0, 10)
+}
+
+function AccountCard({ account, onClick }: { account: BusinessAccount; onClick: () => void }) {
+  return (
+    <Card
+      padding="md"
+      className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
+      onClick={onClick}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-semibold text-text-primary leading-tight break-keep">
+            {account.business_name}
+          </p>
+          <PlanBadge plan={account.plan} />
+        </div>
+
+        <div className="flex flex-col gap-1 text-sm text-text-secondary">
+          {account.profile && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-12 shrink-0">대표자</span>
+              <span>{account.profile.name}</span>
+            </div>
+          )}
+          {account.profile?.phone && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-12 shrink-0">전화번호</span>
+              <span>{account.profile.phone}</span>
+            </div>
+          )}
+          {account.registration_number && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-12 shrink-0">사업자번호</span>
+              <span>{account.registration_number}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-text-tertiary text-xs w-12 shrink-0">가입일</span>
+            <span>{formatDate(account.created_at)}</span>
+          </div>
+          {account.plan !== 'free' && account.plan_expires_at && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-12 shrink-0">만료일</span>
+              <span>{account.plan_expires_at}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+export default function AdminAccountsPage() {
+  const router = useRouter()
+  const [accounts, setAccounts] = useState<BusinessAccount[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/admin/accounts')
+        const json = await res.json()
+        if (!json.success) {
+          setError(json.error ?? '불러오기 실패')
+          return
+        }
+        setAccounts(json.data ?? [])
+      } catch {
+        setError('네트워크 오류')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  return (
+    <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => router.push('/admin')}
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-sunken text-text-secondary hover:bg-border transition-colors shrink-0"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <SectionHeader
+          title="계정 목록"
+          description={`총 ${accounts.length}개 계정`}
+          level="page"
+        />
+      </div>
+
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} padding="md">
+              <div className="flex flex-col gap-2">
+                <div className="h-5 w-40 bg-surface-sunken rounded animate-pulse" />
+                <div className="h-4 w-28 bg-surface-sunken rounded animate-pulse" />
+                <div className="h-4 w-32 bg-surface-sunken rounded animate-pulse" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p className="text-sm text-state-danger">{error}</p>
+          <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
+            재시도
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !error && accounts.length === 0 && (
+        <EmptyState
+          icon={<Users size={40} />}
+          title="등록된 계정이 없습니다"
+          description="아직 가입한 계정이 없습니다."
+          bordered
+        />
+      )}
+
+      {!isLoading && !error && accounts.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {accounts.map(account => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              onClick={() => router.push(`/admin/accounts/${account.id}`)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,695 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import {
+  Plus, Star, Search, Phone, MapPin, CalendarDays, ClipboardList,
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, LayoutList,
+} from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Card } from '@/components/ui/Card'
+import { ApplicationPanel } from '@/components/admin/ApplicationPanel'
+import { useRouter } from 'next/navigation'
+import type { ServiceApplication, ApplicationStatus, PanelConfig } from '@/types'
+
+// ─── 상태 뱃지 ───────────────────────────────────────────────
+const STATUS_BADGE: Record<string, { label: string; bg: string }> = {
+  '신규':           { label: '신규',           bg: 'bg-brand-light text-brand-700' },
+  '견적발송':       { label: '견적발송',        bg: 'bg-indigo-100 text-indigo-700' },
+  '예약확정':       { label: '예약확정',        bg: 'bg-green-100 text-green-800' },
+  '예약1일전':      { label: '예약1일전',       bg: 'bg-sky-100 text-sky-700' },
+  '예약당일':       { label: '예약당일',        bg: 'bg-blue-100 text-blue-800' },
+  '서비스완료':     { label: '서비스완료',       bg: 'bg-orange-100 text-orange-700' },
+  '결제':           { label: '결제',            bg: 'bg-amber-100 text-amber-700' },
+  '결제완료':       { label: '결제완료',        bg: 'bg-state-success-bg text-state-success' },
+  '결제완료(잔금)': { label: '결제완료(잔금)',  bg: 'bg-emerald-100 text-emerald-700' },
+  '계산서발행완료': { label: '계산서발행',      bg: 'bg-surface-sunken text-text-tertiary' },
+  '비과세':         { label: '비과세',          bg: 'bg-surface-sunken text-text-tertiary' },
+  '카드결제 완료':  { label: '카드결제완료',    bg: 'bg-surface-sunken text-text-tertiary' },
+  '예약금환급완료': { label: '예약금환급',      bg: 'bg-surface-sunken text-text-tertiary' },
+  '예약금 입금':    { label: '예약금입금',      bg: 'bg-teal-100 text-teal-700' },
+  '예약취소':       { label: '예약취소',        bg: 'bg-state-danger-bg text-state-danger' },
+  'A/S방문':        { label: 'A/S방문',         bg: 'bg-yellow-100 text-yellow-700' },
+  '방문견적':       { label: '방문견적',        bg: 'bg-purple-100 text-purple-700' },
+}
+
+// 캘린더 날짜 셀 점 색상
+const STATUS_DOT: Record<string, string> = {
+  '신규':     'bg-brand-500',
+  '예약확정': 'bg-green-500',
+  '예약1일전':'bg-sky-500',
+  '예약당일': 'bg-blue-500',
+  '서비스완료': 'bg-orange-500',
+  '결제':     'bg-amber-500',
+  '결제완료': 'bg-emerald-500',
+  '예약취소': 'bg-red-500',
+}
+
+// ─── 필터 탭 ─────────────────────────────────────────────────
+type FilterKey = 'all' | ApplicationStatus
+const FILTER_TABS: { key: FilterKey; label: string }[] = [
+  { key: 'all',      label: '전체' },
+  { key: '신규',     label: '신규' },
+  { key: '예약당일', label: '예약당일' },
+  { key: '서비스완료', label: '서비스완료' },
+  { key: '결제완료', label: '결제완료' },
+]
+
+const TODAY = new Date().toISOString().slice(0, 10)
+
+// ─── 캘린더 그리드 ─────────────────────────────────────────────
+function CalendarGrid({
+  year, month, applications, onDaySelect,
+}: {
+  year: number
+  month: number  // 1-based
+  applications: ServiceApplication[]
+  onDaySelect: (dateStr: string, apps: ServiceApplication[]) => void
+}) {
+  const firstDay = new Date(year, month - 1, 1).getDay()
+  const daysInMonth = new Date(year, month, 0).getDate()
+
+  const dayMap = useMemo(() => {
+    const map: Record<string, ServiceApplication[]> = {}
+    for (const app of applications) {
+      if (!app.construction_date) continue
+      const d = app.construction_date.slice(0, 10)
+      if (!map[d]) map[d] = []
+      map[d].push(app)
+    }
+    return map
+  }, [applications])
+
+  const cells: (number | null)[] = []
+  for (let i = 0; i < firstDay; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  const DAYS = ['일', '월', '화', '수', '목', '금', '토']
+
+  return (
+    <div className="bg-surface rounded-2xl border border-border overflow-hidden">
+      <div className="grid grid-cols-7 border-b border-border-subtle">
+        {DAYS.map(d => (
+          <div key={d} className={`text-center py-2.5 text-xs font-semibold
+            ${d === '일' ? 'text-red-500' : d === '토' ? 'text-brand-600' : 'text-text-secondary'}`}>
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 auto-rows-[5rem]">
+        {cells.map((day, i) => {
+          if (!day) return (
+            <div key={`e-${i}`} className="border-r border-b border-border-subtle bg-surface-sunken/40" />
+          )
+          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const apps = dayMap[dateStr] ?? []
+          const isToday = dateStr === TODAY
+          const dow = (firstDay + day - 1) % 7
+          const hasApps = apps.length > 0
+
+          return (
+            <div
+              key={day}
+              onClick={() => hasApps && onDaySelect(dateStr, apps)}
+              className={`border-r border-b border-border-subtle p-1.5 flex flex-col gap-0.5
+                ${isToday ? 'bg-brand-50' : (dow === 0 || dow === 6) ? 'bg-surface-sunken/30' : ''}
+                ${hasApps ? 'cursor-pointer hover:bg-brand-50/60 transition-colors' : ''}`}
+            >
+              <div className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full shrink-0
+                ${isToday ? 'bg-brand-600 text-white' : dow === 0 ? 'text-red-500' : dow === 6 ? 'text-brand-600' : 'text-text-primary'}`}>
+                {day}
+              </div>
+              <div className="flex flex-col gap-0.5 overflow-hidden">
+                {apps.slice(0, 3).map(app => (
+                  <div key={app.id} className="px-1 py-0.5 rounded bg-surface border border-border-subtle">
+                    <div className="flex items-center gap-0.5 min-w-0">
+                      <span className={`w-1 h-1 rounded-full shrink-0 ${STATUS_DOT[app.status] ?? 'bg-text-tertiary'}`} />
+                      <span className="text-[9px] text-text-primary font-medium truncate leading-tight">
+                        {[app.business_name, app.owner_name, app.care_scope].filter(Boolean).join(' ') || '미입력'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {apps.length > 3 && (
+                  <div className="text-[10px] text-text-tertiary px-1">+{apps.length - 3}건</div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── 날짜 목록 패널 ─────────────────────────────────────────────
+function DayListPanel({
+  dateStr, apps, onSelectApp, onClose, allDates, onDateChange,
+}: {
+  dateStr: string
+  apps: ServiceApplication[]
+  onSelectApp: (app: ServiceApplication) => void
+  onClose: () => void
+  allDates: string[]
+  onDateChange: (date: string) => void
+}) {
+  const touchStartX = useRef<number | null>(null)
+  const parts = dateStr.split('-').map(Number)
+  const m = parts[1]
+  const d = parts[2]
+  const dow = new Date(dateStr + 'T12:00:00').getDay()
+  const dayLabel = ['일', '월', '화', '수', '목', '금', '토'][dow]
+
+  const currentIdx = allDates.indexOf(dateStr)
+  const hasPrev = currentIdx > 0
+  const hasNext = currentIdx < allDates.length - 1
+
+  const goTo = (delta: number) => {
+    const newIdx = currentIdx + delta
+    if (newIdx >= 0 && newIdx < allDates.length) onDateChange(allDates[newIdx])
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const delta = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(delta) > 40) goTo(delta > 0 ? 1 : -1)
+    touchStartX.current = null
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4" onClick={onClose}>
+      <div
+        className="bg-surface w-full max-w-md rounded-2xl flex flex-col overflow-hidden max-h-[75vh] shadow-modal"
+        onClick={e => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle shrink-0">
+          <button
+            type="button"
+            onClick={() => goTo(-1)}
+            disabled={!hasPrev}
+            className={`w-8 h-8 flex items-center justify-center rounded-lg text-xl leading-none
+              ${hasPrev ? 'text-text-secondary hover:bg-surface-sunken' : 'text-text-tertiary cursor-not-allowed'}`}
+          >
+            ‹
+          </button>
+          <div className="text-center">
+            <h3 className="font-bold text-text-primary">{m}월 {d}일 ({dayLabel})</h3>
+            <p className="text-xs text-text-tertiary">{apps.length}건</p>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => goTo(1)}
+              disabled={!hasNext}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg text-xl leading-none
+                ${hasNext ? 'text-text-secondary hover:bg-surface-sunken' : 'text-text-tertiary cursor-not-allowed'}`}
+            >
+              ›
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center text-text-tertiary hover:text-text-secondary"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 p-3 flex flex-col gap-2 pb-6">
+          {apps.length === 0 ? (
+            <p className="text-center text-sm text-text-tertiary py-8">이 날짜에 일정이 없습니다.</p>
+          ) : apps.map(app => {
+            const badge = STATUS_BADGE[app.status]
+            return (
+              <button
+                key={app.id}
+                type="button"
+                onClick={() => { onSelectApp(app); onClose() }}
+                className="text-left bg-surface-sunken hover:bg-brand-50 border border-border-subtle hover:border-brand-200 rounded-xl p-3 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[app.status] ?? 'bg-text-tertiary'}`} />
+                  <span className="font-semibold text-text-primary text-sm">{app.business_name || '(업체명 미입력)'}</span>
+                  {badge && (
+                    <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full shrink-0 ${badge.bg}`}>{badge.label}</span>
+                  )}
+                </div>
+                {app.owner_name && <p className="text-xs text-text-secondary ml-4">{app.owner_name}</p>}
+                {app.address && <p className="text-[11px] text-text-tertiary truncate ml-4 mt-0.5">{app.address}</p>}
+                {app.construction_time && <p className="text-[11px] text-brand-500 ml-4 mt-0.5">{app.construction_time}</p>}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 카드 ────────────────────────────────────────────────────
+function AppCard({
+  app,
+  onClick,
+  onFavoriteToggle,
+}: {
+  app: ServiceApplication
+  onClick: () => void
+  onFavoriteToggle: (id: string, val: boolean) => void
+}) {
+  const badge = STATUS_BADGE[app.status]
+  const isToday = app.construction_date === TODAY
+
+  async function toggleFav(e: React.MouseEvent) {
+    e.stopPropagation()
+    const next = !app.is_favorite
+    onFavoriteToggle(app.id, next)
+    await fetch(`/api/admin/applications/${app.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_favorite: next }),
+    })
+  }
+
+  const totalAmt = (app.deposit ?? 0) + (app.supply_amount ?? 0) + (app.vat ?? 0)
+
+  return (
+    <Card
+      padding="md"
+      className={`cursor-pointer active:scale-[0.98] transition-transform hover:shadow-card ${isToday ? 'border-l-4 border-l-brand-600 bg-brand-light/30' : ''}`}
+      onClick={onClick}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isToday && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
+                오늘
+              </span>
+            )}
+            {badge && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.bg}`}>
+                {badge.label}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={toggleFav}
+            className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
+          >
+            <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
+          </button>
+        </div>
+
+        <p className="font-semibold text-text-primary leading-tight">
+          {app.business_name || '(업체명 미입력)'}
+        </p>
+
+        <div className="flex flex-col gap-1 text-sm text-text-secondary">
+          {app.owner_name && (
+            <span className="flex items-center gap-1.5">
+              <Phone size={12} className="shrink-0 text-text-tertiary" />
+              {app.owner_name}{app.phone ? ` · ${app.phone}` : ''}
+            </span>
+          )}
+          {app.address && (
+            <span className="flex items-start gap-1.5">
+              <MapPin size={12} className="shrink-0 text-text-tertiary mt-0.5" />
+              <span className="line-clamp-1 break-keep">{app.address}</span>
+            </span>
+          )}
+          {app.construction_date && (
+            <span className="flex items-center gap-1.5">
+              <CalendarDays size={12} className="shrink-0 text-text-tertiary" />
+              시공일: {app.construction_date}{app.construction_time ? ` ${app.construction_time}` : ''}
+            </span>
+          )}
+        </div>
+
+        {totalAmt > 0 && (
+          <p className="text-sm font-medium text-brand-600">
+            {totalAmt.toLocaleString('ko-KR')}원
+          </p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function CardSkeleton() {
+  return (
+    <Card padding="md">
+      <div className="flex flex-col gap-2">
+        <div className="h-5 w-16 bg-surface-sunken rounded-full animate-pulse" />
+        <div className="h-5 w-40 bg-surface-sunken rounded animate-pulse" />
+        <div className="h-4 w-28 bg-surface-sunken rounded animate-pulse" />
+        <div className="h-4 w-36 bg-surface-sunken rounded animate-pulse" />
+      </div>
+    </Card>
+  )
+}
+
+// ─── 메인 페이지 ─────────────────────────────────────────────
+export default function ApplicationsPage() {
+  const router = useRouter()
+  const [apps, setApps] = useState<ServiceApplication[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [panelConfig, setPanelConfig] = useState<PanelConfig | undefined>(undefined)
+
+  const now = new Date()
+  const [viewYear, setViewYear] = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
+  const [sortAsc, setSortAsc] = useState(true)
+
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [yearMonthPickerOpen, setYearMonthPickerOpen] = useState(false)
+  const [pickerYear, setPickerYear] = useState(now.getFullYear())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedDateApps, setSelectedDateApps] = useState<ServiceApplication[]>([])
+
+  function prevMonth() {
+    if (viewMonth === 1) { setViewYear((y) => y - 1); setViewMonth(12) }
+    else setViewMonth((m) => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 12) { setViewYear((y) => y + 1); setViewMonth(1) }
+    else setViewMonth((m) => m + 1)
+  }
+
+  useEffect(() => {
+    const loadPanelConfig = async () => {
+      try {
+        const res = await fetch('/api/admin/settings/panel')
+        const json = await res.json()
+        if (json.success && json.data) setPanelConfig(json.data as PanelConfig)
+      } catch { /* 기본값으로 동작 */ }
+    }
+    loadPanelConfig()
+  }, [])
+
+  const fetchApps = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams()
+      if (query.trim()) params.set('q', query.trim())
+      const res = await fetch(`/api/admin/applications?${params.toString()}`)
+      const json = await res.json()
+      if (!json.success) { setError(json.error ?? '불러오기 실패'); return }
+      setApps(json.data ?? [])
+    } catch { setError('네트워크 오류') } finally { setIsLoading(false) }
+  }, [query])
+
+  useEffect(() => {
+    const t = setTimeout(fetchApps, 300)
+    return () => clearTimeout(t)
+  }, [fetchApps])
+
+  const displayedApps = useMemo(() => {
+    const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
+    const filtered = apps.filter((a) => {
+      if (!a.construction_date?.startsWith(monthPrefix)) return false
+      if (activeFilter !== 'all' && a.status !== activeFilter) return false
+      return true
+    })
+    return [...filtered].sort((a, b) => {
+      const da = a.construction_date ?? ''
+      const db = b.construction_date ?? ''
+      if (!da && !db) return 0
+      if (!da) return 1
+      if (!db) return -1
+      const cmp = da.localeCompare(db)
+      return sortAsc ? cmp : -cmp
+    })
+  }, [apps, activeFilter, viewYear, viewMonth, sortAsc])
+
+  const allDates = useMemo(() => {
+    const dateSet = new Set<string>()
+    for (const app of displayedApps) {
+      if (app.construction_date) dateSet.add(app.construction_date.slice(0, 10))
+    }
+    return Array.from(dateSet).sort()
+  }, [displayedApps])
+
+  const selected = apps.find((a) => a.id === selectedId) ?? null
+
+  function handleUpdate(updated: ServiceApplication) {
+    setApps((prev) => prev.map((a) => a.id === updated.id ? updated : a))
+    setSelectedId(null)
+  }
+
+  function handleDelete(id: string) {
+    setApps((prev) => prev.filter((a) => a.id !== id))
+    setSelectedId(null)
+  }
+
+  return (
+    <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">서비스관리</h1>
+          <p className="text-sm text-text-tertiary mt-0.5">{displayedApps.length}건</p>
+        </div>
+        <Button size="sm" onClick={() => router.push('/business/applications/new')}>
+          <Plus size={15} />
+          추가
+        </Button>
+      </div>
+
+      {/* 검색 */}
+      <Input
+        placeholder="업체명·담당자명·전화번호 검색"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        leadingIcon={<Search size={15} />}
+      />
+
+      {/* 년/월 네비게이션 */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={prevMonth}
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-sunken text-text-secondary hover:bg-border transition-colors shrink-0"
+          aria-label="이전 달"
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <div className="flex-1 text-center relative">
+          <button
+            type="button"
+            onClick={() => { setPickerYear(viewYear); setYearMonthPickerOpen(v => !v) }}
+            className="text-base font-bold text-text-primary hover:text-brand-600 transition-colors px-2 py-1 rounded-lg"
+          >
+            {viewYear}년 {viewMonth}월
+          </button>
+
+          {yearMonthPickerOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setYearMonthPickerOpen(false)}
+              />
+              <div
+                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-surface border border-border rounded-2xl shadow-pop p-4 w-64"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(y => y - 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-sunken text-text-secondary text-lg"
+                  >
+                    ‹
+                  </button>
+                  <span className="font-bold text-text-primary">{pickerYear}년</span>
+                  <button
+                    type="button"
+                    onClick={() => setPickerYear(y => y + 1)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-sunken text-text-secondary text-lg"
+                  >
+                    ›
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setViewYear(pickerYear)
+                        setViewMonth(m)
+                        setYearMonthPickerOpen(false)
+                      }}
+                      className={`py-2 text-sm rounded-lg font-medium transition-colors
+                        ${m === viewMonth && pickerYear === viewYear
+                          ? 'bg-brand-600 text-white'
+                          : 'hover:bg-surface-sunken text-text-secondary'
+                        }`}
+                    >
+                      {m}월
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={nextMonth}
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-sunken text-text-secondary hover:bg-border transition-colors shrink-0"
+          aria-label="다음 달"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      {/* 필터 탭 + 뷰 토글 + 정렬 */}
+      <div className="flex items-center gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveFilter(tab.key)}
+              className={`
+                shrink-0 h-8 px-3 rounded-full text-sm font-medium transition-colors
+                ${activeFilter === tab.key
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-surface-sunken text-text-secondary hover:bg-border'}
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 목록/캘린더 토글 */}
+        <div className="shrink-0 flex bg-surface-sunken rounded-xl p-0.5 gap-0.5">
+          <button
+            type="button"
+            onClick={() => setViewMode('list')}
+            className={`h-7 px-2 flex items-center justify-center rounded-lg transition-all
+              ${viewMode === 'list' ? 'bg-surface text-text-primary shadow-flat' : 'text-text-tertiary hover:text-text-secondary'}`}
+            aria-label="목록 보기"
+          >
+            <LayoutList size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('calendar')}
+            className={`h-7 px-2 flex items-center justify-center rounded-lg transition-all
+              ${viewMode === 'calendar' ? 'bg-surface text-text-primary shadow-flat' : 'text-text-tertiary hover:text-text-secondary'}`}
+            aria-label="캘린더 보기"
+          >
+            <CalendarDays size={14} />
+          </button>
+        </div>
+
+        {/* 정렬 버튼 */}
+        <button
+          type="button"
+          onClick={() => setSortAsc((v) => !v)}
+          className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl bg-surface-sunken text-text-secondary hover:bg-border transition-colors"
+          aria-label={sortAsc ? '오름차순' : '내림차순'}
+        >
+          {sortAsc
+            ? <ArrowUp size={14} className="text-brand-600" />
+            : <ArrowDown size={14} className="text-brand-600" />}
+        </button>
+      </div>
+
+      {/* 목록 뷰 */}
+      {viewMode === 'list' && (
+        <div className="flex flex-col gap-3">
+          {isLoading && Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)}
+
+          {!isLoading && error && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <p className="text-sm text-state-danger">{error}</p>
+              <Button variant="secondary" size="sm" onClick={fetchApps}>재시도</Button>
+            </div>
+          )}
+
+          {!isLoading && !error && displayedApps.length === 0 && (
+            <EmptyState
+              icon={<ClipboardList size={40} />}
+              title={`${viewYear}년 ${viewMonth}월 시공 일정이 없어요`}
+              description="다른 달로 이동하거나 새 서비스를 추가해 보세요."
+              bordered
+            />
+          )}
+
+          {!isLoading && !error && displayedApps.map((app) => (
+            <AppCard
+              key={app.id}
+              app={app}
+              onClick={() => setSelectedId(app.id)}
+              onFavoriteToggle={(id, val) =>
+                setApps((prev) => prev.map((a) => a.id === id ? { ...a, is_favorite: val } : a))
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 캘린더 뷰 */}
+      {viewMode === 'calendar' && (
+        <div>
+          {isLoading ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+          ) : (
+            <CalendarGrid
+              year={viewYear}
+              month={viewMonth}
+              applications={displayedApps}
+              onDaySelect={(dateStr, dayApps) => {
+                setSelectedDate(dateStr)
+                setSelectedDateApps(dayApps)
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 상세 패널 */}
+      {selected && (
+        <ApplicationPanel
+          app={selected}
+          onClose={() => setSelectedId(null)}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          panelConfig={panelConfig}
+        />
+      )}
+
+      {/* 날짜 목록 패널 */}
+      {selectedDate && (
+        <DayListPanel
+          dateStr={selectedDate}
+          apps={selectedDateApps}
+          onSelectApp={(app) => setSelectedId(app.id)}
+          onClose={() => setSelectedDate(null)}
+          allDates={allDates}
+          onDateChange={(newDate) => {
+            setSelectedDate(newDate)
+            setSelectedDateApps(displayedApps.filter(a => a.construction_date?.slice(0, 10) === newDate))
+          }}
+        />
+      )}
+    </div>
+  )
+}

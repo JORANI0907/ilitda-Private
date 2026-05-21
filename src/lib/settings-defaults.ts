@@ -1,17 +1,17 @@
 import type { FormConfig, NotificationConfig } from '@/types'
 
 export const NOTIFY_TYPES = [
-  '예약확정알림', '예약1일전알림', '예약당일알림', '작업완료알림',
+  '예약확정알림', '예약1일전알림', '예약당일알림', '서비스완료알림',
   '결제알림', '결제완료알림', '결제완료알림(잔금)', '계산서발행완료알림',
   '예약금 입금완료 알림', '예약금환급완료알림', '예약취소알림',
   'A/S방문알림', '방문견적알림',
 ] as const
 
 export const DEFAULT_MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
-  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n시공일: ${p.date} ${p.time}`,
+  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n서비스일: ${p.date} ${p.time}`,
   '예약1일전알림':        (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}`,
   '예약당일알림':         (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.`,
-  '작업완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업이 완료되었습니다. 감사합니다.`,
+  '서비스완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 서비스가 완료되었습니다. 감사합니다.`,
   '결제알림':             (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}`,
   '결제완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.`,
   '결제완료알림(잔금)':   (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.`,
@@ -54,8 +54,8 @@ export const WORKER_FIELD_LABELS: Record<string, string> = {
   phone: '연락처',
   owner_name: '담당자명',
   address: '주소',
-  construction_date: '시공일',
-  construction_time: '시공시간',
+  construction_date: '서비스일',
+  construction_time: '서비스시간',
   care_scope: '청소 범위',
   elevator: '엘리베이터',
   parking: '주차',
@@ -111,8 +111,8 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'access_method',    label: '출입방법',   placeholder: '예: 비밀번호 입력',   type: 'text',     section: 'site'    },
   { key: 'door_password',    label: '도어락',     placeholder: '예: 1234#',           type: 'text',     section: 'site'    },
   // 일정
-  { key: 'construction_date',label: '시공일',     placeholder: '',                    type: 'date',     section: 'schedule' },
-  { key: 'construction_time',label: '시공시간',   placeholder: '',                    type: 'time',     section: 'schedule' },
+  { key: 'construction_date',label: '서비스일',   placeholder: '',                    type: 'date',     section: 'schedule' },
+  { key: 'construction_time',label: '서비스시간', placeholder: '',                    type: 'time',     section: 'schedule' },
   // 요청사항
   { key: 'care_scope',          label: '청소 범위',   placeholder: '청소 범위 입력',          type: 'textarea', section: 'request'  },
   { key: 'request_notes',       label: '고객 요청',   placeholder: '고객 요청사항',           type: 'textarea', section: 'request'  },

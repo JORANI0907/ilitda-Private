@@ -356,7 +356,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
         <button
           type="button"
           onClick={() => router.back()}
-          className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary"
+          className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary active:opacity-60 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
@@ -369,7 +369,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
         <button
           type="button"
           onClick={handleOpenEditModal}
-          className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary shrink-0"
+          className="w-8 h-8 flex items-center justify-center text-text-secondary hover:text-text-primary active:opacity-60 transition-colors shrink-0"
           title="수정"
         >
           <Pencil size={17} />
@@ -445,9 +445,9 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </section>
 
-      {/* 시공정보 */}
+      {/* 서비스정보 */}
       <section>
-        <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">시공정보</p>
+        <p className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">서비스정보</p>
         <div className="border-2 border-green-200 rounded-xl p-3 bg-green-50/30 space-y-2">
           {client?.care_scope && (
             <div>
@@ -462,7 +462,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
             </div>
           )}
           {!hasSiteInfo && (
-            <p className="text-xs text-text-tertiary">시공 정보가 없습니다.</p>
+            <p className="text-xs text-text-tertiary">서비스 정보가 없습니다.</p>
           )}
         </div>
       </section>

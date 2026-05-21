@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { sendSMS } from '@/lib/solapi/client'
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
     return NextResponse.json({ success: true, data: [] })
   }
+
+  const { searchParams } = new URL(request.url)
+  const status = searchParams.get('status')
 
   const service = createServiceClient()
 
@@ -21,12 +25,18 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  const { data, error } = await service
+  let query = service
     .from('connections')
-    .select('*')
+    .select('*, profiles!worker_profile_id(name, phone)')
     .eq('business_id', business.id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+
+  if (status && ['pending', 'accepted'].includes(status)) {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
@@ -48,9 +58,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '요청 형식이 올바르지 않습니다.' }, { status: 400 })
   }
 
-  const { display_name, phone, is_manual } = body as Record<string, unknown>
+  const {
+    type,
+    name,
+    phone,
+    account_bank,
+    account_number,
+    registration_number,
+    resident_number,
+    company_name,
+  } = body as Record<string, unknown>
 
-  if (!display_name || typeof display_name !== 'string' || !display_name.trim()) {
+  if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ success: false, error: '이름을 입력해 주세요.' }, { status: 400 })
   }
 
@@ -66,25 +85,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  const isManual = is_manual === true
-  const name = (display_name as string).trim()
+  const isInvite = type === 'invite'
+  const nameStr = (name as string).trim()
   const phoneStr = phone && typeof phone === 'string' ? (phone as string).trim() || null : null
+
+  const insertData: Record<string, unknown> = {
+    business_id: business.id,
+    display_name: nameStr,
+    manual_name: nameStr,
+    manual_phone: phoneStr,
+    is_manual: !isInvite,
+    status: isInvite ? 'pending' : 'accepted',
+  }
+
+  if (!isInvite) {
+    if (account_bank && typeof account_bank === 'string') insertData.manual_account_bank = account_bank.trim()
+    if (account_number && typeof account_number === 'string') insertData.manual_account_number = account_number.trim()
+    if (registration_number && typeof registration_number === 'string') insertData.manual_registration_number = registration_number.trim()
+    if (resident_number && typeof resident_number === 'string') insertData.manual_resident_number = resident_number.trim()
+    if (company_name && typeof company_name === 'string') insertData.manual_company_name = company_name.trim()
+  }
 
   const { data, error } = await service
     .from('connections')
-    .insert({
-      business_id: business.id,
-      display_name: name,
-      manual_name: name,
-      manual_phone: phoneStr,
-      is_manual: isManual,
-      status: isManual ? 'accepted' : 'pending',
-    })
+    .insert(insertData)
     .select()
     .single()
 
   if (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  }
+
+  if (isInvite && phoneStr && data?.invite_token) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+    const inviteLink = `${appUrl}/connect/${data.invite_token}`
+    try {
+      await sendSMS(phoneStr, `[일잇다] 작업자 초대가 도착했습니다.\n수락 링크: ${inviteLink}`)
+    } catch {
+      // SMS 실패는 무시 — connection은 이미 생성됨
+    }
   }
 
   return NextResponse.json({ success: true, data }, { status: 201 })

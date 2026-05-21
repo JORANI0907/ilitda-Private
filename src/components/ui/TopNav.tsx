@@ -7,6 +7,7 @@ import {
   Home, Calendar, Wallet,
   BarChart3, Users, Briefcase, Store,
 } from 'lucide-react'
+import { PlanChip } from '@/components/ui/PlanChip'
 
 type Role = 'business' | 'worker'
 
@@ -18,7 +19,7 @@ interface NavItem {
 
 const BUSINESS_TABS: NavItem[] = [
   { href: '/business/home',       label: '홈',    icon: <Home size={18} /> },
-  { href: '/admin/applications',  label: '일정',  icon: <BarChart3 size={18} /> },
+  { href: '/business/applications', label: '일정',  icon: <BarChart3 size={18} /> },
   { href: '/business/hr',         label: '운영',  icon: <Users size={18} /> },
   { href: '/business/market',     label: '마켓',  icon: <Store size={18} /> },
 ]
@@ -62,9 +63,7 @@ export function TopNav({ role }: TopNavProps) {
         {/* 탭 메뉴 */}
         <nav className="flex items-center gap-0.5 flex-1">
           {tabs.map((tab) => {
-            const isActive = tab.href === '/admin/applications'
-              ? pathname.startsWith('/admin')
-              : pathname.startsWith(tab.href)
+            const isActive = pathname.startsWith(tab.href)
             return (
               <Link
                 key={tab.href}
@@ -85,6 +84,7 @@ export function TopNav({ role }: TopNavProps) {
 
         {/* 역할 뱃지 + 프로필/설정 */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {role === 'business' && <PlanChip />}
           <span className="text-xs font-medium text-text-tertiary px-2 py-1 bg-surface-sunken rounded-md">
             {roleLabel}
           </span>

@@ -1,9 +1,29 @@
 import { ReactNode } from 'react'
+import { redirect } from 'next/navigation'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { TopNav } from '@/components/ui/TopNav'
 import { BusinessBottomNav } from '@/components/business/BusinessBottomNav'
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const service = createServiceClient()
+  const { data: profile } = await service
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!profile?.is_admin) {
+    redirect('/business/applications')
+  }
+
   return (
     <AuthProvider>
       <div className="min-h-dvh bg-surface-sunken">

@@ -123,7 +123,7 @@ function NotificationRuleCard({
           {/* 자동 트리거 설정 */}
           {rule.mode === 'auto' && rule.trigger && (
             <div className="flex flex-col gap-2 bg-surface-sunken rounded-xl p-3">
-              <p className="text-xs text-text-tertiary font-medium">기준: 시공일</p>
+              <p className="text-xs text-text-tertiary font-medium">기준: 서비스일</p>
               <div className="flex gap-2 items-center">
                 <label className="text-xs text-text-secondary whitespace-nowrap">발송 시점</label>
                 <select
