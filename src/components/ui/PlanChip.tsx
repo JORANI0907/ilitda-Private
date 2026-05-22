@@ -60,6 +60,9 @@ export function PlanChip() {
     }
 
     fetchPlan()
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchPlan() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   if (isLoading) {

@@ -126,15 +126,15 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
 function FeatureCell({ value, highlight }: { value: FeatureValue; highlight?: boolean }) {
   if (typeof value === 'string') {
     return (
-      <span className={`text-[11px] font-semibold ${highlight ? 'text-brand-600' : 'text-text-secondary'}`}>
+      <span className={`text-xs font-bold leading-tight text-center ${highlight ? 'text-brand-600' : 'text-text-secondary'}`}>
         {value}
       </span>
     )
   }
   if (value) {
-    return <Check size={14} className="text-state-success mx-auto" />
+    return <Check size={16} strokeWidth={2.5} className="text-state-success mx-auto" />
   }
-  return <X size={12} className="text-text-disabled mx-auto" />
+  return <Minus size={14} className="text-border-strong mx-auto opacity-40" />
 }
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
@@ -312,52 +312,55 @@ export default function PlanPage() {
       </div>
 
       {/* 기능 비교표 */}
-      <div className="flex flex-col gap-4 mt-2">
+      <div className="flex flex-col gap-3 mt-2">
         <SectionHeader title="기능 상세 비교" level="section" />
 
-        {/* 컬럼 헤더 */}
-        <div className="grid grid-cols-4 gap-1 px-1">
-          <div />
-          {PLAN_KEYS.map(k => (
-            <div key={k} className="text-center">
-              <p className={`text-[11px] font-bold ${PLAN_STYLE[k].accent}`}>{PLAN_NAMES[k]}</p>
-              <p className="text-[10px] text-text-tertiary">{(PLAN_PRICES[k] / 1000).toFixed(1)}K</p>
-            </div>
-          ))}
-        </div>
-
-        {FEATURE_CATEGORIES.map(cat => (
-          <div key={cat.title} className="rounded-2xl border border-border-subtle overflow-hidden">
-            {/* 카테고리 헤더 */}
-            <div className="flex items-center gap-2 px-3 py-2.5 bg-surface-sunken border-b border-border-subtle">
-              {cat.icon}
-              <span className="text-[12px] font-semibold text-text-secondary">{cat.title}</span>
-            </div>
-
-            {/* 기능 행 */}
-            {cat.rows.map((row, i) => (
-              <div
-                key={row.label}
-                className={`grid grid-cols-4 items-center gap-1 px-3 py-2.5 ${
-                  i < cat.rows.length - 1 ? 'border-b border-border-subtle' : ''
-                } ${row.highlight ? 'bg-blue-50/40' : ''}`}
-              >
-                <span className={`text-[11px] ${row.highlight ? 'font-semibold text-text-primary' : 'text-text-secondary'} break-keep`}>
-                  {row.label}
-                </span>
-                <div className="flex justify-center">
-                  <FeatureCell value={row.basic} highlight={row.highlight} />
-                </div>
-                <div className="flex justify-center">
-                  <FeatureCell value={row.pro} highlight={row.highlight} />
-                </div>
-                <div className="flex justify-center">
-                  <FeatureCell value={row.max} highlight={row.highlight} />
-                </div>
+        <div className="rounded-2xl border border-border overflow-hidden bg-white">
+          {/* 고정 컬럼 헤더 */}
+          <div className="grid grid-cols-4 bg-surface-sunken border-b-2 border-border">
+            <div className="px-3 py-3" />
+            {PLAN_KEYS.map(k => (
+              <div key={k} className="py-3 text-center border-l border-border">
+                <p className={`text-xs font-bold ${PLAN_STYLE[k].accent}`}>{PLAN_NAMES[k]}</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">
+                  {PLAN_PRICES[k].toLocaleString('ko-KR')}원
+                </p>
               </div>
             ))}
           </div>
-        ))}
+
+          {/* 카테고리별 섹션 */}
+          {FEATURE_CATEGORIES.map((cat, catIdx) => (
+            <div key={cat.title}>
+              {/* 카테고리 헤더 */}
+              <div className={`flex items-center gap-2 px-3 py-2.5 bg-surface-sunken/70 ${catIdx > 0 ? 'border-t-2 border-border' : ''}`}>
+                {cat.icon}
+                <span className="text-xs font-bold text-text-secondary">{cat.title}</span>
+              </div>
+
+              {/* 기능 행 */}
+              {cat.rows.map((row, i) => (
+                <div
+                  key={row.label}
+                  className={`grid grid-cols-4 items-center ${
+                    i < cat.rows.length - 1 ? 'border-b border-border-subtle' : ''
+                  } ${row.highlight ? 'bg-brand-50/40' : ''}`}
+                >
+                  <div className="px-3 py-3.5">
+                    <span className={`text-xs leading-snug break-keep ${row.highlight ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>
+                      {row.label}
+                    </span>
+                  </div>
+                  {(['basic', 'pro', 'max'] as const).map(plan => (
+                    <div key={plan} className="py-3.5 flex justify-center items-center border-l border-border-subtle">
+                      <FeatureCell value={row[plan]} highlight={row.highlight} />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 무통장 입금 안내 모달 */}
