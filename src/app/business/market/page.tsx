@@ -7,6 +7,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
 
@@ -31,9 +34,25 @@ const FEATURES = [
   },
 ]
 
+const HELP_SECTIONS = [
+  {
+    title: '마켓플레이스란?',
+    content: '사업자 간 일거리(오더)를 주고받거나, 전문 인력을 구하고 지원할 수 있는 B2B 거래 플랫폼입니다.',
+  },
+  {
+    title: '오픈 일정',
+    content: '현재 준비 중입니다. 오픈 시 앱 알림으로 먼저 안내해 드립니다.',
+  },
+  {
+    title: '사용 가능 플랜',
+    content: '마켓플레이스는 프로(Pro) 이상 플랜에서 이용할 수 있습니다. 스탠더드 플랜은 플랜 업그레이드가 필요합니다.',
+  },
+]
+
 export default function MarketPage() {
   const { planType, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   if (!planLoading && !canUseFeature(planType, 'marketplace')) {
     return (
@@ -66,6 +85,16 @@ export default function MarketPage() {
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <SectionHeader title="마켓" level="page" />
+
+      <HelpBanner label="마켓플레이스 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="마켓플레이스 안내"
+        sections={HELP_SECTIONS}
+      />
+
+      <HelpTip>마켓플레이스는 현재 준비 중입니다. 오픈 시 알림을 보내드립니다.</HelpTip>
 
       {/* 오픈 예정 배너 */}
       <EmptyState
