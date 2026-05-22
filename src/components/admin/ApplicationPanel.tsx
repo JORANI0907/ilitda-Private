@@ -250,6 +250,12 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.options ?? []
   }
 
+  const isHidden = (key: string): boolean => {
+    const override = panelConfig?.fields?.[key]?.hidden
+    if (override !== undefined) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.defaultHidden ?? false
+  }
+
   // ─── 작업자 배정 ──────────────────────────────────────────
   async function handleSaveWorkers(workerIds: string[]) {
     setSavingWorkers(true)
@@ -366,79 +372,117 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     switch (sectionId) {
       case 'basic': return (
         <>
-          <FieldRow label={resolveLabel('business_name')}>
-            <EditInput value={form.business_name} onChange={setF('business_name')} placeholder={resolvePlaceholder('business_name')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('owner_name')}>
-            <EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder={resolvePlaceholder('owner_name')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('platform_nickname')}>
-            <EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder={resolvePlaceholder('platform_nickname')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('phone')}>
-            <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('email')}>
-            <EditInput value={form.email} onChange={setF('email')} type="email" placeholder={resolvePlaceholder('email')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('business_number')}>
-            <EditInput value={form.business_number} onChange={setF('business_number')} placeholder={resolvePlaceholder('business_number')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('address')}>
-            <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
-          </FieldRow>
+          {!isHidden('business_name') && (
+            <FieldRow label={resolveLabel('business_name')}>
+              <EditInput value={form.business_name} onChange={setF('business_name')} placeholder={resolvePlaceholder('business_name')} />
+            </FieldRow>
+          )}
+          {!isHidden('owner_name') && (
+            <FieldRow label={resolveLabel('owner_name')}>
+              <EditInput value={form.owner_name} onChange={setF('owner_name')} placeholder={resolvePlaceholder('owner_name')} />
+            </FieldRow>
+          )}
+          {!isHidden('platform_nickname') && (
+            <FieldRow label={resolveLabel('platform_nickname')}>
+              <EditInput value={form.platform_nickname} onChange={setF('platform_nickname')} placeholder={resolvePlaceholder('platform_nickname')} />
+            </FieldRow>
+          )}
+          {!isHidden('phone') && (
+            <FieldRow label={resolveLabel('phone')}>
+              <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+            </FieldRow>
+          )}
+          {!isHidden('email') && (
+            <FieldRow label={resolveLabel('email')}>
+              <EditInput value={form.email} onChange={setF('email')} type="email" placeholder={resolvePlaceholder('email')} />
+            </FieldRow>
+          )}
+          {!isHidden('business_number') && (
+            <FieldRow label={resolveLabel('business_number')}>
+              <EditInput value={form.business_number} onChange={setF('business_number')} placeholder={resolvePlaceholder('business_number')} />
+            </FieldRow>
+          )}
+          {!isHidden('address') && (
+            <FieldRow label={resolveLabel('address')}>
+              <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+            </FieldRow>
+          )}
         </>
       )
       case 'site': return (
         <>
-          <FieldRow label={resolveLabel('elevator')}>
-            <EditSelect value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('parking')}>
-            <EditSelect value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('building_access')}>
-            <EditSelect value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('access_method')}>
-            <EditInput value={form.access_method} onChange={setF('access_method')} placeholder={resolvePlaceholder('access_method')} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('door_password')}>
-            <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
-          </FieldRow>
+          {!isHidden('elevator') && (
+            <FieldRow label={resolveLabel('elevator')}>
+              <EditSelect value={form.elevator} onChange={setF('elevator')} options={resolveOptions('elevator')} placeholder="선택" />
+            </FieldRow>
+          )}
+          {!isHidden('parking') && (
+            <FieldRow label={resolveLabel('parking')}>
+              <EditSelect value={form.parking} onChange={setF('parking')} options={resolveOptions('parking')} placeholder="선택" />
+            </FieldRow>
+          )}
+          {!isHidden('building_access') && (
+            <FieldRow label={resolveLabel('building_access')}>
+              <EditSelect value={form.building_access} onChange={setF('building_access')} options={resolveOptions('building_access')} placeholder="선택" />
+            </FieldRow>
+          )}
+          {!isHidden('access_method') && (
+            <FieldRow label={resolveLabel('access_method')}>
+              <EditInput value={form.access_method} onChange={setF('access_method')} placeholder={resolvePlaceholder('access_method')} />
+            </FieldRow>
+          )}
+          {!isHidden('door_password') && (
+            <FieldRow label={resolveLabel('door_password')}>
+              <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
+            </FieldRow>
+          )}
         </>
       )
       case 'schedule': return (
         <>
-          <FieldRow label={resolveLabel('construction_date')}>
-            <EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('construction_time')}>
-            <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
-          </FieldRow>
+          {!isHidden('construction_date') && (
+            <FieldRow label={resolveLabel('construction_date')}>
+              <EditInput value={form.construction_date} onChange={setF('construction_date')} type="date" />
+            </FieldRow>
+          )}
+          {!isHidden('construction_time') && (
+            <FieldRow label={resolveLabel('construction_time')}>
+              <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
+            </FieldRow>
+          )}
         </>
       )
       case 'request': return (
         <>
-          <FieldRow label={resolveLabel('care_scope')}>
-            <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder={resolvePlaceholder('care_scope')} rows={2} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('request_notes')}>
-            <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder={resolvePlaceholder('request_notes')} rows={2} />
-          </FieldRow>
-          <FieldRow label={resolveLabel('admin_request_notes')}>
-            <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
-          </FieldRow>
+          {!isHidden('care_scope') && (
+            <FieldRow label={resolveLabel('care_scope')}>
+              <EditTextarea value={form.care_scope} onChange={setF('care_scope')} placeholder={resolvePlaceholder('care_scope')} rows={2} />
+            </FieldRow>
+          )}
+          {!isHidden('request_notes') && (
+            <FieldRow label={resolveLabel('request_notes')}>
+              <EditTextarea value={form.request_notes} onChange={setF('request_notes')} placeholder={resolvePlaceholder('request_notes')} rows={2} />
+            </FieldRow>
+          )}
+          {!isHidden('admin_request_notes') && (
+            <FieldRow label={resolveLabel('admin_request_notes')}>
+              <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
+            </FieldRow>
+          )}
         </>
       )
       case 'payment': return (
         <>
-          <FieldRow label={resolveLabel('payment_method')}>
-            <EditSelect value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('account_number')}>
-            <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
-          </FieldRow>
+          {!isHidden('payment_method') && (
+            <FieldRow label={resolveLabel('payment_method')}>
+              <EditSelect value={form.payment_method} onChange={setF('payment_method')} options={resolveOptions('payment_method')} placeholder="선택" />
+            </FieldRow>
+          )}
+          {!isHidden('account_number') && (
+            <FieldRow label={resolveLabel('account_number')}>
+              <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+            </FieldRow>
+          )}
           <FieldRow label="단가 (원)">
             <EditInput value={form.unit_price_per_visit} onChange={setF('unit_price_per_visit')} type="number" placeholder="0" />
           </FieldRow>
@@ -479,12 +523,16 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       )
       case 'misc': return (
         <>
-          <FieldRow label={resolveLabel('disposition')}>
-            <EditSelect value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
-          </FieldRow>
-          <FieldRow label={resolveLabel('admin_notes')}>
-            <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
-          </FieldRow>
+          {!isHidden('disposition') && (
+            <FieldRow label={resolveLabel('disposition')}>
+              <EditSelect value={form.disposition} onChange={setF('disposition')} options={resolveOptions('disposition')} placeholder="선택" />
+            </FieldRow>
+          )}
+          {!isHidden('admin_notes') && (
+            <FieldRow label={resolveLabel('admin_notes')}>
+              <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
+            </FieldRow>
+          )}
         </>
       )
       default: return null

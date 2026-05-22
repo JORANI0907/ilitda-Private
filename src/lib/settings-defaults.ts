@@ -100,8 +100,9 @@ export const PANEL_SECTIONS = [
 export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   // 기본 정보
   { key: 'business_name',    label: '업체명',     placeholder: '업체명',              type: 'text',     section: 'basic'    },
-  { key: 'owner_name',       label: '담당자명',   placeholder: '홍길동',              type: 'text',     section: 'basic'    },
-  { key: 'phone',            label: '연락처',     placeholder: '010-0000-0000',       type: 'text',     section: 'basic'    },
+  { key: 'owner_name',       label: '담당자명',      placeholder: '홍길동',              type: 'text',     section: 'basic'    },
+  { key: 'platform_nickname',label: '플랫폼 닉네임', placeholder: '예: 스벅판교점',    type: 'text',     section: 'basic'    },
+  { key: 'phone',            label: '연락처',        placeholder: '010-0000-0000',      type: 'text',     section: 'basic'    },
   { key: 'email',            label: '이메일',     placeholder: 'example@email.com',   type: 'text',     section: 'basic'    },
   { key: 'business_number',  label: '사업자번호', placeholder: '000-00-00000',        type: 'text',     section: 'basic'    },
   { key: 'address',          label: '주소',       placeholder: '주소',                type: 'text',     section: 'basic'    },
@@ -111,8 +112,9 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'elevator',         label: '엘리베이터', placeholder: '선택',                type: 'dropdown', options: ['있음', '없음', '계단 전용'], section: 'site' },
   { key: 'parking',          label: '주차',       placeholder: '선택',                type: 'dropdown', options: ['가능', '불가', '유료 주차'],  section: 'site' },
   { key: 'building_access',  label: '건물출입',   placeholder: '선택',                type: 'dropdown', options: ['자유출입', '사전출입신청'],   section: 'site' },
-  { key: 'access_method',    label: '출입방법',   placeholder: '예: 비밀번호 입력',   type: 'text',     section: 'site'    },
-  { key: 'spare_site_1',     label: '커스텀 필드 1', placeholder: '',                type: 'text',     section: 'site',    defaultHidden: true },
+  { key: 'access_method',    label: '출입방법',       placeholder: '예: 비밀번호 입력',   type: 'text',     section: 'site'    },
+  { key: 'door_password',    label: '도어락 비밀번호', placeholder: '비밀번호 입력',   type: 'text',     section: 'site'    },
+  { key: 'spare_site_1',     label: '커스텀 필드 1',  placeholder: '',                type: 'text',     section: 'site',    defaultHidden: true },
   { key: 'spare_site_2',     label: '커스텀 필드 2', placeholder: '',                type: 'text',     section: 'site',    defaultHidden: true },
   // 일정
   { key: 'construction_date',label: '서비스일',   placeholder: '',                    type: 'date',     section: 'schedule' },
