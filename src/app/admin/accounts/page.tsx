@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
 
 interface BusinessAccount {
   id: string
@@ -90,11 +92,27 @@ function AccountCard({ account, onClick }: { account: BusinessAccount; onClick: 
   )
 }
 
+const ACCOUNTS_HELP_SECTIONS = [
+  {
+    title: '계정 목록이란?',
+    content: '일잇다에 가입한 사업자 계정 전체 목록입니다. 각 카드를 탭하면 상세 정보를 확인하고 수정할 수 있어요.',
+  },
+  {
+    title: '플랜 배지 의미',
+    content: 'Free: 무료 플랜\nBasic: 기본 유료 플랜\nPro: 프로 플랜\nMax: 최상위 플랜\n\n배지 색상으로 플랜을 빠르게 확인할 수 있습니다.',
+  },
+  {
+    title: '계정 상세 수정 방법',
+    content: '목록에서 계정 카드를 탭하면 상세 페이지로 이동합니다. 상호명, 플랜, 연락처 등을 수정하고 저장 버튼을 누르면 즉시 반영됩니다.',
+  },
+]
+
 export default function AdminAccountsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<BusinessAccount[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -131,6 +149,14 @@ export default function AdminAccountsPage() {
           level="page"
         />
       </div>
+
+      <HelpBanner label="계정 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="계정 관리 사용법"
+        sections={ACCOUNTS_HELP_SECTIONS}
+      />
 
       {isLoading && (
         <div className="flex flex-col gap-3">
