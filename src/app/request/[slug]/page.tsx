@@ -61,12 +61,12 @@ const PRIVACY_TEXT = `■ 개인정보 수집·이용에 관한 안내
 귀하는 개인정보 수집·이용에 동의를 거부할 권리가 있습니다.
 단, 동의 거부 시 서비스 신청이 불가합니다.`
 
-const MARKETING_TEXT = `■ 서비스 마케팅 활용 동의
+const getMarketingText = (brandName: string) => `■ 서비스 마케팅 활용 동의
 
 수집된 연락처(문자/이메일)를 통해 아래 정보를 수신하는 것에 동의합니다.
 
 수신 정보
-• 일잇다 서비스 소식 및 신규 기능 안내
+• ${brandName} 서비스 소식 및 신규 기능 안내
 • 이벤트, 할인 혜택, 프로모션 정보
 • 맞춤 서비스 추천
 
@@ -174,6 +174,7 @@ export default function RequestPage({ params }: PageProps) {
   const [pageError, setPageError] = useState<string | null>(null)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [formConfig, setFormConfig] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
+  const [businessName, setBusinessName] = useState<string>('일잇다')
 
   const [form, setForm] = useState<RequestForm>(INITIAL_FORM)
   const [consentPrivacy, setConsentPrivacy] = useState(false)
@@ -192,8 +193,9 @@ export default function RequestPage({ params }: PageProps) {
       .then((json) => {
         if (!json.success) {
           setPageError(json.error ?? '존재하지 않는 신청 페이지입니다.')
-        } else if (json.data?.formConfig) {
-          setFormConfig(json.data.formConfig as FormConfig)
+        } else {
+          if (json.data?.businessName) setBusinessName(json.data.businessName)
+          if (json.data?.formConfig) setFormConfig(json.data.formConfig as FormConfig)
         }
       })
       .catch(() => setPageError('페이지를 불러오는 중 오류가 발생했습니다.'))
@@ -253,7 +255,7 @@ export default function RequestPage({ params }: PageProps) {
           }}
         >
           <div style={{ animation: 'itdPop 0.7s cubic-bezier(0.34,1.56,0.64,1) both' }}>
-            <p className="text-4xl font-black text-white tracking-tight">일잇다</p>
+            <p className="text-4xl font-black text-white tracking-tight">{businessName}</p>
           </div>
           <div style={{ animation: 'itdFade 0.5s ease 0.35s both' }}>
             <p
@@ -325,7 +327,7 @@ export default function RequestPage({ params }: PageProps) {
               SERVICE INQUIRY
             </div>
             <p style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 10, letterSpacing: '-0.5px', whiteSpace: 'pre-line' }}>
-              {isPageLoading ? '...' : (pageError ? '서비스 신청' : '일잇다\n서비스를 신청하세요')}
+              {isPageLoading ? '...' : (pageError ? '서비스 신청' : `${businessName}\n서비스를 신청하세요`)}
             </p>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>
               {formConfig.hero_subtitle}
@@ -356,7 +358,7 @@ export default function RequestPage({ params }: PageProps) {
             </div>
             <h2 className="text-xl font-black text-slate-800 mb-3">신청 완료!</h2>
             <p className="text-sm text-slate-500 leading-relaxed mb-2 break-keep">
-              일잇다 담당자가 확인 후 빠르게 연락드리겠습니다.
+              {businessName} 담당자가 확인 후 빠르게 연락드리겠습니다.
             </p>
           </div>
         ) : (
@@ -615,7 +617,7 @@ export default function RequestPage({ params }: PageProps) {
                   <label htmlFor="consent-marketing" className="text-sm font-semibold text-slate-700 cursor-pointer">
                     서비스 마케팅 활용 동의 <span className="text-red-500">*</span>
                   </label>
-                  <p className="text-xs text-slate-500 mt-0.5">일잇다의 서비스 안내, 이벤트, 프로모션 정보 수신에 동의합니다.</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{businessName}의 서비스 안내, 이벤트, 프로모션 정보 수신에 동의합니다.</p>
                 </div>
                 <button
                   type="button"
@@ -664,14 +666,14 @@ export default function RequestPage({ params }: PageProps) {
           </div>
         )}
 
-        <div className="text-center py-5 text-xs text-slate-400">© 2025 일잇다. All rights reserved.</div>
+        <div className="text-center py-5 text-xs text-slate-400">© 2025 {businessName}. All rights reserved.</div>
       </div>
 
       {/* 동의 내용 모달 */}
       {showModal && (
         <ConsentModal
           title={showModal === 'privacy' ? '개인정보 수집·이용 동의' : '서비스 마케팅 활용 동의'}
-          content={showModal === 'privacy' ? PRIVACY_TEXT : MARKETING_TEXT}
+          content={showModal === 'privacy' ? PRIVACY_TEXT : getMarketingText(businessName)}
           onClose={() => setShowModal(null)}
         />
       )}
