@@ -40,7 +40,7 @@ export function HelpIcon({ title, description, className = '' }: HelpIconProps) 
       </button>
 
       {open && (
-        <div className="absolute z-50 left-5 top-0 w-64 rounded-xl shadow-lg border border-border-primary bg-bg-primary p-3">
+        <div className="absolute z-50 left-5 top-0 w-64 rounded-xl shadow-pop border border-border bg-white p-3">
           <div className="flex items-start justify-between gap-2 mb-1.5">
             <p className="text-[12px] font-semibold text-text-primary leading-tight">{title}</p>
             <button
