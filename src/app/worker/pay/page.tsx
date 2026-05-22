@@ -6,6 +6,9 @@ import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { EarningsCard } from '@/components/worker/EarningsCard'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { PayrollStatus } from '@/types'
 
 type Segment = 'current' | 'history'
@@ -70,11 +73,23 @@ function calcTotalMinutes(items: CurrentItem[]): number {
   return items.reduce((sum, item) => sum + (getTotalMinutes(item.attendance) ?? 0), 0)
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '이번 달 급여 확인',
+    content: '"이번 달" 탭에서 이번 달 예상 급여와 작업별 내역을 확인할 수 있어요.\n실제 출퇴근 기록 시간을 기준으로 금액이 계산됩니다.',
+  },
+  {
+    title: '지급 내역 확인',
+    content: '"지난 내역" 탭에서 이전 달 정산이 완료된 급여 내역을 확인할 수 있어요.',
+  },
+]
+
 export default function WorkerPayPage() {
   const [segment, setSegment] = useState<Segment>('current')
   const [currentItems, setCurrentItems] = useState<CurrentItem[]>([])
   const [payrolls, setPayrolls] = useState<PayrollItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,6 +120,16 @@ export default function WorkerPayPage() {
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <SectionHeader title="정산" level="page" />
+
+      <HelpBanner label="급여 확인 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="급여 확인 안내"
+        sections={HELP_SECTIONS}
+      />
+
+      <HelpTip>급여는 사업자가 등록한 금액 기준으로 표시됩니다. 문의사항은 담당 사업자에게 연락하세요.</HelpTip>
 
       {/* 세그먼트 탭 */}
       <div className="flex gap-1 bg-surface-sunken rounded-xl p-1">
