@@ -26,7 +26,6 @@ import type { FormConfig, PanelConfig, PanelFieldOverride } from '@/types'
 // ─── 상수 ─────────────────────────────────────────────────────
 const FORM_ALWAYS_KEYS = new Set([
   'business_name', 'phone', 'address',
-  'construction_date', 'construction_time',
   'care_scope', 'request_notes',
 ])
 

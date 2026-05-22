@@ -103,12 +103,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   if (!client_address || typeof client_address !== 'string' || !client_address.trim()) {
     return NextResponse.json({ success: false, error: '주소를 입력해 주세요.' }, { status: 400 })
   }
-  if (!desired_date || typeof desired_date !== 'string' || !desired_date.trim()) {
-    return NextResponse.json({ success: false, error: '희망 방문일을 선택해 주세요.' }, { status: 400 })
-  }
-  if (!desired_time || typeof desired_time !== 'string' || !desired_time.trim()) {
-    return NextResponse.json({ success: false, error: '희망 시간을 선택해 주세요.' }, { status: 400 })
-  }
   if (!care_scope || typeof care_scope !== 'string' || !care_scope.trim()) {
     return NextResponse.json({ success: false, error: '서비스 내용을 입력해 주세요.' }, { status: 400 })
   }
@@ -153,8 +147,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     business_name:     (client_name as string).trim(),
     phone:             (client_phone as string).trim(),
     address:           (client_address as string).trim(),
-    construction_date: (desired_date as string).trim(),
-    construction_time: (desired_time as string).trim(),
+    construction_date: strOrNull(desired_date),
+    construction_time: strOrNull(desired_time),
     request_notes:     finalNotes,
     status:            '신규',
     owner_name:        strOrNull(owner_name),

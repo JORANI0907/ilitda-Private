@@ -20,8 +20,6 @@ interface RequestForm {
   client_name: string
   client_phone: string
   client_address: string
-  desired_date: string
-  desired_time: string
   notes: string
   owner_name: string
   email: string
@@ -38,19 +36,13 @@ interface RequestForm {
 
 const INITIAL_FORM: RequestForm = {
   client_name: '', client_phone: '', client_address: '',
-  desired_date: '', desired_time: '', notes: '',
+  notes: '',
   owner_name: '', email: '', business_number: '',
   account_number: '', payment_method: '',
   elevator: '', parking: '', building_access: '',
   access_method: '', care_scope: '',
   custom_fields: {},
 }
-
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const h = Math.floor(i / 2).toString().padStart(2, '0')
-  const m = i % 2 === 0 ? '00' : '30'
-  return `${h}:${m}`
-})
 
 const PRIVACY_TEXT = `■ 개인정보 수집·이용에 관한 안내
 
@@ -223,14 +215,12 @@ export default function RequestPage({ params }: PageProps) {
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {}
-    if (!form.client_name.trim())   e.client_name = '업체명/이름을 입력해 주세요.'
-    if (!form.client_phone.trim())  e.client_phone = '연락처를 입력해 주세요.'
+    if (!form.client_name.trim())    e.client_name = '업체명/이름을 입력해 주세요.'
+    if (!form.client_phone.trim())   e.client_phone = '연락처를 입력해 주세요.'
     if (!form.client_address.trim()) e.client_address = '주소를 입력해 주세요.'
-    if (!form.desired_date)         e.desired_date = '희망 방문일을 선택해 주세요.'
-    if (!form.desired_time)         e.desired_time = '희망 시간을 선택해 주세요.'
-    if (!form.care_scope.trim())    e.care_scope = '서비스 내용을 입력해 주세요.'
-    if (!consentPrivacy)            e.consent_privacy = '개인정보 제공에 동의해 주세요.'
-    if (!consentMarketing)          e.consent_marketing = '서비스 마케팅 활용에 동의해 주세요.'
+    if (!form.care_scope.trim())     e.care_scope = '서비스 내용을 입력해 주세요.'
+    if (!consentPrivacy)             e.consent_privacy = '개인정보 제공에 동의해 주세요.'
+    if (!consentMarketing)           e.consent_marketing = '서비스 마케팅 활용에 동의해 주세요.'
     return e
   }
 
@@ -477,26 +467,6 @@ export default function RequestPage({ params }: PageProps) {
                   value={form.client_address}
                   onChange={(e) => set('client_address')(e.target.value)}
                 />
-              </Field>
-              <Field label="희망 방문일" required error={errors.desired_date}>
-                <input
-                  type="date"
-                  className={inputCls(errors.desired_date)}
-                  value={form.desired_date}
-                  onChange={(e) => set('desired_date')(e.target.value)}
-                />
-              </Field>
-              <Field label="희망 시간" required error={errors.desired_time}>
-                <select
-                  className={inputCls(errors.desired_time)}
-                  value={form.desired_time}
-                  onChange={(e) => set('desired_time')(e.target.value)}
-                >
-                  <option value="">시간을 선택해 주세요</option>
-                  {TIME_OPTIONS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
               </Field>
               {formConfig.show_fields.elevator && (
                 <OptionGroup
