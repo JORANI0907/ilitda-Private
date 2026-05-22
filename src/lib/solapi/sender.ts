@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 
-const BASE = 'https://api.solapi.com/users/v1/sender-id'
+const BASE = 'https://api.solapi.com/callers/v1'
 
 function auth() {
   const date = new Date().toISOString()
@@ -27,8 +27,8 @@ export async function requestSenderVerification(phoneNumber: string): Promise<st
 
 // 2단계: OTP 검증 → 승인 완료
 export async function verifySenderRegistration(uniqueId: string, otp: string): Promise<void> {
-  const res = await fetch(BASE, {
-    method: 'PUT',
+  const res = await fetch(`${BASE}/verify`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: auth() },
     body: JSON.stringify({ uniqueId, otp }),
   })
