@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '일잇다 — 1인 사업자를 기업처럼 편하게 관리',
+  title: '일잇다 1인 사업자를 기업처럼 편하게 관리',
   description: '1인 사업자를 기업처럼 편하게 관리',
   manifest: '/manifest.json',
   appleWebApp: {
