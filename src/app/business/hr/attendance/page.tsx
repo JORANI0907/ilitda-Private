@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 interface AttendanceRow {
   id: string
@@ -26,8 +29,24 @@ interface AttendanceRow {
   } | null
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '근태 기록 확인 방법',
+    content: '직원이 앱에서 출퇴근 체크를 하면 이 페이지에 자동으로 기록됩니다. 직원 이름, 출근·퇴근 시간, 총 근무 시간을 한눈에 확인할 수 있습니다.',
+  },
+  {
+    title: '날짜별 필터 사용법',
+    content: '날짜 입력 칸에서 원하는 날짜를 선택하면 해당 날짜의 기록만 표시됩니다. 기본값은 오늘 날짜입니다.',
+  },
+  {
+    title: '직원이 출퇴근 체크하는 방법',
+    content: '직원이 일잇다 앱을 설치하고 관리자가 보낸 초대 링크로 계정을 연결하면, 앱 내 출퇴근 버튼으로 현장에서 바로 체크할 수 있습니다.',
+  },
+]
+
 export default function AttendancePage() {
   const today = new Date().toISOString().slice(0, 10)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [dateFilter, setDateFilter] = useState(today)
   const [records, setRecords] = useState<AttendanceRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -61,6 +80,15 @@ export default function AttendancePage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
       <SectionHeader title="출퇴근 기록" level="page" />
+
+      <HelpBanner label="근태 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip>직원이 현장에서 출퇴근 앱으로 체크하면 여기에 자동으로 기록됩니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="근태 관리 사용법"
+        sections={HELP_SECTIONS}
+      />
 
       <Input
         label="날짜"
