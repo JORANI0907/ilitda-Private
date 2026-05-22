@@ -3,21 +3,21 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Lock } from 'lucide-react'
+import { Mail, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!username.trim() || !password.trim()) {
-      setError('아이디와 비밀번호를 입력해주세요.')
+    if (!email.trim() || !password.trim()) {
+      setError('이메일과 비밀번호를 입력해주세요.')
       return
     }
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
       })
 
       const json = await res.json()
@@ -65,14 +65,14 @@ export default function LoginPage() {
         className="bg-surface rounded-2xl shadow-soft p-6 flex flex-col gap-4"
       >
         <Input
-          label="아이디"
-          type="text"
-          placeholder="아이디 입력"
-          leadingIcon={<User size={16} />}
-          value={username}
-          onChange={(e) => { setUsername(e.target.value); setError(null) }}
-          autoComplete="username"
-          name="username"
+          label="이메일"
+          type="email"
+          placeholder="이메일 입력"
+          leadingIcon={<Mail size={16} />}
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setError(null) }}
+          autoComplete="email"
+          name="email"
         />
         <Input
           label="비밀번호"
@@ -89,7 +89,7 @@ export default function LoginPage() {
           type="submit"
           fullWidth
           isLoading={isLoading}
-          disabled={!username.trim() || !password.trim()}
+          disabled={!email.trim() || !password.trim()}
         >
           로그인
         </Button>
