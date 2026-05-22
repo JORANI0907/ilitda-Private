@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Sparkles,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users, Link2, Copy, Check, FileText, LayoutList, ShieldCheck,
+  CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -371,13 +371,13 @@ export default function BusinessProfilePage() {
           <button
             type="button"
             className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
-            onClick={() => router.push('/business/profile/settings/form')}
+            onClick={() => router.push('/business/profile/settings/fields')}
           >
             <div className="flex items-center gap-3">
-              <FileText size={16} className="text-text-tertiary" />
+              <SlidersHorizontal size={16} className="text-text-tertiary" />
               <div>
-                <span className="text-sm text-text-primary">신청서 폼 설정</span>
-                <p className="text-xs text-text-tertiary mt-0.5">결제 방법, 표시 항목, 작업자 전달 필드</p>
+                <span className="text-sm text-text-primary">필드 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">표시 이름, 폼 노출, SMS 포함, 순서</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
@@ -392,20 +392,6 @@ export default function BusinessProfilePage() {
               <div>
                 <span className="text-sm text-text-primary">서비스 알림 설정</span>
                 <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
-              </div>
-            </div>
-            <ChevronRight size={16} className="text-text-tertiary" />
-          </button>
-          <button
-            type="button"
-            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
-            onClick={() => router.push('/business/profile/settings/panel')}
-          >
-            <div className="flex items-center gap-3">
-              <LayoutList size={16} className="text-text-tertiary" />
-              <div>
-                <span className="text-sm text-text-primary">서비스 관리 화면 설정</span>
-                <p className="text-xs text-text-tertiary mt-0.5">필드 제목, 예시 텍스트, 드롭다운 옵션 커스텀</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />

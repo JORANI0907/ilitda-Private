@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
@@ -23,13 +23,34 @@ function offsetLabel(n: number): string {
 }
 
 const DUMMY_PARAMS: Record<string, string> = {
-  name: '업체명',
+  name: '스타벅스 판교점',
   date: '2025-01-15',
   time: '09:00',
   amount: '500,000',
   account: '국민은행 000-0000-0000',
 }
 
+// ─── SMS 변수 정의 ────────────────────────────────────────────
+const SMS_VARIABLES: { token: string; label: string; preview: string }[] = [
+  { token: '{이름}',      label: '업체명/이름',  preview: '스타벅스 판교점' },
+  { token: '{담당자}',    label: '담당자명',     preview: '홍길동' },
+  { token: '{연락처}',    label: '연락처',       preview: '010-1234-5678' },
+  { token: '{서비스일}',  label: '서비스일',     preview: '2025-01-15' },
+  { token: '{시간}',      label: '서비스시간',   preview: '09:00' },
+  { token: '{주소}',      label: '주소',         preview: '성남시 분당구' },
+  { token: '{서비스내용}',label: '서비스 내용',  preview: '주방 후드, 에어컨 2대' },
+  { token: '{금액}',      label: '금액',         preview: '500,000원' },
+  { token: '{계좌}',      label: '계좌',         preview: '국민은행 123-456' },
+]
+
+function previewTemplate(template: string): string {
+  return SMS_VARIABLES.reduce(
+    (t, v) => t.replaceAll(v.token, v.preview),
+    template,
+  )
+}
+
+// ─── NotificationRuleCard ─────────────────────────────────────
 function NotificationRuleCard({
   rule,
   onChange,
@@ -40,6 +61,7 @@ function NotificationRuleCard({
   const [useCustomTemplate, setUseCustomTemplate] = useState(
     rule.template !== null && rule.template !== undefined
   )
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const defaultPreview = DEFAULT_MSG_TEMPLATE[rule.type]
     ? DEFAULT_MSG_TEMPLATE[rule.type](DUMMY_PARAMS)
@@ -65,19 +87,26 @@ function NotificationRuleCard({
 
   const handleTriggerChange = (field: 'offset_days' | 'send_time', value: number | string) => {
     if (!rule.trigger) return
-    onChange({
-      ...rule,
-      trigger: { ...rule.trigger, [field]: value },
-    })
+    onChange({ ...rule, trigger: { ...rule.trigger, [field]: value } })
   }
 
   const handleCustomTemplateToggle = (useCustom: boolean) => {
     setUseCustomTemplate(useCustom)
-    if (!useCustom) {
-      onChange({ ...rule, template: null })
-    } else {
-      onChange({ ...rule, template: rule.template ?? '' })
-    }
+    onChange({ ...rule, template: useCustom ? (rule.template ?? '') : null })
+  }
+
+  function insertVariable(token: string) {
+    const el = textareaRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const current = rule.template ?? ''
+    const next = current.slice(0, start) + token + current.slice(end)
+    onChange({ ...rule, template: next })
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(start + token.length, start + token.length)
+    })
   }
 
   return (
@@ -172,13 +201,44 @@ function NotificationRuleCard({
             )}
 
             {useCustomTemplate && (
-              <textarea
-                rows={4}
-                value={rule.template ?? ''}
-                onChange={(e) => onChange({ ...rule, template: e.target.value })}
-                placeholder="커스텀 문구를 입력하세요"
-                className="w-full text-sm border border-border-subtle rounded-xl px-3 py-2.5 bg-surface outline-none focus:border-brand-600 resize-y"
-              />
+              <div className="flex flex-col gap-2">
+                {/* 변수 칩 */}
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-medium text-text-tertiary">변수 클릭 시 커서 위치에 삽입</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SMS_VARIABLES.map((v) => (
+                      <button
+                        key={v.token}
+                        type="button"
+                        onClick={() => insertVariable(v.token)}
+                        className="inline-flex items-center h-6 px-2 rounded-full bg-brand-600/10 text-brand-600 text-[11px] font-medium hover:bg-brand-600/20 transition-colors active:scale-95"
+                      >
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 편집 textarea */}
+                <textarea
+                  ref={textareaRef}
+                  rows={4}
+                  value={rule.template ?? ''}
+                  onChange={(e) => onChange({ ...rule, template: e.target.value })}
+                  placeholder={`예: [일잇다] {이름} 담당자님, 예약이 확정되었습니다.\n서비스일: {서비스일} {시간}`}
+                  className="w-full text-sm border border-border-subtle rounded-xl px-3 py-2.5 bg-surface outline-none focus:border-brand-600 resize-y"
+                />
+
+                {/* 미리보기 */}
+                {rule.template && rule.template.trim() && (
+                  <div className="bg-surface-sunken rounded-lg p-2.5">
+                    <p className="text-[10px] text-text-tertiary mb-1">미리보기</p>
+                    <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed">
+                      {previewTemplate(rule.template)}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -187,6 +247,7 @@ function NotificationRuleCard({
   )
 }
 
+// ─── 메인 페이지 ─────────────────────────────────────────────
 export default function NotificationsSettingsPage() {
   const router = useRouter()
   const [config, setConfig] = useState<NotificationConfig | null>(null)
@@ -297,16 +358,9 @@ export default function NotificationsSettingsPage() {
         />
       ))}
 
-      {/* 저장 */}
-      {saveError && (
-        <p className="text-sm text-state-danger text-center">{saveError}</p>
-      )}
-      {saveSuccess && (
-        <p className="text-sm text-state-success text-center">저장되었습니다.</p>
-      )}
-      <Button fullWidth onClick={handleSave} isLoading={isSaving}>
-        저장
-      </Button>
+      {saveError && <p className="text-sm text-state-danger text-center">{saveError}</p>}
+      {saveSuccess && <p className="text-sm text-state-success text-center">저장되었습니다.</p>}
+      <Button fullWidth onClick={handleSave} isLoading={isSaving}>저장</Button>
     </div>
   )
 }

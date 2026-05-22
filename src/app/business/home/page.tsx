@@ -164,7 +164,7 @@ export default function BusinessHomePage() {
               key={s.id}
               padding="md"
               className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
-              onClick={() => router.push(`/business/ops/schedules/${s.id}`)}
+              onClick={() => router.push('/business/applications')}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

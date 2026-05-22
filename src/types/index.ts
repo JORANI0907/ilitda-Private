@@ -32,6 +32,7 @@ export interface FormConfig {
   }
   worker_notify_fields: string[]
   hero_subtitle: string
+  custom_form_fields?: string[]
 }
 
 export interface NotificationRule {
@@ -329,6 +330,7 @@ export interface PanelFieldOverride {
   label?: string
   placeholder?: string
   options?: string[]
+  hidden?: boolean
 }
 
 export interface PanelConfig {

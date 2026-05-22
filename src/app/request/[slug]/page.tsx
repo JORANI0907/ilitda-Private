@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { use } from 'react'
-import { CheckCircle, User, Building2, PenLine, Shield } from 'lucide-react'
+import { CheckCircle, User, Building2, PenLine, Shield, SlidersHorizontal } from 'lucide-react'
 import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
 import type { FormConfig } from '@/types'
+
+interface CustomFieldDef {
+  key: string
+  label: string
+  placeholder: string
+}
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -27,6 +33,7 @@ interface RequestForm {
   building_access: string
   access_method: string
   care_scope: string
+  custom_fields: Record<string, string>
 }
 
 const INITIAL_FORM: RequestForm = {
@@ -36,6 +43,7 @@ const INITIAL_FORM: RequestForm = {
   account_number: '', payment_method: '',
   elevator: '', parking: '', building_access: '',
   access_method: '', care_scope: '',
+  custom_fields: {},
 }
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -176,6 +184,8 @@ export default function RequestPage({ params }: PageProps) {
   const [formConfig, setFormConfig] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
   const [businessName, setBusinessName] = useState<string>('일잇다')
 
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([])
+
   const [form, setForm] = useState<RequestForm>(INITIAL_FORM)
   const [consentPrivacy, setConsentPrivacy] = useState(false)
   const [consentMarketing, setConsentMarketing] = useState(false)
@@ -196,6 +206,7 @@ export default function RequestPage({ params }: PageProps) {
         } else {
           if (json.data?.businessName) setBusinessName(json.data.businessName)
           if (json.data?.formConfig) setFormConfig(json.data.formConfig as FormConfig)
+          if (json.data?.customFieldDefs) setCustomFieldDefs(json.data.customFieldDefs as CustomFieldDef[])
         }
       })
       .catch(() => setPageError('페이지를 불러오는 중 오류가 발생했습니다.'))
@@ -204,8 +215,11 @@ export default function RequestPage({ params }: PageProps) {
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [slug])
 
-  const set = (key: keyof RequestForm) => (value: string) =>
+  const set = (key: keyof Omit<RequestForm, 'custom_fields'>) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
+
+  const setCustomField = (key: string, value: string) =>
+    setForm((prev) => ({ ...prev, custom_fields: { ...prev.custom_fields, [key]: value } }))
 
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {}
@@ -551,6 +565,32 @@ export default function RequestPage({ params }: PageProps) {
                 />
               </Field>
             </div>
+
+            {/* 추가 정보 (사업자 커스텀 필드) */}
+            {customFieldDefs.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100">
+                    <SlidersHorizontal size={16} className="text-slate-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">추가 정보</p>
+                    <p className="text-xs text-slate-400">추가 정보를 입력해주세요</p>
+                  </div>
+                </div>
+
+                {customFieldDefs.map((def) => (
+                  <Field key={def.key} label={def.label}>
+                    <input
+                      className={inputCls()}
+                      placeholder={def.placeholder || def.label}
+                      value={form.custom_fields[def.key] ?? ''}
+                      onChange={(e) => setCustomField(def.key, e.target.value)}
+                    />
+                  </Field>
+                ))}
+              </div>
+            )}
 
             {/* 동의사항 */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-4">

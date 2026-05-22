@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
-import type { FormConfig } from '@/types'
+import { DEFAULT_FORM_CONFIG, DEFAULT_PANEL_FIELDS } from '@/lib/settings-defaults'
+import type { FormConfig, PanelConfig, PanelFieldOverride } from '@/types'
 
 type RouteContext = { params: Promise<{ slug: string }> }
 
@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 
   const { data: business, error } = await service
     .from('businesses')
-    .select('id, business_name, request_slug, form_config')
+    .select('id, business_name, request_slug, form_config, panel_config')
     .eq('request_slug', slug)
     .maybeSingle()
 
@@ -37,12 +37,29 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
     },
   }
 
+  const panelConfig = business.panel_config as PanelConfig | null
+  const panelFields = panelConfig?.fields ?? {}
+
+  const customFieldDefs = (formConfig.custom_form_fields ?? [])
+    .map(key => {
+      const def = DEFAULT_PANEL_FIELDS.find(f => f.key === key)
+      if (!def) return null
+      const override = panelFields[key] as PanelFieldOverride | undefined
+      return {
+        key,
+        label: override?.label ?? def.label,
+        placeholder: override?.placeholder ?? def.placeholder,
+      }
+    })
+    .filter(Boolean)
+
   return NextResponse.json({
     success: true,
     data: {
       businessName: business.business_name,
       slug: business.request_slug,
       formConfig,
+      customFieldDefs,
     },
   })
 }
@@ -74,6 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     building_access,
     access_method,
     care_scope,
+    custom_fields,
   } = b
 
   if (!client_name || typeof client_name !== 'string' || !client_name.trim()) {
@@ -99,7 +117,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   const { data: business, error: bizError } = await service
     .from('businesses')
-    .select('id')
+    .select('id, panel_config, form_config')
     .eq('request_slug', slug)
     .maybeSingle()
 
@@ -110,13 +128,34 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     )
   }
 
+  let finalNotes = strOrNull(notes)
+  if (custom_fields && typeof custom_fields === 'object') {
+    const pConf = business.panel_config as PanelConfig | null
+    const pFields = pConf?.fields ?? {}
+    const fConf = business.form_config as FormConfig | null
+    const enabledKeys = fConf?.custom_form_fields ?? []
+    const lines: string[] = []
+    for (const key of enabledKeys) {
+      const val = (custom_fields as Record<string, string>)[key]
+      if (!val || !String(val).trim()) continue
+      const def = DEFAULT_PANEL_FIELDS.find(f => f.key === key)
+      const override = pFields[key] as PanelFieldOverride | undefined
+      const label = override?.label ?? def?.label ?? key
+      lines.push(`${label}: ${String(val).trim()}`)
+    }
+    if (lines.length > 0) {
+      const appendix = `\n[추가 정보]\n${lines.join('\n')}`
+      finalNotes = finalNotes ? finalNotes + appendix : appendix.trim()
+    }
+  }
+
   const { error } = await service.from('service_applications').insert({
     business_name:     (client_name as string).trim(),
     phone:             (client_phone as string).trim(),
     address:           (client_address as string).trim(),
     construction_date: (desired_date as string).trim(),
     construction_time: (desired_time as string).trim(),
-    request_notes:     strOrNull(notes),
+    request_notes:     finalNotes,
     status:            '신규',
     owner_name:        strOrNull(owner_name),
     email:             strOrNull(email),

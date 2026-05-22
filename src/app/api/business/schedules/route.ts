@@ -99,6 +99,10 @@ export async function GET(request: NextRequest) {
   if (filter === 'today') {
     const today = now.toISOString().slice(0, 10)
     query = query.eq('service_date', today)
+  } else if (filter === 'tomorrow') {
+    const tomorrow = new Date(now)
+    tomorrow.setDate(now.getDate() + 1)
+    query = query.eq('service_date', tomorrow.toISOString().slice(0, 10))
   } else if (filter === 'week') {
     const start = new Date(now)
     start.setDate(now.getDate() - now.getDay())
