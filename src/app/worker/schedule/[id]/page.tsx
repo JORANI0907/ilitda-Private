@@ -12,6 +12,9 @@ import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { AssignmentStatusBadge } from '@/components/ui/Badge'
 import { CheckInButton } from '@/components/worker/CheckInButton'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 interface AttendanceData {
   id: string
@@ -64,12 +67,28 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '출퇴근 체크 방법',
+    content: '당일 일정에만 "출근" / "퇴근" 버튼이 표시됩니다.\n현장 도착 후 "출근" 버튼을 누르고, 작업이 모두 끝난 뒤 "퇴근" 버튼을 눌러주세요.',
+  },
+  {
+    title: '카카오맵으로 길찾기',
+    content: '작업 정보 카드 아래 "카카오맵으로 길찾기" 버튼을 탭하면 현장 주소를 카카오맵에서 바로 확인할 수 있어요.',
+  },
+  {
+    title: '출퇴근 상태 의미',
+    content: '· 예정: 아직 출퇴근 기록이 없는 상태\n· 출근: 출근 버튼을 눌러 근무가 시작된 상태\n· 퇴근: 퇴근 버튼을 눌러 근무가 완료된 상태',
+  },
+]
+
 export default function WorkerScheduleDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
   const [detail, setDetail] = useState<AssignmentDetail | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const fetchDetail = async () => {
     setIsLoading(true)
@@ -150,6 +169,16 @@ export default function WorkerScheduleDetailPage({ params }: PageProps) {
         <SectionHeader title="일정 상세" level="page" className="flex-1" />
         <AssignmentStatusBadge status={detail.status} />
       </div>
+
+      <HelpBanner label="일정 상세 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="일정 상세 안내"
+        sections={HELP_SECTIONS}
+      />
+
+      <HelpTip>현장 도착 후 &apos;출근&apos; 버튼을 눌러주세요. 작업 완료 후 &apos;퇴근&apos; 버튼을 눌러야 기록됩니다.</HelpTip>
 
       {/* 작업 정보 */}
       <Card padding="md">
