@@ -176,7 +176,7 @@ function NotificationRuleCard({
     <>
     {upgradeModal && (
       <UpgradeModal
-        open={true}
+        open={!!upgradeModal}
         onClose={() => setUpgradeModal(null)}
         featureName={upgradeModal.featureName}
         requiredPlan={upgradeModal.requiredPlan}

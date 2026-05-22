@@ -54,7 +54,7 @@ export default function MarketPage() {
   const { planType, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
-  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
 
   if (!planLoading && !isGuest && !canUseFeature(planType, 'marketplace')) {
@@ -62,7 +62,7 @@ export default function MarketPage() {
       <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
         <SectionHeader title="마켓" level="page" />
         <UpgradeModal
-          open={true}
+          open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
           featureName="마켓플레이스"
           requiredPlan="pro"
@@ -72,15 +72,6 @@ export default function MarketPage() {
           <p className="text-sm text-text-secondary break-keep">프로 이상 플랜에서 이용할 수 있습니다.</p>
           <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
         </div>
-        {upgradeOpen && (
-          <UpgradeModal
-            open={upgradeOpen}
-            onClose={() => setUpgradeOpen(false)}
-            featureName="마켓플레이스"
-            requiredPlan="pro"
-            currentPlan={planType}
-          />
-        )}
       </div>
     )
   }

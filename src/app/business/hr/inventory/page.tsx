@@ -86,7 +86,7 @@ export default function InventoryPage() {
   const { planType, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
-  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
 
   const [isDemo, setIsDemo] = useState(false)
@@ -336,7 +336,7 @@ const filteredItems = useMemo(() => items.filter((item) => {
       <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
         <SectionHeader title="재고 관리" level="page" />
         <UpgradeModal
-          open={true}
+          open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
           featureName="재고 관리"
           requiredPlan="pro"
@@ -346,15 +346,6 @@ const filteredItems = useMemo(() => items.filter((item) => {
           <p className="text-sm text-text-secondary break-keep">프로 이상 플랜에서 이용할 수 있습니다.</p>
           <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
         </div>
-        {upgradeOpen && (
-          <UpgradeModal
-            open={upgradeOpen}
-            onClose={() => setUpgradeOpen(false)}
-            featureName="재고 관리"
-            requiredPlan="pro"
-            currentPlan={planType}
-          />
-        )}
       </div>
     )
   }

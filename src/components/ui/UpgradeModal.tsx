@@ -1,6 +1,7 @@
 'use client'
 
 import { Lock } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PLAN_NAMES, PLAN_PRICES, type PlanType } from '@/lib/plan-features'
@@ -27,7 +28,13 @@ export function UpgradeModal({
   requiredPlan,
   currentPlan = 'free',
 }: UpgradeModalProps) {
+  const router = useRouter()
   const requiredIdx = PAID_PLANS.indexOf(requiredPlan)
+
+  function handlePlanClick() {
+    onClose()
+    router.push('/business/settings/plan')
+  }
 
   return (
     <Modal
@@ -64,14 +71,15 @@ export function UpgradeModal({
           return (
             <div
               key={plan}
+              onClick={handlePlanClick}
               className={`
-                rounded-2xl border p-4 flex items-center justify-between gap-3 transition-colors
+                rounded-2xl border p-4 flex items-center justify-between gap-3 transition-colors cursor-pointer active:scale-[0.98]
                 ${isCurrent
-                  ? 'bg-surface-sunken border-border text-text-secondary'
+                  ? 'bg-surface-sunken border-border text-text-secondary hover:bg-border/50'
                   : isRequired
-                    ? 'bg-brand-600/5 border-brand-600 ring-1 ring-brand-600'
+                    ? 'bg-brand-600/5 border-brand-600 ring-1 ring-brand-600 hover:bg-brand-600/10'
                     : isAvailable
-                      ? 'bg-surface border-border-subtle'
+                      ? 'bg-surface border-border-subtle hover:bg-surface-sunken'
                       : 'bg-surface-sunken border-border opacity-60'}
               `}
             >
@@ -118,7 +126,7 @@ export function UpgradeModal({
         })}
 
         <p className="text-xs text-text-tertiary text-center break-keep mt-1">
-          플랜 변경은 설정 {'>'} 요금제 메뉴에서 가능합니다.
+          플랜 카드를 탭하면 요금제 페이지로 이동합니다.
         </p>
       </div>
     </Modal>

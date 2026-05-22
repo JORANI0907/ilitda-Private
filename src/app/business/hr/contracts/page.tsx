@@ -128,7 +128,7 @@ export default function ContractsPage() {
   const { planType, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
-  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
 
   const [contracts, setContracts] = useState<ContractRow[]>([])
@@ -243,7 +243,7 @@ export default function ContractsPage() {
           <SectionHeader title="계약서 관리" level="page" className="flex-1" />
         </div>
         <UpgradeModal
-          open={true}
+          open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
           featureName="계약서 관리"
           requiredPlan="max"
@@ -253,15 +253,6 @@ export default function ContractsPage() {
           <p className="text-sm text-text-secondary break-keep">맥스 플랜에서 이용할 수 있습니다.</p>
           <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
         </div>
-        {upgradeOpen && (
-          <UpgradeModal
-            open={upgradeOpen}
-            onClose={() => setUpgradeOpen(false)}
-            featureName="계약서 관리"
-            requiredPlan="max"
-            currentPlan={planType}
-          />
-        )}
       </div>
     )
   }
