@@ -7,6 +7,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ScheduleItem } from '@/components/worker/ScheduleItem'
 import type { ScheduleItemData } from '@/components/worker/ScheduleItem'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 type FilterKey = 'all' | 'this_week' | 'next_week'
 
@@ -16,12 +19,24 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all',       label: '전체' },
 ]
 
+const HELP_SECTIONS = [
+  {
+    title: '기간 필터 사용법',
+    content: '상단 탭에서 원하는 기간을 선택할 수 있어요.\n· 이번 주: 이번 주 월~일 일정만 표시\n· 다음 주: 다음 주 일정만 표시\n· 전체: 배정된 모든 일정 표시',
+  },
+  {
+    title: '일정 상세 확인하기',
+    content: '일정 카드를 탭하면 현장 주소, 작업 시간, 담당자 연락처 등 상세 정보를 확인할 수 있어요.',
+  },
+]
+
 export default function WorkerSchedulePage() {
   const router = useRouter()
   const [filter, setFilter] = useState<FilterKey>('this_week')
   const [schedules, setSchedules] = useState<ScheduleItemData[]>([])
   const [today, setToday] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     const fetchSchedules = async () => {
@@ -49,6 +64,16 @@ export default function WorkerSchedulePage() {
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <SectionHeader title="내 일정" level="page" />
+
+      <HelpBanner label="일정 관리 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="일정 관리 안내"
+        sections={HELP_SECTIONS}
+      />
+
+      <HelpTip>일정을 탭하면 현장 주소, 작업 내용, 출퇴근 체크를 할 수 있습니다.</HelpTip>
 
       {/* 필터 탭 */}
       <div className="flex gap-2">
