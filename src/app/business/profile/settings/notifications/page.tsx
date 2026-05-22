@@ -10,6 +10,7 @@ import { HelpTip } from '@/components/ui/HelpTip'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpBanner } from '@/components/ui/HelpBanner'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import {
   DEFAULT_NOTIFICATION_CONFIG,
   DEFAULT_MSG_TEMPLATE,
@@ -17,7 +18,9 @@ import {
   PANEL_SECTIONS,
   SMS_TOKEN_META,
 } from '@/lib/settings-defaults'
+import { toPlanType, canUseFeature } from '@/lib/plan-features'
 import type { NotificationConfig, NotificationRule, PanelConfig } from '@/types'
+import type { PlanType } from '@/lib/plan-features'
 
 const SEND_TIME_OPTIONS = Array.from({ length: 17 }, (_, i) => {
   const h = (i + 6).toString().padStart(2, '0')
@@ -73,16 +76,26 @@ function NotificationRuleCard({
   rule,
   onChange,
   smsVars,
+  planType,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
   smsVars: SmsVar[]
+  planType: PlanType
 }) {
   const [useCustomTemplate, setUseCustomTemplate] = useState(
     rule.template !== null && rule.template !== undefined,
   )
   const [activeSection, setActiveSection] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const [upgradeModal, setUpgradeModal] = useState<{
+    featureName: string
+    requiredPlan: PlanType
+  } | null>(null)
+
+  const canAutoDispatch  = canUseFeature(planType, 'sms_auto_dispatch')
+  const canCustomTemplate = canUseFeature(planType, 'sms_custom_template')
 
   const sections = PANEL_SECTIONS
     .map(s => ({
@@ -116,6 +129,10 @@ function NotificationRuleCard({
   const handleToggleEnabled = () => onChange({ ...rule, enabled: !rule.enabled })
 
   const handleModeChange = (mode: 'manual' | 'auto') => {
+    if (mode === 'auto' && !canAutoDispatch) {
+      setUpgradeModal({ featureName: '자동 발송', requiredPlan: 'pro' })
+      return
+    }
     if (mode === 'manual') {
       onChange({ ...rule, mode, trigger: undefined })
     } else {
@@ -133,6 +150,10 @@ function NotificationRuleCard({
   }
 
   const handleCustomTemplateToggle = (useCustom: boolean) => {
+    if (useCustom && !canCustomTemplate) {
+      setUpgradeModal({ featureName: '커스텀 문구', requiredPlan: 'pro' })
+      return
+    }
     setUseCustomTemplate(useCustom)
     onChange({ ...rule, template: useCustom ? (rule.template ?? '') : null })
   }
@@ -152,6 +173,16 @@ function NotificationRuleCard({
   }
 
   return (
+    <>
+    {upgradeModal && (
+      <UpgradeModal
+        open={true}
+        onClose={() => setUpgradeModal(null)}
+        featureName={upgradeModal.featureName}
+        requiredPlan={upgradeModal.requiredPlan}
+        currentPlan={planType}
+      />
+    )}
     <Card padding="md">
       {/* 헤더: 알림 타입 + ON/OFF */}
       <div className="flex items-center justify-between mb-3">
@@ -332,6 +363,7 @@ function NotificationRuleCard({
         </div>
       )}
     </Card>
+    </>
   )
 }
 
@@ -340,6 +372,7 @@ export default function NotificationsSettingsPage() {
   const router = useRouter()
   const [config, setConfig]           = useState<NotificationConfig | null>(null)
   const [panelConfig, setPanelConfig]  = useState<PanelConfig | null>(null)
+  const [planType, setPlanType]        = useState<PlanType>('free')
   const [isLoading, setIsLoading]     = useState(true)
   const [isSaving, setIsSaving]       = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
@@ -360,7 +393,11 @@ export default function NotificationsSettingsPage() {
           notifRes.json(),
           fieldsRes.json(),
         ])
-        if (notifJson.success) setConfig(notifJson.data as NotificationConfig)
+        if (notifJson.success) {
+          const { plan_type, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string }
+          setConfig(rest as NotificationConfig)
+          setPlanType(toPlanType(plan_type))
+        }
         if (fieldsJson.success && fieldsJson.data?.panelConfig) {
           setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)
         }
@@ -494,6 +531,7 @@ export default function NotificationsSettingsPage() {
           rule={rule}
           onChange={(updated) => handleRuleChange(i, updated)}
           smsVars={smsVars}
+          planType={planType}
         />
       ))}
 
