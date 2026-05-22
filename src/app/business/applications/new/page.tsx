@@ -9,6 +9,9 @@ import {
 import { Button } from '@/components/ui/Button'
 import { DEFAULT_PANEL_FIELDS, SECTION_BORDER_COLOR, SECTION_TITLE_COLOR } from '@/lib/settings-defaults'
 import type { PanelConfig } from '@/types'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 // ─── 상수 ────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -113,6 +116,7 @@ export default function NewApplicationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [vatEnabled, setVatEnabled] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/settings/panel')
@@ -182,6 +186,28 @@ export default function NewApplicationPage() {
 
       <div className="flex flex-col gap-3 px-4 pt-4 pb-28">
 
+        {/* 도움말 배너 */}
+        <HelpBanner label="신청서 작성 방법 보기" onClick={() => setHelpOpen(true)} />
+        <HelpDrawer
+          open={helpOpen}
+          onClose={() => setHelpOpen(false)}
+          title="신청서 작성 방법"
+          sections={[
+            {
+              title: '필수 입력 항목',
+              content: '업체명과 연락처(*)는 반드시 입력해야 저장할 수 있습니다.\n나머지 항목은 나중에 수정할 수 있으니 아는 정보부터 입력하세요.',
+            },
+            {
+              title: '서비스 유형별 차이',
+              content: '• 1회성케어: 한 번만 방문하는 단발성 서비스입니다. 시공 날짜·시간을 입력하세요.\n• 정기딥케어: 주기적으로 방문하는 정기 딥 클리닝 서비스입니다.\n• 정기엔드케어: 주기적으로 방문하는 정기 엔드 클리닝 서비스입니다.',
+            },
+            {
+              title: '저장 후 알림 발송',
+              content: '저장 버튼을 누르면 신청서가 등록됩니다.\n고객에게 알림을 발송하려면 저장 후 상세 화면에서 "알림 발송" 버튼을 이용하세요.',
+            },
+          ]}
+        />
+
         {/* 진행 상태 */}
         <div className="bg-surface rounded-2xl border border-border-subtle shadow-flat px-4 py-3">
           <FL>진행 상태</FL>
@@ -189,6 +215,7 @@ export default function NewApplicationPage() {
         </div>
 
         {/* 기본 정보 */}
+        <HelpTip>업체명과 연락처는 필수 항목입니다. 나머지는 나중에 추가해도 됩니다.</HelpTip>
         <FormSection color="blue" icon={<Building2 size={14} />} title="기본 정보">
           <div>
             <FL required>{lbl('business_name')}</FL>
@@ -223,6 +250,7 @@ export default function NewApplicationPage() {
         </FormSection>
 
         {/* 일정 */}
+        <HelpTip>방문 예정 날짜와 시간을 입력하세요. 미정이면 비워두어도 됩니다.</HelpTip>
         <FormSection color="violet" icon={<Calendar size={14} />} title="일정">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -237,6 +265,7 @@ export default function NewApplicationPage() {
         </FormSection>
 
         {/* 현장 정보 */}
+        <HelpTip>작업자가 현장에 도착했을 때 필요한 출입 정보를 입력하세요.</HelpTip>
         <FormSection color="green" icon={<MapPin size={14} />} title="현장 정보">
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -271,6 +300,7 @@ export default function NewApplicationPage() {
         </FormSection>
 
         {/* 결제 정보 */}
+        <HelpTip>단가를 입력하면 부가세와 총액이 자동 계산됩니다.</HelpTip>
         <FormSection color="teal" icon={<CreditCard size={14} />} title="결제 정보">
           <div>
             <FL>{lbl('payment_method')}</FL>
@@ -330,6 +360,7 @@ export default function NewApplicationPage() {
         </FormSection>
 
         {/* 요청사항 */}
+        <HelpTip>고객 요청사항과 서비스 범위를 자세히 적어두면 작업자에게 전달됩니다.</HelpTip>
         <FormSection color="amber" icon={<ClipboardList size={14} />} title="요청사항">
           <div>
             <FL>{lbl('care_scope')}</FL>
