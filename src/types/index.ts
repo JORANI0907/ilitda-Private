@@ -75,6 +75,7 @@ export interface Business {
   plan_expires_at?: string | null
   daily_sms_count?: number
   daily_sms_reset_date?: string | null
+  app_display_name?: string | null
 }
 
 // ─── 플랜 발송 한도 ───────────────────────────────────────────
