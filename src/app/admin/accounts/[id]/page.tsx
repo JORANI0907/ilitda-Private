@@ -172,6 +172,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
         return
       }
       setSaveStatus('saved')
+      await fetchDetail()
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch {
       setSaveStatus('error')

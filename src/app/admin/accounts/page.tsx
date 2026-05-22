@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -114,24 +114,28 @@ export default function AdminAccountsPage() {
   const [error, setError] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch('/api/admin/accounts')
-        const json = await res.json()
-        if (!json.success) {
-          setError(json.error ?? '불러오기 실패')
-          return
-        }
-        setAccounts(json.data ?? [])
-      } catch {
-        setError('네트워크 오류')
-      } finally {
-        setIsLoading(false)
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/accounts')
+      const json = await res.json()
+      if (!json.success) {
+        setError(json.error ?? '불러오기 실패')
+        return
       }
+      setAccounts(json.data ?? [])
+    } catch {
+      setError('네트워크 오류')
+    } finally {
+      setIsLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => {
+    load()
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [load])
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
