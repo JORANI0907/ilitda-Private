@@ -6,6 +6,10 @@ import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpTip } from '@/components/ui/HelpTip'
+import { HelpIcon } from '@/components/ui/HelpIcon'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpBanner } from '@/components/ui/HelpBanner'
 import {
   DEFAULT_NOTIFICATION_CONFIG,
   DEFAULT_MSG_TEMPLATE,
@@ -170,21 +174,30 @@ function NotificationRuleCard({
       {rule.enabled && (
         <div className="flex flex-col gap-3">
           {/* 수동/자동 모드 */}
-          <div className="flex gap-2">
-            {(['manual', 'auto'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => handleModeChange(m)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
-                  rule.mode === m
-                    ? 'border-brand-600 bg-brand-50 text-brand-600'
-                    : 'border-border-subtle bg-surface text-text-secondary hover:border-border'
-                }`}
-              >
-                {m === 'manual' ? '수동' : '자동'}
-              </button>
-            ))}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-text-tertiary">발송 방식</span>
+              <HelpIcon
+                title="수동 vs 자동 발송"
+                description={`수동: 서비스 관리 화면에서 담당자가 직접 버튼을 눌러 문자를 보냅니다.\n\n자동: 서비스일 기준으로 설정한 시점에 시스템이 자동으로 문자를 발송합니다.\n예) 서비스 하루 전 오전 9시 자동 발송`}
+              />
+            </div>
+            <div className="flex gap-2">
+              {(['manual', 'auto'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleModeChange(m)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    rule.mode === m
+                      ? 'border-brand-600 bg-brand-50 text-brand-600'
+                      : 'border-border-subtle bg-surface text-text-secondary hover:border-border'
+                  }`}
+                >
+                  {m === 'manual' ? '수동' : '자동'}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 자동 트리거 설정 */}
@@ -215,6 +228,9 @@ function NotificationRuleCard({
                   ))}
                 </select>
               </div>
+              <HelpTip>
+                서비스일이 등록된 신청건에만 자동 발송됩니다. 발송 시각은 KST(한국 시간) 기준입니다.
+              </HelpTip>
             </div>
           )}
 
@@ -242,9 +258,15 @@ function NotificationRuleCard({
               <div className="flex flex-col gap-2">
                 {/* 변수 삽입 영역 */}
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium text-text-tertiary">
-                    변수 삽입 — 탭하면 커서 위치에 추가
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-[10px] font-medium text-text-tertiary">
+                      변수 삽입 — 탭하면 커서 위치에 추가
+                    </p>
+                    <HelpIcon
+                      title="변수란?"
+                      description={`변수를 사용하면 고객별로 문자 내용이 자동으로 채워집니다.\n\n예) {business_name} → 실제 고객사 이름으로 치환\n예) {construction_date} → 실제 서비스 날짜로 치환\n\n변수 목록은 필드 설정에서 활성화된 항목이 자동으로 표시됩니다.`}
+                    />
+                  </div>
 
                   {/* 카테고리 탭 */}
                   <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -316,12 +338,13 @@ function NotificationRuleCard({
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function NotificationsSettingsPage() {
   const router = useRouter()
-  const [config, setConfig]         = useState<NotificationConfig | null>(null)
-  const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null)
-  const [isLoading, setIsLoading]   = useState(true)
-  const [isSaving, setIsSaving]     = useState(false)
-  const [saveError, setSaveError]   = useState<string | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [config, setConfig]           = useState<NotificationConfig | null>(null)
+  const [panelConfig, setPanelConfig]  = useState<PanelConfig | null>(null)
+  const [isLoading, setIsLoading]     = useState(true)
+  const [isSaving, setIsSaving]       = useState(false)
+  const [saveError, setSaveError]     = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess]  = useState(false)
+  const [helpOpen, setHelpOpen]        = useState(false)
 
   const smsVars = buildVarsFromConfig(panelConfig)
 
@@ -426,6 +449,43 @@ export default function NotificationsSettingsPage() {
           기본값으로 초기화
         </button>
       </div>
+
+      {/* 페이지 도움말 배너 */}
+      <HelpBanner onClick={() => setHelpOpen(true)} />
+
+      {/* 전체 한도 경고 */}
+      <HelpTip variant="warning">
+        요금제별 일일 SMS 발송 한도가 있습니다. 한도 초과 시 당일 발송이 불가합니다.
+      </HelpTip>
+
+      {/* 도움말 Drawer */}
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="알림 설정 사용 방법"
+        sections={[
+          {
+            title: '이 페이지에서 무엇을 설정하나요?',
+            content: '고객에게 보내는 SMS 문자 알림을 설정하는 화면입니다.\n각 알림 유형별로 ON/OFF, 수동/자동 발송 방식, 문자 내용을 따로 설정할 수 있습니다.',
+          },
+          {
+            title: '수동 발송이란?',
+            content: '서비스 관리 화면에서 담당자가 직접 버튼을 눌러야 문자가 발송됩니다.\n원하는 타이밍에 보낼 수 있어 유연하지만, 잊으면 발송되지 않습니다.',
+          },
+          {
+            title: '자동 발송이란?',
+            content: '서비스일 기준으로 설정한 시점에 시스템이 자동으로 문자를 보냅니다.\n예) "서비스 1일 전 오전 9시" 설정 시 매일 그 시간에 해당하는 고객에게 자동 발송됩니다.\n\n단, 서비스 신청서에 서비스일이 입력된 건에만 동작합니다.',
+          },
+          {
+            title: '변수를 사용하면 무엇이 좋나요?',
+            content: '문자 내용에 {business_name}, {construction_date} 같은 변수를 넣으면\n실제 고객 정보가 자동으로 채워져 발송됩니다.\n\n예) "{business_name} 담당자님" → "스타벅스 판교점 담당자님"\n\n변수는 필드 설정에서 활성화한 항목만 표시됩니다.',
+          },
+          {
+            title: 'SMS 발송 한도 주의사항',
+            content: '요금제별로 하루에 보낼 수 있는 SMS 건수가 정해져 있습니다.\n한도를 초과하면 당일 추가 발송이 불가능합니다.\n\n자동 발송이 많은 경우 수동 발송 여유분을 고려해 설정하세요.',
+          },
+        ]}
+      />
 
       {/* 알림 규칙 카드 목록 */}
       {config.rules.map((rule, i) => (
