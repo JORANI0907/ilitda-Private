@@ -12,6 +12,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Modal } from '@/components/ui/Modal'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
 import type { Profile, Business, Worker } from '@/types'
@@ -39,6 +42,8 @@ export default function BusinessProfilePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   const [slug, setSlug] = useState('')
   const [isCopied, setIsCopied] = useState(false)
@@ -163,6 +168,33 @@ export default function BusinessProfilePage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="프로필 페이지 사용 방법 보기"
+        onClick={() => setShowHelpDrawer(true)}
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="프로필 페이지 안내"
+        sections={[
+          {
+            title: '구독 플랜 확인 및 업그레이드',
+            content: '화면 중간의 파란색 배너를 탭하면 현재 구독 플랜을 확인하고 업그레이드할 수 있습니다.\n\nFree → Basic → Pro → Max 순서로 업그레이드할수록 더 많은 기능과 알림 발송 횟수를 사용할 수 있습니다.',
+          },
+          {
+            title: '앱 설정 변경 방법',
+            content: '아래쪽 "설정" 섹션에서 알림 설정, 발신번호·드라이브 연동, 직원 권한 설정을 변경할 수 있습니다.\n\n각 항목을 탭하면 해당 설정 화면으로 이동합니다.',
+          },
+          {
+            title: '관리자 패널 접근 방법',
+            content: '관리자 계정으로 로그인한 경우 화면 하단에 "관리자 패널" 섹션이 표시됩니다.\n\n대시보드, 계정 관리, 입금 확인 기능을 이용할 수 있습니다.',
+          },
+        ]}
+      />
+
       {/* 사업체 헤더 */}
       <Card padding="md">
         <div className="flex items-center gap-4">
@@ -303,6 +335,10 @@ export default function BusinessProfilePage() {
               <div className="flex items-center gap-1.5">
                 <Sparkles size={14} className="text-yellow-300" />
                 <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>구독 플랜</span>
+                <HelpIcon
+                  title="플랜별 기능 차이"
+                  description={'Free: 기본 기능, 하루 10건 발송\nBasic: 하루 30건 발송\nPro: 하루 100건 + 고급 기능\nMax: 무제한 발송 + 모든 기능\n\n상위 플랜일수록 더 많은 알림을 보내고 고급 기능을 이용할 수 있습니다.'}
+                />
               </div>
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
                 {PLAN_LABEL[business?.plan ?? 'free'] ?? 'Free'} 플랜
