@@ -5,6 +5,7 @@ export type ActiveRole = 'business' | 'worker'
 export interface Profile {
   id: string
   username?: string | null
+  email: string | null
   phone: string
   name: string
   active_role: ActiveRole
