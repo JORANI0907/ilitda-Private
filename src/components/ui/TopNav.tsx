@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useContext } from 'react'
 import {
   Home, Calendar, Wallet,
   BarChart3, Users, Briefcase, Store,
 } from 'lucide-react'
 import { PlanChip } from '@/components/ui/PlanChip'
+import { AuthContext } from '@/contexts/AuthContext'
 
 type Role = 'business' | 'worker'
 
@@ -37,10 +39,12 @@ interface TopNavProps {
 
 export function TopNav({ role }: TopNavProps) {
   const pathname = usePathname()
+  const auth = useContext(AuthContext)
   const tabs = role === 'business' ? BUSINESS_TABS : WORKER_TABS
   const profileHref = role === 'business' ? '/business/profile' : '/worker/profile'
   const roleLabel = role === 'business' ? '사업자' : '작업자'
   const isProfileActive = pathname.startsWith(profileHref)
+  const appDisplayName = auth?.business?.app_display_name ?? '일잇다'
 
   return (
     <header className="fixed top-0 inset-x-0 z-40 bg-surface border-b border-border-subtle h-16 hidden md:flex items-center">
@@ -57,7 +61,7 @@ export function TopNav({ role }: TopNavProps) {
               priority
             />
           </div>
-          <span className="text-lg font-bold text-brand-600 tracking-tight">일잇다</span>
+          <span className="text-lg font-bold text-brand-600 tracking-tight">{appDisplayName}</span>
         </Link>
 
         {/* 탭 메뉴 */}
