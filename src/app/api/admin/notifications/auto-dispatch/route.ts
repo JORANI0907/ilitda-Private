@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { DEFAULT_MSG_TEMPLATE } from '@/lib/settings-defaults'
+import { DEFAULT_MSG_TEMPLATE, applyNotificationTemplate } from '@/lib/settings-defaults'
 import { sendSMS } from '@/lib/solapi/client'
 import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
 import type { ApiResponse, NotificationConfig, NotificationRule, ServiceApplication } from '@/types'
@@ -37,16 +37,18 @@ function addDays(dateStr: string, days: number): string {
 }
 
 function buildMessage(rule: NotificationRule, app: ServiceApplication): string {
-  if (rule.template) return rule.template
+  if (rule.template) {
+    return applyNotificationTemplate(rule.template, app as unknown as Record<string, unknown>)
+  }
 
   const templateFn = DEFAULT_MSG_TEMPLATE[rule.type]
   if (!templateFn) return `[일잇다] ${app.business_name} 담당자님, ${rule.type} 알림입니다.`
 
   return templateFn({
-    name: app.owner_name ?? app.business_name,
-    date: app.construction_date ?? '',
-    time: app.construction_time ?? '',
-    amount: String(app.supply_amount ?? ''),
+    name:    app.owner_name ?? app.business_name,
+    date:    app.construction_date ?? '',
+    time:    app.construction_time ?? '',
+    amount:  String(app.supply_amount ?? ''),
     account: app.account_number ?? '',
   })
 }
