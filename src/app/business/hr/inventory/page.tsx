@@ -8,6 +8,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
 
 interface Category {
   id: string
@@ -55,6 +58,9 @@ const EMPTY_ITEM = { name: '', unit: '', min_qty: '', category: '' }
 const EMPTY_TX = { qty: '', note: '' }
 
 export default function InventoryPage() {
+  const { planType, isLoading: planLoading } = usePlanType()
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+
   const [categories, setCategories] = useState<Category[]>([])
   const [items, setItems] = useState<InventoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -294,6 +300,34 @@ const filteredItems = useMemo(() => items.filter((item) => {
 
   const lowCount = items.filter((i) => i.min_qty !== null && i.current_qty <= i.min_qty).length
   const defaultCat = categories[0]?.name ?? ''
+
+  if (!planLoading && !canUseFeature(planType, 'inventory')) {
+    return (
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+        <SectionHeader title="재고 관리" level="page" />
+        <UpgradeModal
+          open={true}
+          onClose={() => setUpgradeOpen(false)}
+          featureName="재고 관리"
+          requiredPlan="pro"
+          currentPlan={planType}
+        />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">프로 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+        {upgradeOpen && (
+          <UpgradeModal
+            open={upgradeOpen}
+            onClose={() => setUpgradeOpen(false)}
+            featureName="재고 관리"
+            requiredPlan="pro"
+            currentPlan={planType}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
