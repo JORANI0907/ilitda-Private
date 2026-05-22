@@ -9,6 +9,9 @@ import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { Connection } from '@/types'
 
 type AddMode = 'invite' | 'manual'
@@ -69,8 +72,24 @@ const EMPTY_FORM: AddForm = {
   company_name: '',
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '초대 vs 직접 등록 차이',
+    content: '초대 방식은 작업자 분께 SMS로 초대 링크를 발송합니다. 작업자가 앱에서 링크를 수락해야 연결이 완료됩니다.\n직접 등록은 앱 없이 즉시 등록되며, 이름·연락처·계좌 정보를 수동으로 관리합니다.',
+  },
+  {
+    title: '연결 상태 의미',
+    content: '연결됨 — 작업자가 앱 계정과 연결된 상태입니다. 출퇴근 체크와 일정 확인이 가능합니다.\n초대중 — SMS를 발송했지만 아직 수락하지 않은 상태입니다.\n수동등록 — 앱 없이 직접 등록된 작업자입니다.',
+  },
+  {
+    title: '베이직 플랜 제한',
+    content: '베이직 플랜에서는 작업자를 최대 10명까지 등록할 수 있습니다. 더 많은 인원이 필요하다면 상위 플랜으로 업그레이드해 주세요.',
+  },
+]
+
 export default function WorkersPage() {
   const router = useRouter()
+  const [helpOpen, setHelpOpen] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -195,6 +214,15 @@ export default function WorkersPage() {
           작업자 추가
         </Button>
       </div>
+
+      <HelpBanner label="직원 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip>초대 방식은 직원이 앱에서 수락해야 연결됩니다. 직접 등록은 즉시 추가됩니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="직원 관리 사용법"
+        sections={HELP_SECTIONS}
+      />
 
       {/* 탭 */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
