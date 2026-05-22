@@ -1,13 +1,21 @@
 'use client'
 
-import { useState, useContext } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import Link from 'next/link'
 import {
   User, Building2, PenLine, Shield, ArrowRight,
-  CalendarCheck, LogIn, Send, X, Link2,
+  CalendarCheck, LogIn, Send, X, Link2, SlidersHorizontal,
 } from 'lucide-react'
-import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
+import { DEFAULT_FORM_CONFIG, DEFAULT_PANEL_FIELDS } from '@/lib/settings-defaults'
 import { AuthContext } from '@/contexts/AuthContext'
+import type { FormConfig, PanelConfig } from '@/types'
+
+// ─── 커스텀 필드 정의 ─────────────────────────────────────────
+interface CustomFieldDef {
+  key: string
+  label: string
+  placeholder: string
+}
 
 // ─── 폼 상태 ─────────────────────────────────────────────────
 interface RequestForm {
@@ -16,16 +24,25 @@ interface RequestForm {
   client_address: string
   notes: string
   owner_name: string
+  email: string
+  business_number: string
+  account_number: string
   care_scope: string
   payment_method: string
   elevator: string
   parking: string
+  building_access: string
+  access_method: string
+  custom_fields: Record<string, string>
 }
 
 const INITIAL: RequestForm = {
   client_name: '', client_phone: '', client_address: '',
-  notes: '', owner_name: '', care_scope: '',
+  notes: '', owner_name: '', email: '', business_number: '',
+  account_number: '', care_scope: '',
   payment_method: '', elevator: '', parking: '',
+  building_access: '', access_method: '',
+  custom_fields: {},
 }
 
 function formatPhone(v: string): string {
@@ -141,11 +158,38 @@ export default function FormPreviewPage() {
 
   const [form, setForm] = useState<RequestForm>(INITIAL)
   const [showBlockModal, setShowBlockModal] = useState(false)
+  const [formConfig, setFormConfig] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
+  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDef[]>([])
 
-  const set = (key: keyof RequestForm) => (value: string) =>
+  const set = (key: keyof Omit<RequestForm, 'custom_fields'>) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const formConfig = DEFAULT_FORM_CONFIG
+  const setCustomField = (key: string, value: string) =>
+    setForm((prev) => ({ ...prev, custom_fields: { ...prev.custom_fields, [key]: value } }))
+
+  useEffect(() => {
+    fetch('/api/admin/settings/fields')
+      .then(r => r.json())
+      .then(json => {
+        if (!json.success || !json.data) return
+        const { formConfig: fc, panelConfig: pc } = json.data as { formConfig: FormConfig; panelConfig: PanelConfig }
+        setFormConfig({
+          ...DEFAULT_FORM_CONFIG,
+          ...fc,
+          show_fields: { ...DEFAULT_FORM_CONFIG.show_fields, ...fc.show_fields },
+        })
+        const customKeys: string[] = fc.custom_form_fields ?? []
+        setCustomFieldDefs(customKeys.map(key => {
+          const def = DEFAULT_PANEL_FIELDS.find(f => f.key === key)
+          return {
+            key,
+            label: pc?.fields?.[key]?.label ?? def?.label ?? key,
+            placeholder: pc?.fields?.[key]?.placeholder ?? def?.placeholder ?? '',
+          }
+        }))
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-28">
@@ -239,6 +283,37 @@ export default function FormPreviewPage() {
             />
           </Field>
         )}
+        {formConfig.show_fields.email && (
+          <Field label="이메일">
+            <input
+              type="email"
+              className={inputCls()}
+              placeholder="example@email.com"
+              value={form.email}
+              onChange={(e) => set('email')(e.target.value)}
+            />
+          </Field>
+        )}
+        {formConfig.show_fields.business_number && (
+          <Field label="사업자번호">
+            <input
+              className={inputCls()}
+              placeholder="000-00-00000"
+              value={form.business_number}
+              onChange={(e) => set('business_number')(e.target.value)}
+            />
+          </Field>
+        )}
+        {formConfig.show_fields.account_number && (
+          <Field label="계좌번호">
+            <input
+              className={inputCls()}
+              placeholder="예: 국민은행 123-456-789012"
+              value={form.account_number}
+              onChange={(e) => set('account_number')(e.target.value)}
+            />
+          </Field>
+        )}
         <OptionGroup
           label="결제 방법"
           options={formConfig.payment_options}
@@ -283,6 +358,24 @@ export default function FormPreviewPage() {
             onChange={set('parking')}
           />
         )}
+        {formConfig.show_fields.building_access && (
+          <OptionGroup
+            label="건물출입신청여부"
+            options={['자유출입', '사전출입신청']}
+            value={form.building_access}
+            onChange={set('building_access')}
+          />
+        )}
+        {formConfig.show_fields.access_method && (
+          <Field label="출입 방법 상세">
+            <input
+              className={inputCls()}
+              placeholder="예: 비밀번호 1234, 1층 경비실 문의"
+              value={form.access_method}
+              onChange={(e) => set('access_method')(e.target.value)}
+            />
+          </Field>
+        )}
         <Field label="서비스 내용" required>
           <textarea
             rows={3}
@@ -315,6 +408,31 @@ export default function FormPreviewPage() {
           />
         </Field>
       </div>
+
+      {/* 폼 섹션: 추가 정보 (커스텀 필드) */}
+      {customFieldDefs.length > 0 && (
+        <div className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-5 flex flex-col gap-4">
+          <div className="flex items-center gap-2.5 pb-3 border-b border-border-subtle">
+            <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <SlidersHorizontal size={15} className="text-text-secondary" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-text-primary">추가 정보</p>
+              <p className="text-xs text-text-tertiary">추가 정보를 입력해주세요</p>
+            </div>
+          </div>
+          {customFieldDefs.map(def => (
+            <Field key={def.key} label={def.label}>
+              <input
+                className={inputCls()}
+                placeholder={def.placeholder || def.label}
+                value={form.custom_fields[def.key] ?? ''}
+                onChange={(e) => setCustomField(def.key, e.target.value)}
+              />
+            </Field>
+          ))}
+        </div>
+      )}
 
       {/* 폼 섹션: 동의사항 (읽기전용 UI) */}
       <div className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-5 flex flex-col gap-3">
