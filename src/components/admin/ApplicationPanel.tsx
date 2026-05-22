@@ -148,6 +148,7 @@ type FormState = {
   admin_notes: string
   construction_date: string
   construction_time: string
+  spare_data: Record<string, string>
 }
 
 function toForm(app: ServiceApplication): FormState {
@@ -178,6 +179,7 @@ function toForm(app: ServiceApplication): FormState {
     admin_notes:          app.admin_notes ?? '',
     construction_date:    app.construction_date ?? '',
     construction_time:    app.construction_time ?? '',
+    spare_data:           (app.spare_data as Record<string, string>) ?? {},
   }
 }
 
@@ -223,6 +225,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
 
   const setF = (key: keyof FormState) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }))
+
+  const setSpare = (key: string) => (v: string) =>
+    setForm((prev) => ({ ...prev, spare_data: { ...prev.spare_data, [key]: v } }))
 
   // ─── 결제 자동 계산 ───────────────────────────────────────
   const unitPrice = Number(form.unit_price_per_visit) || 0
@@ -284,8 +289,10 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       ]
       const payload: Record<string, unknown> = { status, is_favorite: isFavorite }
       for (const [k, v] of Object.entries(form) as [keyof FormState, string][]) {
+        if (k === 'spare_data') continue
         payload[k] = numericKeys.includes(k) ? (v.trim() ? Number(v) : null) : (v.trim() || null)
       }
+      payload.spare_data = form.spare_data
       payload.vat = vatAmount
       payload.supply_amount = totalAmount
       payload.balance = balanceAmount
@@ -407,6 +414,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
             </FieldRow>
           )}
+          {['spare_basic_1', 'spare_basic_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       case 'site': return (
@@ -436,6 +448,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <EditInput value={form.door_password} onChange={setF('door_password')} placeholder={resolvePlaceholder('door_password')} />
             </FieldRow>
           )}
+          {['spare_site_1', 'spare_site_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       case 'schedule': return (
@@ -450,6 +467,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <EditInput value={form.construction_time} onChange={setF('construction_time')} type="time" />
             </FieldRow>
           )}
+          {['spare_schedule_1', 'spare_schedule_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       case 'request': return (
@@ -469,6 +491,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <EditTextarea value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder={resolvePlaceholder('admin_request_notes')} rows={2} />
             </FieldRow>
           )}
+          {['spare_request_1', 'spare_request_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       case 'payment': return (
@@ -519,6 +546,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               {balanceAmount.toLocaleString('ko-KR')}원
             </span>
           </FieldRow>
+          {['spare_payment_1', 'spare_payment_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       case 'misc': return (
@@ -533,6 +565,11 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <EditTextarea value={form.admin_notes} onChange={setF('admin_notes')} placeholder={resolvePlaceholder('admin_notes')} rows={3} />
             </FieldRow>
           )}
+          {['spare_misc_1', 'spare_misc_2'].map((key) => !isHidden(key) && (
+            <FieldRow key={key} label={resolveLabel(key)}>
+              <EditInput value={form.spare_data[key] ?? ''} onChange={setSpare(key)} placeholder={resolvePlaceholder(key)} />
+            </FieldRow>
+          ))}
         </>
       )
       default: return null

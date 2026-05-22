@@ -327,6 +327,7 @@ export interface ServiceApplication {
   business_id: string | null
   assigned_connection_ids: string[] | null
   worker_pay: Record<string, number> | null
+  spare_data?: Record<string, string> | null
 }
 
 // ─── 패널 필드 커스터마이징 ───────────────────────────────────
