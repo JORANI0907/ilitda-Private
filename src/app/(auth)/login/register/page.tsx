@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Lock, Phone, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { User, Lock, Phone, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
-type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+type EmailStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '')
@@ -23,10 +23,9 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
 
   // Step 1
-  const [isBusiness, setIsBusiness] = useState(true)
-  const [isWorker, setIsWorker] = useState(false)
-  const [username, setUsername] = useState('')
-  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle')
+  const [role, setRole] = useState<'business' | 'worker'>('business')
+  const [email, setEmail] = useState('')
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [name, setName] = useState('')
@@ -45,36 +44,35 @@ export default function RegisterPage() {
   useEffect(() => {
     if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
 
-    const clean = username.trim().toLowerCase()
-    if (!clean) { setUsernameStatus('idle'); return }
-    if (!/^[a-z0-9_]{4,20}$/.test(clean)) { setUsernameStatus('invalid'); return }
+    const clean = email.trim().toLowerCase()
+    if (!clean) { setEmailStatus('idle'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { setEmailStatus('invalid'); return }
 
-    setUsernameStatus('checking')
+    setEmailStatus('checking')
     checkTimerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(clean)}`)
+        const res = await fetch(`/api/auth/check-username?email=${encodeURIComponent(clean)}`)
         const json = await res.json()
-        setUsernameStatus(json.data?.available ? 'available' : 'taken')
+        setEmailStatus(json.data?.available ? 'available' : 'taken')
       } catch {
-        setUsernameStatus('idle')
+        setEmailStatus('idle')
       }
     }, 500)
 
     return () => {
       if (checkTimerRef.current) clearTimeout(checkTimerRef.current)
     }
-  }, [username])
+  }, [email])
 
   function validateStep1(): string | null {
-    if (!isBusiness && !isWorker) return '역할을 하나 이상 선택해주세요.'
-    if (usernameStatus === 'invalid' || !/^[a-z0-9_]{4,20}$/.test(username.trim().toLowerCase()))
-      return '아이디는 4~20자 영문 소문자·숫자·_만 사용 가능합니다.'
-    if (usernameStatus === 'taken') return '이미 사용 중인 아이디입니다.'
-    if (usernameStatus === 'checking') return '아이디 확인 중입니다. 잠시 후 다시 시도해주세요.'
+    const cleanEmail = email.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return '올바른 이메일 형식을 입력해주세요.'
+    if (emailStatus === 'taken') return '이미 사용 중인 이메일입니다.'
+    if (emailStatus === 'checking') return '이메일 확인 중입니다. 잠시 후 다시 시도해주세요.'
     if (password.length < 8) return '비밀번호는 8자 이상이어야 합니다.'
     if (password !== passwordConfirm) return '비밀번호가 일치하지 않습니다.'
     if (!name.trim()) return '이름을 입력해주세요.'
-    if (isBusiness && !businessName.trim()) return '상호명을 입력해주세요.'
+    if (role === 'business' && !businessName.trim()) return '상호명을 입력해주세요.'
     return null
   }
 
@@ -116,19 +114,16 @@ export default function RegisterPage() {
     setError(null)
 
     try {
-      const active_role = isBusiness ? 'business' : 'worker'
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.trim().toLowerCase(),
+          email: email.trim().toLowerCase(),
           password,
           name: name.trim(),
           phone: digits,
           otp,
-          active_role,
-          is_business: isBusiness,
-          is_worker: isWorker,
+          role,
           business_name: businessName.trim() || undefined,
           address: address.trim() || undefined,
           business_number: businessNumber.trim() || undefined,
@@ -142,8 +137,8 @@ export default function RegisterPage() {
         return
       }
 
-      const role = json.data?.role ?? active_role
-      router.push(`/${role}/home`)
+      const finalRole = json.data?.role ?? role
+      router.push(`/${finalRole}/home`)
       router.refresh()
     } catch {
       setError('네트워크 오류가 발생했습니다.')
@@ -181,64 +176,58 @@ export default function RegisterPage() {
 
       {step === 1 && (
         <div className="flex flex-col gap-4">
-          {/* 역할 선택 */}
+          {/* 역할 토글 */}
           <div>
             <p className="text-sm font-medium text-text-primary mb-2">역할 선택 <span className="text-state-danger">*</span></p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { key: 'business', label: '사업자', desc: '직원을 관리해요' },
-                { key: 'worker',   label: '작업자', desc: '일감을 받아요' },
-              ].map(({ key, label, desc }) => {
-                const checked = key === 'business' ? isBusiness : isWorker
-                const toggle = key === 'business'
-                  ? () => setIsBusiness(p => !p)
-                  : () => setIsWorker(p => !p)
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => { toggle(); setError(null) }}
-                    className={`
-                      flex flex-col items-start p-3 rounded-xl border-2 text-left transition-colors
-                      ${checked
-                        ? 'border-brand-600 bg-brand-50/40'
-                        : 'border-border bg-surface hover:border-border-strong'}
-                    `}
-                  >
-                    <span className={`text-sm font-semibold ${checked ? 'text-brand-600' : 'text-text-primary'}`}>{label}</span>
-                    <span className="text-xs text-text-tertiary mt-0.5">{desc}</span>
-                  </button>
-                )
-              })}
+            <div className="flex bg-surface-sunken rounded-xl p-1 gap-1">
+              {([
+                { key: 'business' as const, label: '사업자', desc: '직원을 관리해요' },
+                { key: 'worker'   as const, label: '작업자', desc: '일감을 받아요'  },
+              ]).map(({ key, label, desc }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => { setRole(key); setError(null) }}
+                  className={`
+                    flex-1 flex flex-col items-center py-3 px-2 rounded-lg text-center transition-all
+                    ${role === key
+                      ? 'bg-white shadow-soft'
+                      : 'text-text-secondary hover:text-text-primary'}
+                  `}
+                >
+                  <span className={`text-sm font-semibold ${role === key ? 'text-brand-600' : 'text-text-primary'}`}>{label}</span>
+                  <span className="text-xs text-text-tertiary mt-0.5">{desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* 아이디 */}
+          {/* 이메일 */}
           <div>
             <Input
-              label="아이디"
-              type="text"
-              placeholder="4~20자 영문 소문자·숫자·_"
-              leadingIcon={<User size={16} />}
-              value={username}
-              onChange={(e) => { setUsername(e.target.value); setError(null) }}
-              autoComplete="username"
-              name="username"
+              label="이메일"
+              type="email"
+              placeholder="example@email.com"
+              leadingIcon={<Mail size={16} />}
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(null) }}
+              autoComplete="email"
+              name="email"
               trailingIcon={
-                usernameStatus === 'checking' ? <Loader2 size={16} className="animate-spin text-text-tertiary" /> :
-                usernameStatus === 'available' ? <CheckCircle2 size={16} className="text-state-success" /> :
-                usernameStatus === 'taken' ? <XCircle size={16} className="text-state-danger" /> :
+                emailStatus === 'checking' ? <Loader2 size={16} className="animate-spin text-text-tertiary" /> :
+                emailStatus === 'available' ? <CheckCircle2 size={16} className="text-state-success" /> :
+                emailStatus === 'taken'     ? <XCircle size={16} className="text-state-danger" /> :
                 undefined
               }
             />
-            {usernameStatus === 'available' && (
-              <p className="mt-1 text-xs text-state-success">사용 가능한 아이디입니다.</p>
+            {emailStatus === 'available' && (
+              <p className="mt-1 text-xs text-state-success">사용 가능한 이메일입니다.</p>
             )}
-            {usernameStatus === 'taken' && (
-              <p className="mt-1 text-xs text-state-danger">이미 사용 중인 아이디입니다.</p>
+            {emailStatus === 'taken' && (
+              <p className="mt-1 text-xs text-state-danger">이미 사용 중인 이메일입니다.</p>
             )}
-            {usernameStatus === 'invalid' && username.trim() && (
-              <p className="mt-1 text-xs text-state-danger">4~20자 영문 소문자·숫자·_만 사용 가능합니다.</p>
+            {emailStatus === 'invalid' && email.trim() && (
+              <p className="mt-1 text-xs text-state-danger">올바른 이메일 형식이 아닙니다.</p>
             )}
           </div>
 
@@ -275,8 +264,8 @@ export default function RegisterPage() {
             name="name"
           />
 
-          {/* 상호명 - 사업자일 때만 */}
-          {isBusiness && (
+          {/* 상호명 — 사업자일 때만 */}
+          {role === 'business' && (
             <Input
               label="상호명"
               type="text"
@@ -333,7 +322,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* OTP 입력 */}
+          {/* OTP */}
           {otpSent && (
             <Input
               label="인증번호"
@@ -348,7 +337,7 @@ export default function RegisterPage() {
           )}
 
           {/* 사업자번호 (선택) */}
-          {isBusiness && (
+          {role === 'business' && (
             <Input
               label="사업자번호 (선택)"
               type="text"
