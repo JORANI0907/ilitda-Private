@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Download, Users, LogIn } from 'lucide-react'
+import { Download, Users, LogIn, ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -76,6 +76,19 @@ export default function PayrollPage() {
   const [activeWorker, setActiveWorker] = useState<WorkerTab>('all')
   const [saveStatuses, setSaveStatuses] = useState<SaveStatus>({})
   const [inputValues, setInputValues] = useState<Record<string, string>>({})
+
+  const now = new Date()
+  const [viewYear, setViewYear] = useState(now.getFullYear())
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
+
+  function prevMonth() {
+    if (viewMonth === 1) { setViewYear((y) => y - 1); setViewMonth(12) }
+    else setViewMonth((m) => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 12) { setViewYear((y) => y + 1); setViewMonth(1) }
+    else setViewMonth((m) => m + 1)
+  }
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -159,9 +172,11 @@ export default function PayrollPage() {
     }
   }
 
+  const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
   const filteredApps = applications.filter((app) => {
-    if (activeWorker === 'all') return true
-    return (app.assigned_connection_ids ?? []).includes(activeWorker)
+    const matchesMonth = app.construction_date?.startsWith(monthPrefix) ?? false
+    if (activeWorker === 'all') return matchesMonth
+    return matchesMonth && (app.assigned_connection_ids ?? []).includes(activeWorker)
   })
 
   const totalForWorker = filteredApps.reduce((sum, app) => {
@@ -174,9 +189,9 @@ export default function PayrollPage() {
   const handleExport = async () => {
     const xlsx = await import('xlsx')
 
-    // Build rows: one row per (application, worker) pair
+    // Build rows: one row per (application, worker) pair — current month only
     const rows: Record<string, string | number>[] = []
-    for (const app of applications) {
+    for (const app of filteredApps) {
       for (const w of app.workers ?? []) {
         const conn = connections.find((c) => c.id === w.connection_id)
         rows.push({
@@ -200,7 +215,7 @@ export default function PayrollPage() {
     const ws = xlsx.utils.json_to_sheet(rows)
     const wb = xlsx.utils.book_new()
     xlsx.utils.book_append_sheet(wb, ws, '급여명세')
-    xlsx.writeFile(wb, `급여명세_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    xlsx.writeFile(wb, `급여명세_${viewYear}${String(viewMonth).padStart(2, '0')}.xlsx`)
   }
 
   const workerTabs = [
@@ -248,6 +263,29 @@ export default function PayrollPage() {
         title="급여 관리 사용법"
         sections={HELP_SECTIONS}
       />
+
+      {/* 월 네비게이션 */}
+      <div className="flex items-center justify-between bg-surface-sunken rounded-2xl px-2 py-1.5">
+        <button
+          type="button"
+          onClick={prevMonth}
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+          aria-label="이전 달"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <span className="text-sm font-semibold text-text-primary">
+          {viewYear}년 {viewMonth}월
+        </span>
+        <button
+          type="button"
+          onClick={nextMonth}
+          className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+          aria-label="다음 달"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
 
       {/* 작업자 탭 */}
       <div className="flex items-center gap-1.5 mb-0.5">
@@ -304,8 +342,8 @@ export default function PayrollPage() {
       {!isLoading && !error && filteredApps.length === 0 && (
         <EmptyState
           icon={<Users size={40} />}
-          title="급여 데이터가 없어요"
-          description="신청서에서 작업자를 배정하면 여기서 급여를 입력할 수 있습니다."
+          title={`${viewMonth}월 급여 데이터가 없어요`}
+          description="해당 월에 작업자가 배정된 신청서가 없습니다. 다른 달을 확인하거나 신청서에서 작업자를 배정해 주세요."
           bordered
         />
       )}
