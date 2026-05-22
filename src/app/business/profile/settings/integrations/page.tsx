@@ -219,7 +219,7 @@ export default function IntegrationsPage() {
                 onChange={e => setPhoneInput(e.target.value)}
                 className="flex-1"
               />
-              <Button size="md" onClick={handleRequestOtp} isLoading={solapiLoading}>
+              <Button size="md" onClick={handleRequestOtp} isLoading={solapiLoading} className="whitespace-nowrap">
                 인증 요청
               </Button>
             </div>
@@ -284,7 +284,7 @@ export default function IntegrationsPage() {
               type="email"
               className="flex-1"
             />
-            <Button size="md" onClick={handleConnectDrive} isLoading={driveLoading}>
+            <Button size="md" onClick={handleConnectDrive} isLoading={driveLoading} className="whitespace-nowrap">
               {biz?.gmail_for_drive ? '재연동' : '연동'}
             </Button>
           </div>
