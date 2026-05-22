@@ -25,8 +25,11 @@ import type { PanelConfig, PanelFieldOverride } from '@/types'
 
 // 신청서 폼 설정에서 관리하는 필드 → 이 화면에서는 잠금
 const FORM_MANAGED_KEYS = new Set([
+  'business_name', 'phone', 'address',
   'owner_name', 'email', 'business_number', 'account_number',
   'elevator', 'parking', 'building_access', 'access_method',
+  'construction_date', 'construction_time',
+  'care_scope', 'request_notes',
   'payment_method',
 ])
 
