@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { HelpTip } from '@/components/ui/HelpTip'
 
@@ -163,8 +164,15 @@ function VerifyContent() {
     <div className="flex flex-col gap-8">
       {/* 헤더 */}
       <div className="text-center pt-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-600 mb-4">
-          <span className="text-white text-2xl font-bold">일</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-brand-light mb-4 overflow-hidden">
+          <Image
+            src="/brand/logo-icon.png"
+            alt="일잇다 로고"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover object-top"
+            priority
+          />
         </div>
         <h1 className="text-2xl font-bold text-text-primary">인증번호 입력</h1>
         {maskedPhone && (

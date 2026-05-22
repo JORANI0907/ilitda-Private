@@ -78,7 +78,7 @@ const FEATURE_CATEGORIES: FeatureCategory[] = [
     title: 'SMS 알림',
     rows: [
       { label: '수동 발송',   basic: true,      pro: true,      max: true },
-      { label: '일일 한도',   basic: '50건',    pro: '무제한',  max: '무제한', highlight: true },
+      { label: '일일 한도',   basic: '20건',    pro: '50건',    max: '100건',  highlight: true },
       { label: '자동 발송',   basic: false,     pro: true,      max: true,     highlight: true },
       { label: '커스텀 문구', basic: false,     pro: true,      max: true },
     ],

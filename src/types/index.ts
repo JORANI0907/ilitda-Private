@@ -83,9 +83,9 @@ export interface Business {
 // ─── 플랜 발송 한도 ───────────────────────────────────────────
 export const PLAN_SMS_LIMITS: Record<string, number> = {
   free:  10,
-  basic: 50,
-  pro:   Number.MAX_SAFE_INTEGER,
-  max:   Number.MAX_SAFE_INTEGER,
+  basic: 20,
+  pro:   50,
+  max:   100,
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────
