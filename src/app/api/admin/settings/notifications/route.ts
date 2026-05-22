@@ -3,7 +3,11 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { DEFAULT_NOTIFICATION_CONFIG } from '@/lib/settings-defaults'
 import type { ApiResponse, NotificationConfig } from '@/types'
 
-export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig>>> {
+interface NotificationConfigWithPlan extends NotificationConfig {
+  plan_type: string
+}
+
+export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfigWithPlan>>> {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
@@ -14,7 +18,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('notification_config')
+    .select('notification_config, plan_type')
     .eq('profile_id', user.id)
     .maybeSingle()
 
@@ -22,8 +26,9 @@ export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig
   const defaultRules = DEFAULT_NOTIFICATION_CONFIG.rules
   const savedMap = new Map((saved?.rules ?? []).map((r) => [r.type, r]))
   const rules = defaultRules.map((def) => ({ ...def, ...(savedMap.get(def.type) ?? {}) }))
+  const plan_type = (biz?.plan_type as string | null) ?? 'free'
 
-  return NextResponse.json({ success: true, data: { rules } })
+  return NextResponse.json({ success: true, data: { rules, plan_type } })
 }
 
 export async function PATCH(req: NextRequest): Promise<NextResponse<ApiResponse>> {
