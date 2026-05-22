@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { Connection } from '@/types'
 
 interface PageProps {
@@ -44,9 +47,21 @@ type ApplicationItem = {
   care_scope: string | null
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '연결 상태 변경 방법',
+    content: '앱으로 초대된 작업자는 연결 상태가 자동으로 바뀝니다. 수동 등록 작업자는 나중에 초대 링크를 보내 앱 연결로 전환할 수 있습니다.',
+  },
+  {
+    title: '근무 이력 확인 방법',
+    content: '페이지 아래쪽 "작업 이력" 섹션에서 해당 작업자가 배정된 현장 목록을 확인할 수 있습니다. 최근 10건까지 표시됩니다.',
+  },
+]
+
 export default function WorkerDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [connection, setConnection] = useState<Connection | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -196,6 +211,15 @@ export default function WorkerDetailPage({ params }: PageProps) {
         <ArrowLeft size={16} />
         작업자 관리
       </button>
+
+      <HelpBanner label="직원 상세 페이지 안내 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip>연결된 직원은 앱에서 출퇴근 체크와 일정을 확인할 수 있습니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="직원 상세 페이지 안내"
+        sections={HELP_SECTIONS}
+      />
 
       {/* 헤더 아바타 */}
       <div className="flex flex-col items-center gap-3 py-4">
