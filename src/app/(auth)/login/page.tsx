@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Mail, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -74,6 +75,9 @@ export default function LoginPage() {
           autoComplete="email"
           name="email"
         />
+        <HelpTip className="mt-1">
+          가입 시 사용한 이메일 주소를 입력하세요. 비밀번호를 잊으셨다면 아래 &apos;비밀번호 찾기&apos;를 눌러주세요.
+        </HelpTip>
         <Input
           label="비밀번호"
           type="password"
