@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -129,6 +130,7 @@ export default function RevenuePage() {
   const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null)
   const [annualData, setAnnualData]   = useState<AnnualData | null>(null)
   const [isLoading, setIsLoading]   = useState(false)
+  const [isDemo, setIsDemo]         = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isExporting, setIsExporting] = useState(false)
 
@@ -138,7 +140,7 @@ export default function RevenuePage() {
     try {
       const res = await fetch(`/api/business/revenue?year=${y}&month=${m}`)
       const json = await res.json()
-      if (json.success) setMonthlyData(json.data)
+      if (json.success) { setMonthlyData(json.data); setIsDemo(json.isDemo === true) }
     } catch { /* ignore */ }
     finally { setIsLoading(false) }
   }, [])
@@ -148,7 +150,7 @@ export default function RevenuePage() {
     try {
       const res = await fetch(`/api/business/revenue?year=${y}`)
       const json = await res.json()
-      if (json.success) setAnnualData(json.data)
+      if (json.success) { setAnnualData(json.data); setIsDemo(json.isDemo === true) }
     } catch { /* ignore */ }
     finally { setIsLoading(false) }
   }, [])
@@ -233,6 +235,19 @@ export default function RevenuePage() {
         </button>
         <SectionHeader title="매출 관리" level="page" />
       </div>
+
+      {/* 데모 배너 */}
+      {isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link href="/login/register" className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors">
+            <LogIn size={14} /> 가입하기
+          </Link>
+        </div>
+      )}
 
       {/* 월간 / 연간 토글 */}
       <div className="flex gap-0.5 bg-surface-sunken rounded-lg p-0.5 self-start">

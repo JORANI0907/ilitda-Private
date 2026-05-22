@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
+const DEMO_INVENTORY = [
+  { id: 'demo-inv-1', name: '탈지제 (20L)',          current_qty: 3,  min_qty: 5,  unit: '통', category: '세제류' },
+  { id: 'demo-inv-2', name: '스팀청소기',              current_qty: 2,  min_qty: 2,  unit: '대', category: '장비' },
+  { id: 'demo-inv-3', name: '후드세정제 (5L)',         current_qty: 8,  min_qty: 3,  unit: '통', category: '세제류' },
+  { id: 'demo-inv-4', name: '고압세척기 호스',         current_qty: 1,  min_qty: 2,  unit: '개', category: '장비' },
+  { id: 'demo-inv-5', name: '마이크로파이버 걸레',     current_qty: 15, min_qty: 10, unit: '장', category: '소모품' },
+]
+
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
+    return NextResponse.json({ success: true, data: DEMO_INVENTORY, isDemo: true })
   }
 
   const service = createServiceClient()

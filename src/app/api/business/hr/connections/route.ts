@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSMS } from '@/lib/solapi/client'
 
+const DEMO_WORKERS = [
+  { id: 'demo-worker-1', display_name: '김청소', manual_name: '김청소', manual_phone: '010-1111-1111', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: null, manual_account_number: null, manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+  { id: 'demo-worker-2', display_name: '이세정', manual_name: '이세정', manual_phone: '010-2222-2222', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: null, manual_account_number: null, manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+  { id: 'demo-worker-3', display_name: '박일꾼', manual_name: '박일꾼', manual_phone: '010-3333-3333', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: null, manual_account_number: null, manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+]
+
 export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ success: true, data: [] })
+    return NextResponse.json({ success: true, data: DEMO_WORKERS, isDemo: true })
   }
 
   const { searchParams } = new URL(request.url)

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardList, MapPin, Phone, CalendarClock, Users } from 'lucide-react'
+import { ClipboardList, MapPin, Phone, CalendarClock, Users, LogIn } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
@@ -68,6 +69,7 @@ export default function RequestsPage() {
   const router = useRouter()
   const [helpOpen, setHelpOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('all')
+  const [isDemo, setIsDemo] = useState(false)
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [pendingCount, setPendingCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -100,6 +102,7 @@ export default function RequestsPage() {
         return
       }
       setRequests(json.data ?? [])
+      setIsDemo(json.isDemo === true)
       if (json.meta?.pending_count !== undefined) {
         setPendingCount(json.meta.pending_count)
       }
@@ -259,6 +262,19 @@ export default function RequestsPage() {
           },
         ]}
       />
+
+      {/* 데모 배너 */}
+      {isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link href="/login/register" className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors">
+            <LogIn size={14} /> 가입하기
+          </Link>
+        </div>
+      )}
 
       {/* 수락 주의 안내 */}
       <HelpTip variant="warning">수락 후에는 취소가 어려우니 일정을 꼭 확인하고 수락해 주세요.</HelpTip>

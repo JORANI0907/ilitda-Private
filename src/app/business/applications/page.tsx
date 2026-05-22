@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   Plus, Star, Search, Phone, MapPin, CalendarDays, ClipboardList,
-  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, LayoutList,
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, LayoutList, LogIn,
 } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -360,6 +361,7 @@ function CardSkeleton() {
 export default function ApplicationsPage() {
   const router = useRouter()
   const [apps, setApps] = useState<ServiceApplication[]>([])
+  const [isDemo, setIsDemo] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -409,6 +411,7 @@ export default function ApplicationsPage() {
       const json = await res.json()
       if (!json.success) { setError(json.error ?? '불러오기 실패'); return }
       setApps(json.data ?? [])
+      setIsDemo(json.isDemo === true)
     } catch { setError('네트워크 오류') } finally { setIsLoading(false) }
   }, [query])
 
@@ -482,6 +485,19 @@ export default function ApplicationsPage() {
           },
         ]}
       />
+
+      {/* 데모 배너 */}
+      {isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link href="/login/register" className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors">
+            <LogIn size={14} /> 가입하기
+          </Link>
+        </div>
+      )}
 
       {/* 헤더 */}
       <div className="flex items-center justify-between">

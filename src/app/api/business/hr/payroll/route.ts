@@ -12,13 +12,49 @@ async function getBusinessId(userId: string): Promise<string | null> {
   return data.id
 }
 
+const DEMO_PAYROLL = () => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+
+  return [
+    {
+      id: 'demo-pay-1',
+      construction_date: `${y}-${m}-05`,
+      business_name: '스타벅스 강남역점',
+      care_scope: '주방후드 청소',
+      worker_pay: { 'demo-worker-1': 300000 },
+      assigned_connection_ids: ['demo-worker-1'],
+      workers: [{ connection_id: 'demo-worker-1', display_name: '김청소' }],
+    },
+    {
+      id: 'demo-pay-2',
+      construction_date: `${y}-${m}-12`,
+      business_name: '이디야 선릉점',
+      care_scope: '바닥 청소',
+      worker_pay: { 'demo-worker-2': 280000 },
+      assigned_connection_ids: ['demo-worker-2'],
+      workers: [{ connection_id: 'demo-worker-2', display_name: '이세정' }],
+    },
+    {
+      id: 'demo-pay-3',
+      construction_date: `${y}-${m}-15`,
+      business_name: '버거킹 삼성점',
+      care_scope: '덕트 청소',
+      worker_pay: { 'demo-worker-3': 320000 },
+      assigned_connection_ids: ['demo-worker-3'],
+      workers: [{ connection_id: 'demo-worker-3', display_name: '박일꾼' }],
+    },
+  ]
+}
+
 // GET: 내 business_id의 service_applications 중 assigned_connection_ids가 있는 것 목록
 export async function GET(_request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 })
+    return NextResponse.json({ success: true, data: DEMO_PAYROLL(), isDemo: true })
   }
 
   const businessId = await getBusinessId(user.id)
