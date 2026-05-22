@@ -11,6 +11,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useRouter } from 'next/navigation'
 import type { ServiceRequest, RequestStatus, ServiceType, Connection } from '@/types'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 type Tab = 'all' | RequestStatus
 
@@ -63,6 +66,7 @@ function WorkerChip({ name }: { name: string }) {
 
 export default function RequestsPage() {
   const router = useRouter()
+  const [helpOpen, setHelpOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('all')
   const [requests, setRequests] = useState<ServiceRequest[]>([])
   const [pendingCount, setPendingCount] = useState(0)
@@ -233,6 +237,31 @@ export default function RequestsPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
       <SectionHeader title="신청서함" level="page" />
+
+      {/* 도움말 배너 */}
+      <HelpBanner label="서비스 요청 수신 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="서비스 요청 수신 사용법"
+        sections={[
+          {
+            title: '요청 수락 방법',
+            content: '신규 탭에서 고객 신청서를 확인하고 "수락" 버튼을 누르세요.\n수락 시 방문 날짜, 시작 시간, 금액을 입력하면 일정이 자동으로 생성됩니다.',
+          },
+          {
+            title: '요청 거절 방법',
+            content: '"거절" 버튼을 누르면 거절 사유를 입력할 수 있습니다.\n거절 사유는 선택 사항이며, 고객에게 전달될 수 있습니다.',
+          },
+          {
+            title: '직원 배정 방법',
+            content: '"작업자 배정" 버튼을 탭하면 연결된 작업자 목록이 나타납니다.\n배정할 작업자를 선택 후 저장하면 해당 서비스에 작업자가 배정됩니다.\n작업자 관리에서 작업자를 먼저 등록해야 목록에 표시됩니다.',
+          },
+        ]}
+      />
+
+      {/* 수락 주의 안내 */}
+      <HelpTip variant="warning">수락 후에는 취소가 어려우니 일정을 꼭 확인하고 수락해 주세요.</HelpTip>
 
       {/* 탭 */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
