@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useContext } from 'react'
 import {
   Home, Calendar, Wallet, ShoppingBag, User,
   BarChart3, Users, Briefcase, Store,
 } from 'lucide-react'
+import { AuthContext } from '@/contexts/AuthContext'
 
 type Role = 'business' | 'worker'
 
@@ -37,7 +39,11 @@ interface BottomNavProps {
 
 export function BottomNav({ role }: BottomNavProps) {
   const pathname = usePathname()
-  const tabs = role === 'business' ? BUSINESS_TABS : WORKER_TABS
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
+  const profileHref = isGuest ? '/login' : `/${role}/profile`
+  const baseTabs = role === 'business' ? BUSINESS_TABS : WORKER_TABS
+  const tabs = baseTabs.map(t => t.href.endsWith('/profile') ? { ...t, href: profileHref } : t)
 
   return (
     <nav

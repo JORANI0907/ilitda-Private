@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Home, BarChart3, Users, Store, User, ClipboardList,
 } from 'lucide-react'
+import { AuthContext } from '@/contexts/AuthContext'
 
 interface NavItem {
   href: string
@@ -25,6 +26,8 @@ const TABS: NavItem[] = [
 
 export function BusinessBottomNav() {
   const pathname = usePathname()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
@@ -43,13 +46,17 @@ export function BusinessBottomNav() {
     fetchPending()
   }, [])
 
+  const tabs = TABS.map(t =>
+    t.href === '/business/profile' ? { ...t, href: isGuest ? '/login' : '/business/profile' } : t
+  )
+
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-border-subtle"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <ul className="flex h-16">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href)
           const showBadge = tab.badgeKey === 'requests' && pendingCount > 0
           return (

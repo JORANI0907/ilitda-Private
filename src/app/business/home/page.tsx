@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Calendar, Users, Package } from 'lucide-react'
+import Link from 'next/link'
+import { Calendar, Users, Package, LogIn } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -21,6 +22,7 @@ interface HomeData {
   monthScheduleCount: number
   monthWorkerCount: number
   lowStockCount: number
+  isDemo?: boolean
   todaySchedules: DaySchedule[]
   tomorrowSchedules: DaySchedule[]
 }
@@ -88,6 +90,23 @@ export default function BusinessHomePage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
+      {/* 데모 배너 */}
+      {data?.isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link
+            href="/login/register"
+            className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors"
+          >
+            <LogIn size={14} />
+            가입하기
+          </Link>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div>
         <p className="text-sm text-text-secondary">안녕하세요</p>

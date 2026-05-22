@@ -1,12 +1,40 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
+const DEMO_SCHEDULES_TODAY = () => {
+  const today = new Date().toISOString().slice(0, 10)
+  return [
+    { id: 'demo-1', service_date: today, start_time: '10:00', status: '예약확정', service_type: '주방후드 청소', client: { name: '스타벅스 강남역점' } },
+    { id: 'demo-2', service_date: today, start_time: '14:00', status: '서비스완료', service_type: '에어컨 청소', client: { name: '맥도날드 역삼점' } },
+    { id: 'demo-3', service_date: today, start_time: '17:30', status: '신규', service_type: '바닥 청소', client: { name: '이디야 선릉점' } },
+  ]
+}
+
+const DEMO_SCHEDULES_TOMORROW = () => {
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  return [
+    { id: 'demo-4', service_date: tomorrow, start_time: '09:00', status: '예약확정', service_type: '덕트 청소', client: { name: '버거킹 삼성점' } },
+    { id: 'demo-5', service_date: tomorrow, start_time: '13:00', status: '신규', service_type: '식기세척기 청소', client: { name: '롯데리아 잠실점' } },
+  ]
+}
+
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
+    return NextResponse.json({
+      success: true,
+      data: {
+        businessName: '데모 사업장',
+        monthScheduleCount: 8,
+        monthWorkerCount: 15,
+        lowStockCount: 2,
+        isDemo: true,
+        todaySchedules: DEMO_SCHEDULES_TODAY(),
+        tomorrowSchedules: DEMO_SCHEDULES_TOMORROW(),
+      },
+    })
   }
 
   const service = createServiceClient()

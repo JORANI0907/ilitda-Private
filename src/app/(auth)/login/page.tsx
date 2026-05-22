@@ -2,38 +2,22 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Phone } from 'lucide-react'
+import Link from 'next/link'
+import { User, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '')
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`
-}
-
 export default function LoginPage() {
   const router = useRouter()
-  const [phone, setPhone] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isDev = process.env.NODE_ENV === 'development'
-
-  function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const formatted = formatPhone(e.target.value)
-    if (formatted.replace(/-/g, '').length <= 11) {
-      setPhone(formatted)
-    }
-    setError(null)
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const digits = phone.replace(/-/g, '')
-    if (digits.length < 10 || digits.length > 11) {
-      setError('올바른 휴대폰 번호를 입력해주세요.')
+    if (!username.trim() || !password.trim()) {
+      setError('아이디와 비밀번호를 입력해주세요.')
       return
     }
 
@@ -41,22 +25,24 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: digits }),
+        body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
       })
 
       const json = await res.json()
 
       if (!res.ok) {
-        setError(json.error ?? '인증번호 발송에 실패했습니다. 다시 시도해주세요.')
+        setError(json.error ?? '로그인에 실패했습니다.')
         return
       }
 
-      router.push(`/login/verify?phone=${encodeURIComponent(digits)}`)
+      const role = json.data?.role ?? 'business'
+      router.push(`/${role}/home`)
+      router.refresh()
     } catch {
-      setError('네트워크 오류가 발생했습니다. 다시 시도해주세요.')
+      setError('네트워크 오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -79,36 +65,43 @@ export default function LoginPage() {
         className="bg-surface rounded-2xl shadow-soft p-6 flex flex-col gap-4"
       >
         <Input
-          label="휴대폰 번호"
-          type="tel"
-          inputMode="tel"
-          placeholder="010-0000-0000"
-          leadingIcon={<Phone size={16} />}
-          value={phone}
-          onChange={handlePhoneChange}
+          label="아이디"
+          type="text"
+          placeholder="아이디 입력"
+          leadingIcon={<User size={16} />}
+          value={username}
+          onChange={(e) => { setUsername(e.target.value); setError(null) }}
+          autoComplete="username"
+          name="username"
+        />
+        <Input
+          label="비밀번호"
+          type="password"
+          placeholder="비밀번호 입력"
+          leadingIcon={<Lock size={16} />}
+          value={password}
+          onChange={(e) => { setPassword(e.target.value); setError(null) }}
           error={error ?? undefined}
-          autoComplete="tel"
-          name="phone"
+          autoComplete="current-password"
+          name="password"
         />
         <Button
           type="submit"
           fullWidth
           isLoading={isLoading}
-          disabled={phone.replace(/-/g, '').length < 10}
+          disabled={!username.trim() || !password.trim()}
         >
-          인증번호 받기
+          로그인
         </Button>
       </form>
 
-      {/* 개발 환경 안내 */}
-      {isDev && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-          <p className="text-xs text-amber-700 font-medium">개발 모드</p>
-          <p className="text-xs text-amber-600 mt-0.5">
-            OTP 입력 시 <strong>000000</strong> 을 사용하세요.
-          </p>
-        </div>
-      )}
+      {/* 회원가입 */}
+      <div className="text-center">
+        <span className="text-sm text-text-secondary">계정이 없으신가요? </span>
+        <Link href="/login/register" className="text-sm font-semibold text-brand-600">
+          회원가입
+        </Link>
+      </div>
 
       <p className="text-center text-xs text-text-tertiary leading-normal px-4">
         로그인하면{' '}
