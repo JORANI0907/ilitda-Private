@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useCallback } from 'react'
 import { X } from 'lucide-react'
+import { useModalBackButton } from '@/hooks/useModalBackButton'
 
 interface ModalProps {
   open: boolean
@@ -50,13 +51,7 @@ export function Modal({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, handleClose])
 
-  useEffect(() => {
-    if (!open) return
-    window.history.pushState({ modal: true }, '')
-    const onPop = () => handleClose()
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [open, handleClose])
+  useModalBackButton(open, handleClose)
 
   if (!open) return null
 

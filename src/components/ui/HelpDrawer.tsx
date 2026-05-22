@@ -2,6 +2,7 @@
 
 import { useEffect, ReactNode } from 'react'
 import { X, HelpCircle } from 'lucide-react'
+import { useModalBackButton } from '@/hooks/useModalBackButton'
 
 interface HelpSection {
   title: string
@@ -16,6 +17,8 @@ interface HelpDrawerProps {
 }
 
 export function HelpDrawer({ open, onClose, title, sections }: HelpDrawerProps) {
+  useModalBackButton(open, onClose)
+
   useEffect(() => {
     if (!open) return
     document.body.style.overflow = 'hidden'

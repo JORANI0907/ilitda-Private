@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink } from 'lucide-react'
+import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
 import {
   DEFAULT_PANEL_FIELDS,
@@ -191,6 +192,8 @@ interface Props {
 
 // ─── 메인 패널 ────────────────────────────────────────────────
 export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig }: Props) {
+  useModalBackButton(true, onClose)
+
   const [form, setForm] = useState<FormState>(() => toForm(app))
   const [status, setStatus] = useState<ApplicationStatus>(app.status)
   const [isFavorite, setIsFavorite] = useState(app.is_favorite)

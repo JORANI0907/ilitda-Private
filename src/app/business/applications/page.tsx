@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useModalBackButton } from '@/hooks/useModalBackButton'
 import {
   Plus, Star, Search, Phone, MapPin, CalendarDays, ClipboardList,
   ChevronLeft, ChevronRight, ArrowUp, ArrowDown, LayoutList, LogIn,
@@ -158,6 +159,8 @@ function DayListPanel({
   allDates: string[]
   onDateChange: (date: string) => void
 }) {
+  useModalBackButton(true, onClose)
+
   const touchStartX = useRef<number | null>(null)
   const parts = dateStr.split('-').map(Number)
   const m = parts[1]
@@ -380,6 +383,8 @@ export default function ApplicationsPage() {
   const [pickerYear, setPickerYear] = useState(now.getFullYear())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedDateApps, setSelectedDateApps] = useState<ServiceApplication[]>([])
+
+  useModalBackButton(yearMonthPickerOpen, () => setYearMonthPickerOpen(false))
 
   function prevMonth() {
     if (viewMonth === 1) { setViewYear((y) => y - 1); setViewMonth(12) }
