@@ -490,6 +490,7 @@ export default function FieldsSettingsPage() {
       if (!json.success) { setSaveError(json.error ?? '저장에 실패했습니다.'); return }
       setEditOrder(false)
       setSaveSuccess(true)
+      router.refresh()
       setTimeout(() => setSaveSuccess(false), 2500)
     } catch {
       setSaveError('네트워크 오류가 발생했습니다.')
@@ -625,9 +626,17 @@ export default function FieldsSettingsPage() {
         </>
       )}
 
-      <div className="mt-6 flex flex-col gap-2">
-        {saveError && <p className="text-sm text-state-danger text-center">{saveError}</p>}
-        {saveSuccess && <p className="text-sm text-state-success text-center">저장되었습니다.</p>}
+      <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm pt-3 pb-6 mt-4 flex flex-col gap-2">
+        {saveError && (
+          <div className="rounded-xl bg-state-danger-bg border border-state-danger/20 px-4 py-3 text-sm text-state-danger text-center">
+            {saveError}
+          </div>
+        )}
+        {saveSuccess && (
+          <div className="rounded-xl bg-state-success-bg border border-state-success/20 px-4 py-3 text-sm text-state-success text-center">
+            저장되었습니다. 설정이 모든 화면에 반영됩니다.
+          </div>
+        )}
         <Button fullWidth onClick={handleSave} isLoading={isSaving}>저장</Button>
       </div>
     </div>
