@@ -451,7 +451,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
         <div className="border-2 border-green-200 rounded-xl p-3 bg-green-50/30 space-y-2">
           {client?.care_scope && (
             <div>
-              <p className="text-xs text-state-success font-semibold mb-1">청소 범위</p>
+              <p className="text-xs text-state-success font-semibold mb-1">서비스 내용</p>
               <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed">{client.care_scope}</p>
             </div>
           )}
@@ -663,7 +663,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
             onChange={(e) => setEF('access_method')(e.target.value)}
           />
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">청소 범위</label>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">서비스 내용</label>
             <textarea
               value={editForm.care_scope}
               rows={3}

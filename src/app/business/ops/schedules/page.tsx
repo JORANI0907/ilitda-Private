@@ -384,7 +384,7 @@ export default function SchedulesPage() {
             onChange={(e) => setF('access_method')(e.target.value)}
           />
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">청소 범위</label>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">서비스 내용</label>
             <textarea
               value={form.care_scope}
               rows={3}

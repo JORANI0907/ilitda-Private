@@ -49,7 +49,7 @@ const PRIVACY_TEXT = `■ 개인정보 수집·이용에 관한 안내
 수집 항목
 • 업체명/이름, 담당자명, 연락처, 이메일
 • 사업자번호, 주소, 희망 방문 일시
-• 청소 범위, 요청사항 등 서비스 신청 관련 정보
+• 서비스 내용, 요청사항 등 서비스 신청 관련 정보
 
 수집 목적
 서비스 신청 접수 및 처리, 견적 안내, 담당자 연락
@@ -214,7 +214,7 @@ export default function RequestPage({ params }: PageProps) {
     if (!form.client_address.trim()) e.client_address = '주소를 입력해 주세요.'
     if (!form.desired_date)         e.desired_date = '희망 방문일을 선택해 주세요.'
     if (!form.desired_time)         e.desired_time = '희망 시간을 선택해 주세요.'
-    if (!form.care_scope.trim())    e.care_scope = '청소 범위를 입력해 주세요.'
+    if (!form.care_scope.trim())    e.care_scope = '서비스 내용을 입력해 주세요.'
     if (!consentPrivacy)            e.consent_privacy = '개인정보 제공에 동의해 주세요.'
     if (!consentMarketing)          e.consent_marketing = '서비스 마케팅 활용에 동의해 주세요.'
     return e
@@ -518,7 +518,7 @@ export default function RequestPage({ params }: PageProps) {
                   />
                 </Field>
               )}
-              <Field label="청소 범위" required error={errors.care_scope}>
+              <Field label="서비스 내용" required error={errors.care_scope}>
                 <textarea
                   rows={3}
                   className={`${inputCls(errors.care_scope)} resize-y`}

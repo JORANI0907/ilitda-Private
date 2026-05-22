@@ -333,7 +333,7 @@ export default function NewApplicationPage() {
         <FormSection color="amber" icon={<ClipboardList size={14} />} title="요청사항">
           <div>
             <FL>{lbl('care_scope')}</FL>
-            <ST value={form.care_scope} onChange={setF('care_scope')} placeholder="청소 범위 입력" />
+            <ST value={form.care_scope} onChange={setF('care_scope')} placeholder="서비스 내용 입력" />
           </div>
           <div>
             <FL>{lbl('request_notes')}</FL>

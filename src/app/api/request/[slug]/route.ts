@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: false, error: '희망 시간을 선택해 주세요.' }, { status: 400 })
   }
   if (!care_scope || typeof care_scope !== 'string' || !care_scope.trim()) {
-    return NextResponse.json({ success: false, error: '청소 범위를 입력해 주세요.' }, { status: 400 })
+    return NextResponse.json({ success: false, error: '서비스 내용을 입력해 주세요.' }, { status: 400 })
   }
 
   const service = createServiceClient()
