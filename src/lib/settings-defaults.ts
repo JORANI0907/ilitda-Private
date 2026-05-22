@@ -141,6 +141,54 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'spare_misc_2', label: '커스텀 필드 2', placeholder: '', type: 'text', section: 'misc', defaultHidden: true },
 ]
 
+// ─── SMS 변수 토큰 메타 (필드키 기반) ──────────────────────────
+// token 형식: {fieldKey} — 라벨이 바뀌어도 토큰은 유지됨
+export const SMS_TOKEN_META: Record<string, { preview: string }> = {
+  business_name:     { preview: '스타벅스 판교점' },
+  owner_name:        { preview: '홍길동' },
+  phone:             { preview: '010-1234-5678' },
+  email:             { preview: 'hello@example.com' },
+  business_number:   { preview: '123-45-67890' },
+  address:           { preview: '성남시 분당구' },
+  construction_date: { preview: '2025-01-15' },
+  construction_time: { preview: '09:00' },
+  care_scope:        { preview: '주방 후드, 에어컨 2대' },
+  request_notes:     { preview: '특이사항 없음' },
+  payment_method:    { preview: '현금(세금계산서)' },
+  account_number:    { preview: '국민은행 123-456' },
+  supply_amount:     { preview: '500,000원' },
+  vat:               { preview: '50,000원' },
+  balance:           { preview: '450,000원' },
+}
+
+// 커스텀 알림 템플릿의 {fieldKey} 토큰을 실제 데이터로 치환
+export function applyNotificationTemplate(
+  template: string,
+  app: Record<string, unknown>,
+): string {
+  const values: Record<string, string> = {
+    business_name:     String(app.business_name ?? ''),
+    owner_name:        String(app.owner_name ?? ''),
+    phone:             String(app.phone ?? ''),
+    email:             String(app.email ?? ''),
+    business_number:   String(app.business_number ?? ''),
+    address:           String(app.address ?? ''),
+    construction_date: String(app.construction_date ?? ''),
+    construction_time: String(app.construction_time ?? ''),
+    care_scope:        String(app.care_scope ?? ''),
+    request_notes:     String(app.request_notes ?? ''),
+    payment_method:    String(app.payment_method ?? ''),
+    account_number:    String(app.account_number ?? ''),
+    supply_amount:     app.supply_amount ? `${Number(app.supply_amount).toLocaleString('ko-KR')}원` : '',
+    vat:               app.vat ? `${Number(app.vat).toLocaleString('ko-KR')}원` : '',
+    balance:           app.balance ? `${Number(app.balance).toLocaleString('ko-KR')}원` : '',
+  }
+  return Object.entries(values).reduce(
+    (msg, [key, val]) => msg.replaceAll(`{${key}}`, val),
+    template,
+  )
+}
+
 export const SECTION_BORDER_COLOR: Record<string, string> = {
   blue:   'border-blue-200',
   green:  'border-green-200',
