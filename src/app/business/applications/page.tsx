@@ -278,7 +278,7 @@ function AppCard({
     })
   }
 
-  const totalAmt = (app.deposit ?? 0) + (app.supply_amount ?? 0) + (app.vat ?? 0)
+  const totalAmt = app.supply_amount ?? 0
 
   return (
     <Card
