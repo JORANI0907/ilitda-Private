@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import { ShoppingBag, Megaphone, BarChart2, Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -12,6 +12,7 @@ import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 const FEATURES = [
   {
@@ -51,10 +52,12 @@ const HELP_SECTIONS = [
 
 export default function MarketPage() {
   const { planType, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  if (!planLoading && !canUseFeature(planType, 'marketplace')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'marketplace')) {
     return (
       <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
         <SectionHeader title="마켓" level="page" />

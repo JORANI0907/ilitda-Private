@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, FilePen, Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -16,6 +16,7 @@ import { HelpTip } from '@/components/ui/HelpTip'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -125,6 +126,8 @@ const HELP_SECTIONS = [
 export default function ContractsPage() {
   const router = useRouter()
   const { planType, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
@@ -226,7 +229,7 @@ export default function ContractsPage() {
     setForm(prev => ({ ...prev, [key]: value }))
 
   // ─── 렌더링 ──────────────────────────────────────────────────
-  if (!planLoading && !canUseFeature(planType, 'contracts')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'contracts')) {
     return (
       <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
         <div className="flex items-center gap-3">

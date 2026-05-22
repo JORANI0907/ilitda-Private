@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useContext } from 'react'
 import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -16,6 +16,7 @@ import { HelpTip } from '@/components/ui/HelpTip'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 interface Category {
   id: string
@@ -83,6 +84,8 @@ const HELP_SECTIONS = [
 
 export default function InventoryPage() {
   const { planType, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
@@ -328,7 +331,7 @@ const filteredItems = useMemo(() => items.filter((item) => {
   const lowCount = items.filter((i) => i.min_qty !== null && i.current_qty <= i.min_qty).length
   const defaultCat = categories[0]?.name ?? ''
 
-  if (!planLoading && !canUseFeature(planType, 'inventory')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'inventory')) {
     return (
       <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
         <SectionHeader title="재고 관리" level="page" />
