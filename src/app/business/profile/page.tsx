@@ -99,7 +99,7 @@ export default function BusinessProfilePage() {
     setIsLoggingOut(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/login')
+      window.location.href = '/login'
     } finally {
       setIsLoggingOut(false)
       setShowLogoutModal(false)
