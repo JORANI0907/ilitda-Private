@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
 import { sendSMS } from '@/lib/solapi/client'
-import type { ApiResponse, NotifyLog } from '@/types'
+import { applyNotificationTemplate } from '@/lib/settings-defaults'
+import type { ApiResponse, NotifyLog, NotificationConfig } from '@/types'
 
 const MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
   '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n서비스일: ${p.date} ${p.time}\n문의: ${p.contact}`,
@@ -36,7 +37,7 @@ export async function POST(
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, solapi_from_phone, solapi_phone_verified, plan_type')
+    .select('id, solapi_from_phone, solapi_phone_verified, plan_type, notification_config')
     .eq('profile_id', user.id)
     .maybeSingle()
 
@@ -50,15 +51,12 @@ export async function POST(
     const { data: app, error: fetchErr } = await service
       .schema('ilitda')
       .from('service_applications')
-      .select('owner_name,phone,construction_date,construction_time,balance,account_number')
+      .select('*')
       .eq('id', id)
       .single()
 
     if (fetchErr || !app) throw new Error('신청서를 찾을 수 없습니다.')
     if (!app.phone) throw new Error('연락처가 없습니다.')
-
-    const templateFn = MSG_TEMPLATE[notifyType]
-    if (!templateFn) throw new Error('지원하지 않는 알림 유형입니다.')
 
     // SMS 발송 한도 확인 및 증가
     const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
@@ -73,14 +71,25 @@ export async function POST(
       ? biz.solapi_from_phone
       : (process.env.SOLAPI_FROM_PHONE ?? '')
 
-    const msgText = templateFn({
-      name:    app.owner_name ?? '고객',
-      date:    app.construction_date ?? '',
-      time:    app.construction_time ?? '',
-      amount:  app.balance?.toLocaleString('ko-KR') ?? '',
-      account: app.account_number ?? '',
-      contact: contactPhone,
-    })
+    // 커스텀 템플릿 우선, 없으면 기본 템플릿 사용
+    const notifConfig = biz.notification_config as NotificationConfig | null
+    const customRule  = notifConfig?.rules?.find(r => r.type === notifyType)
+    let msgText: string
+
+    if (customRule?.template) {
+      msgText = applyNotificationTemplate(customRule.template, app as Record<string, unknown>)
+    } else {
+      const templateFn = MSG_TEMPLATE[notifyType]
+      if (!templateFn) throw new Error('지원하지 않는 알림 유형입니다.')
+      msgText = templateFn({
+        name:    app.owner_name ?? '고객',
+        date:    app.construction_date ?? '',
+        time:    app.construction_time ?? '',
+        amount:  app.balance?.toLocaleString('ko-KR') ?? '',
+        account: app.account_number ?? '',
+        contact: contactPhone,
+      })
+    }
 
     const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
     await sendSMS(app.phone, msgText, fromPhone)
