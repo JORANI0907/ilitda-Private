@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Users, Package, FileText, FilePen, Lock, Banknote, TrendingUp, CreditCard } from 'lucide-react'
+import { Users, Package, FileText, FilePen, Lock, Banknote, TrendingUp } from 'lucide-react'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 
 interface Card {
@@ -70,15 +70,6 @@ const CARDS: Card[] = [
     title: '계약서 관리',
     desc: '계약 체결·만료 관리',
     comingSoon: true,
-  },
-  {
-    href: '/business/settings/plan',
-    icon: <CreditCard size={24} />,
-    color: 'text-sky-600',
-    bg: 'bg-sky-50',
-    border: 'border-sky-100',
-    title: '플랜 관리',
-    desc: '구독 플랜 확인 및 변경',
   },
 ]
 
