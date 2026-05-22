@@ -4,7 +4,7 @@ import { useState, useContext } from 'react'
 import Link from 'next/link'
 import {
   User, Building2, PenLine, Shield, ArrowRight,
-  CalendarCheck, LogIn, Send, X,
+  CalendarCheck, LogIn, Send, X, Link2,
 } from 'lucide-react'
 import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
 import { AuthContext } from '@/contexts/AuthContext'
@@ -189,6 +189,14 @@ export default function FormPreviewPage() {
           아래는 고객이 실제로 보게 되는 신청서 폼 미리보기입니다.
           {isGuest ? ' 가입 후 신청서 링크를 설정에서 복사해 고객에게 공유하세요.' : ' 설정 > 신청서 폼에서 링크를 복사해 고객에게 공유하세요.'}
         </p>
+        <Link
+          href="/business/profile#request-link-section"
+          className="self-start flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-[0.97] px-3 py-2 rounded-lg transition-all"
+        >
+          <Link2 size={13} />
+          신청서 링크 확인하기
+          <ArrowRight size={12} />
+        </Link>
       </div>
 
       {/* 폼 섹션: 기본 정보 */}

@@ -49,6 +49,7 @@ export default function BusinessProfilePage() {
 
   const [slug, setSlug] = useState('')
   const [isCopied, setIsCopied] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   // 앱 이름 관련 상태
   const [appDisplayName, setAppDisplayName] = useState('')
@@ -74,6 +75,7 @@ export default function BusinessProfilePage() {
           const displayName = json.data.business?.app_display_name ?? ''
           setAppDisplayName(displayName)
           setAppDisplayNameInput(displayName)
+          setDataLoaded(true)
         }
       } finally {
         setIsLoading(false)
@@ -82,6 +84,16 @@ export default function BusinessProfilePage() {
 
     fetchProfile()
   }, [])
+
+  useEffect(() => {
+    if (!dataLoaded) return
+    const hash = window.location.hash
+    if (!hash) return
+    const el = document.querySelector(hash)
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    }
+  }, [dataLoaded])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -481,7 +493,7 @@ export default function BusinessProfilePage() {
       </Card>
 
       {/* 신청서 링크 */}
-      <Card padding="md">
+      <Card padding="md" id="request-link-section">
         <SectionHeader title="신청서 링크" className="mb-3" />
         <div className="flex flex-col gap-3">
           {slug ? (
