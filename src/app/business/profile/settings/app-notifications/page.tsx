@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Bell, BellOff, ClipboardList, ShoppingCart, Users } from 'lucide-react'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 // ─── 저장 키 ─────────────────────────────────────────────────
 const STORAGE_KEY = 'ilitda_app_notifications'
@@ -84,6 +87,7 @@ export default function AppNotificationsPage() {
   const router = useRouter()
   const [settings, setSettings] = useState<NotifSettings>(DEFAULT_SETTINGS)
   const [isMounted, setIsMounted] = useState(false)
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   useEffect(() => {
     setSettings(loadSettings())
@@ -124,6 +128,37 @@ export default function AppNotificationsPage() {
         </button>
         <SectionHeader title="알림 설정" level="page" />
       </div>
+
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="앱 알림 설정 안내 보기"
+        onClick={() => setShowHelpDrawer(true)}
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="앱 알림 설정 안내"
+        sections={[
+          {
+            title: '서비스관리 알림',
+            content: '서비스 신청, 예약, 작업 배정 등 서비스 전반에 관한 알림입니다.\n신청이 들어오거나 작업 상태가 변경될 때 알림을 받을 수 있습니다.',
+          },
+          {
+            title: '오더거래 알림',
+            content: '발주나 거래 관련 새로운 소식을 알려주는 알림입니다.\n거래 요청이 들어오거나 상태가 바뀔 때 알림을 받습니다.',
+          },
+          {
+            title: '인력거래 알림',
+            content: '인력 요청·매칭 관련 알림입니다.\n인력 요청이 접수되거나 매칭이 완료될 때 알림을 받습니다.',
+          },
+          {
+            title: '알림이 오지 않을 때 확인 방법',
+            content: '1. 상단 "앱 알림" 스위치가 켜져 있는지 확인하세요.\n2. 각 카테고리 스위치도 켜져 있는지 확인하세요.\n3. 휴대폰 설정 → 앱 → 일잇다 → 알림 허용이 되어 있는지 확인하세요.',
+          },
+        ]}
+      />
 
       {/* 전체 알림 */}
       <div className="bg-surface rounded-2xl border-2 border-border-subtle px-4 py-1 shadow-flat">
@@ -175,6 +210,11 @@ export default function AppNotificationsPage() {
           알림 설정은 이 기기에만 저장됩니다. 앱 알림을 끄면 모든 페이지 알림이 비활성화됩니다.
         </p>
       </div>
+
+      {/* 도움말 팁 */}
+      <HelpTip>
+        알림을 끄면 해당 카테고리의 푸시 알림을 받지 않습니다.
+      </HelpTip>
     </div>
   )
 }
