@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 // ─── OTP 입력 6칸 컴포넌트 ───────────────────────────────────
 interface OtpInputProps {
@@ -172,6 +173,11 @@ function VerifyContent() {
           </p>
         )}
       </div>
+
+      {/* 도움말 */}
+      <HelpTip>
+        이메일로 발송된 6자리 숫자를 입력하세요. 코드는 10분간 유효하며, 받지 못하셨다면 아래 &apos;재발송&apos;을 눌러주세요.
+      </HelpTip>
 
       {/* 인증 폼 */}
       <div className="bg-surface rounded-2xl shadow-soft p-6 flex flex-col gap-6">
