@@ -56,7 +56,7 @@ export const WORKER_FIELD_LABELS: Record<string, string> = {
   address: '주소',
   construction_date: '서비스일',
   construction_time: '서비스시간',
-  care_scope: '청소 범위',
+  care_scope: '서비스 내용',
   elevator: '엘리베이터',
   parking: '주차',
   access_method: '출입 방법',
@@ -99,7 +99,6 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   // 기본 정보
   { key: 'business_name',    label: '업체명',     placeholder: '업체명',              type: 'text',     section: 'basic'    },
   { key: 'owner_name',       label: '담당자명',   placeholder: '홍길동',              type: 'text',     section: 'basic'    },
-  { key: 'platform_nickname',label: '닉네임',     placeholder: '플랫폼 닉네임',       type: 'text',     section: 'basic'    },
   { key: 'phone',            label: '연락처',     placeholder: '010-0000-0000',       type: 'text',     section: 'basic'    },
   { key: 'email',            label: '이메일',     placeholder: 'example@email.com',   type: 'text',     section: 'basic'    },
   { key: 'business_number',  label: '사업자번호', placeholder: '000-00-00000',        type: 'text',     section: 'basic'    },
@@ -109,12 +108,11 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'parking',          label: '주차',       placeholder: '선택',                type: 'dropdown', options: ['가능', '불가', '유료 주차'],  section: 'site' },
   { key: 'building_access',  label: '건물출입',   placeholder: '선택',                type: 'dropdown', options: ['자유출입', '사전출입신청'],   section: 'site' },
   { key: 'access_method',    label: '출입방법',   placeholder: '예: 비밀번호 입력',   type: 'text',     section: 'site'    },
-  { key: 'door_password',    label: '도어락',     placeholder: '예: 1234#',           type: 'text',     section: 'site'    },
   // 일정
   { key: 'construction_date',label: '서비스일',   placeholder: '',                    type: 'date',     section: 'schedule' },
   { key: 'construction_time',label: '서비스시간', placeholder: '',                    type: 'time',     section: 'schedule' },
   // 요청사항
-  { key: 'care_scope',          label: '청소 범위',   placeholder: '청소 범위 입력',          type: 'textarea', section: 'request'  },
+  { key: 'care_scope',          label: '서비스 내용', placeholder: '서비스 내용 입력',        type: 'textarea', section: 'request'  },
   { key: 'request_notes',       label: '고객 요청',   placeholder: '고객 요청사항',           type: 'textarea', section: 'request'  },
   { key: 'admin_request_notes', label: '관리자 추가', placeholder: '관리자 추가 요청사항',    type: 'textarea', section: 'request'  },
   // 결제 정보
