@@ -12,6 +12,9 @@ import { Card } from '@/components/ui/Card'
 import { ApplicationPanel } from '@/components/admin/ApplicationPanel'
 import { useRouter } from 'next/navigation'
 import type { ServiceApplication, ApplicationStatus, PanelConfig } from '@/types'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 // ─── 상태 뱃지 ───────────────────────────────────────────────
 const STATUS_BADGE: Record<string, { label: string; bg: string }> = {
@@ -363,6 +366,7 @@ export default function ApplicationsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [panelConfig, setPanelConfig] = useState<PanelConfig | undefined>(undefined)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const now = new Date()
   const [viewYear, setViewYear] = useState(now.getFullYear())
@@ -453,6 +457,32 @@ export default function ApplicationsPage() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
+      {/* 도움말 배너 */}
+      <HelpBanner label="서비스 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="서비스 관리 사용법"
+        sections={[
+          {
+            title: '목록뷰 / 캘린더뷰 전환',
+            content: '오른쪽 상단의 목록(리스트) 아이콘과 캘린더 아이콘을 탭해 뷰를 전환할 수 있습니다.\n• 목록뷰: 서비스 카드를 한 줄씩 확인\n• 캘린더뷰: 월별 달력에서 날짜별 서비스 확인\n캘린더에서 날짜를 탭하면 해당 날짜 서비스 목록이 팝업으로 표시됩니다.',
+          },
+          {
+            title: '상태 탭 의미',
+            content: '• 전체: 모든 서비스를 표시합니다.\n• 신규: 접수 후 아직 확정되지 않은 서비스입니다.\n• 예약당일: 오늘 방문 예정인 서비스입니다.\n• 서비스완료: 작업이 완료된 서비스입니다.\n• 결제완료: 결제까지 모두 마무리된 서비스입니다.',
+          },
+          {
+            title: '필터 및 정렬',
+            content: '• 년/월 이동: 왼쪽/오른쪽 화살표 버튼으로 이전·다음 달로 이동합니다.\n• 년/월 직접 선택: 가운데 "년 월" 버튼을 탭하면 연도·월 선택 팝업이 열립니다.\n• 정렬: 오른쪽 위 화살표 버튼으로 날짜 오름차순/내림차순을 전환합니다.',
+          },
+          {
+            title: '신청서 상세 보기',
+            content: '목록의 카드를 탭하면 오른쪽에서 상세 패널이 열립니다.\n패널에서 상태 변경, 결제 정보 입력, 담당자 메모 등을 수정할 수 있습니다.',
+          },
+        ]}
+      />
+
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
@@ -466,12 +496,15 @@ export default function ApplicationsPage() {
       </div>
 
       {/* 검색 */}
-      <Input
-        placeholder="업체명·담당자명·전화번호 검색"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        leadingIcon={<Search size={15} />}
-      />
+      <div className="flex flex-col gap-1.5">
+        <Input
+          placeholder="업체명·담당자명·전화번호 검색"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          leadingIcon={<Search size={15} />}
+        />
+        <HelpTip>업체명, 주소, 담당자명으로 검색할 수 있습니다.</HelpTip>
+      </div>
 
       {/* 년/월 네비게이션 */}
       <div className="flex items-center gap-2">
