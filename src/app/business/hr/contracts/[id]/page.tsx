@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -79,9 +81,21 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 // ─── 메인 페이지 ─────────────────────────────────────────────────
 
+const HELP_SECTIONS = [
+  {
+    title: 'OTP 인증으로 서명하는 방법',
+    content: '"OTP 발송" 버튼을 누르면 고객의 전화번호로 6자리 인증번호가 발송됩니다. 고객이 인증번호를 입력하면 서명이 완료되고 상태가 "고객서명완료"로 바뀝니다.',
+  },
+  {
+    title: '계약 완료 및 파기 처리 방법',
+    content: '고객 서명이 완료된 뒤 "계약 완료 처리" 버튼을 눌러 계약을 확정하세요.\n계약을 취소해야 할 때는 "파기" 버튼을 누르고 사유를 입력하면 됩니다. 파기 후에는 복구할 수 없습니다.',
+  },
+]
+
 export default function ContractDetailPage() {
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [contract, setContract] = useState<ContractDetail | null>(null)
   const [loading, setLoading]   = useState(true)
@@ -224,6 +238,14 @@ export default function ContractDetailPage() {
           {STATUS_LABEL[contract.signing_status]}
         </Badge>
       </div>
+
+      <HelpBanner label="계약서 상세 안내 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="계약서 상세 안내"
+        sections={HELP_SECTIONS}
+      />
 
       {/* 알림 */}
       {actionSuccess && (
