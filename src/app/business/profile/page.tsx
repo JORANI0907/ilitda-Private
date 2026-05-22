@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Building2, Phone, MapPin, User,
+  Building2, Sparkles,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
   CreditCard, Users, Link2, Copy, Check, FileText, LayoutList, ShieldCheck,
 } from 'lucide-react'
@@ -12,7 +12,6 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Modal } from '@/components/ui/Modal'
-import { PlanBadge } from '@/components/ui/PlanChip'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
 import type { Profile, Business, Worker } from '@/types'
@@ -184,40 +183,6 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
-      {/* 내 정보 */}
-      <Card padding="md">
-        <SectionHeader title="사업체 정보" className="mb-3" />
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Phone size={16} className="text-text-tertiary shrink-0" />
-            <div>
-              <p className="text-xs text-text-tertiary mb-0.5">대표 전화</p>
-              <p className="text-sm text-text-primary">{profile.phone}</p>
-            </div>
-          </div>
-
-          {business?.address && (
-            <div className="flex items-start gap-3">
-              <MapPin size={16} className="text-text-tertiary shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-text-tertiary mb-0.5">주소</p>
-                <p className="text-sm text-text-primary break-keep">{business.address}</p>
-              </div>
-            </div>
-          )}
-
-          {business?.representative_name && (
-            <div className="flex items-center gap-3">
-              <User size={16} className="text-text-tertiary shrink-0" />
-              <div>
-                <p className="text-xs text-text-tertiary mb-0.5">대표자</p>
-                <p className="text-sm text-text-primary">{business.representative_name}</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
-
       {/* 가입 정보 */}
       <Card padding="md">
         <SectionHeader title="가입 정보" className="mb-3" />
@@ -321,27 +286,41 @@ export default function BusinessProfilePage() {
       )}
 
       {/* 구독 플랜 */}
-      <Card
-        padding="md"
-        className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
+      <button
+        type="button"
+        className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+        style={{
+          background: 'linear-gradient(135deg, #1E40AF 0%, #2563EB 55%, #7C3AED 100%)',
+          boxShadow: '0 6px 28px rgba(37,99,235,0.35)',
+        }}
         onClick={() => router.push('/business/settings/plan')}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CreditCard size={16} className="text-text-tertiary shrink-0" />
-            <div>
-              <p className="text-xs text-text-tertiary">구독 플랜</p>
-              <p className="text-sm font-semibold text-text-primary">
-                {PLAN_LABEL[business?.plan ?? 'free'] ?? 'Free'}
-              </p>
+        <div className="p-5 relative overflow-hidden">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }} />
+          <div className="absolute -bottom-8 right-10 w-20 h-20 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
+
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={14} className="text-yellow-300" />
+                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>구독 플랜</span>
+              </div>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
+                {PLAN_LABEL[business?.plan ?? 'free'] ?? 'Free'} 플랜
+              </span>
+            </div>
+
+            <p className="text-[15px] font-bold text-white leading-snug break-keep mb-3">
+              플랜을 변경하고 나만의<br />스마트 비서를 운영하세요
+            </p>
+
+            <div className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
+              <span className="text-xs font-semibold text-white">플랜 보러가기</span>
+              <ChevronRight size={13} className="text-white" />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <PlanBadge plan={business?.plan ?? 'free'} />
-            <ChevronRight size={16} className="text-text-tertiary" />
-          </div>
         </div>
-      </Card>
+      </button>
 
       {/* 설정 */}
       <Card padding="md">
