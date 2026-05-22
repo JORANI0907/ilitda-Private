@@ -126,12 +126,12 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'spare_request_1',     label: '커스텀 필드 1', placeholder: '',                      type: 'text',     section: 'request', defaultHidden: true },
   { key: 'spare_request_2',     label: '커스텀 필드 2', placeholder: '',                      type: 'text',     section: 'request', defaultHidden: true },
   // 결제 정보
-  { key: 'payment_method',  label: '결제방법', placeholder: '선택', type: 'dropdown', options: ['현금(세금계산서)', '카드결제', '현금(비과세X)'], section: 'payment' },
+  { key: 'payment_method',  label: '결제방법', placeholder: '선택', type: 'dropdown', options: ['현금(세금계산서)', '카드결제', '현금(비과세X)'], section: 'payment', readOnly: true },
   { key: 'account_number',  label: '계좌번호', placeholder: '은행 + 계좌번호', type: 'text',   section: 'payment'  },
-  { key: 'supply_amount',   label: '공급가액', placeholder: '0',               type: 'number', section: 'payment'  },
-  { key: 'vat',             label: '부가세',   placeholder: '0',               type: 'number', section: 'payment'  },
+  { key: 'supply_amount',   label: '공급가액', placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
+  { key: 'vat',             label: '부가세',   placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
   { key: 'supply_total',    label: '공급대가', placeholder: '',                type: 'number', section: 'payment', readOnly: true },
-  { key: 'balance',         label: '잔금',     placeholder: '0',               type: 'number', section: 'payment'  },
+  { key: 'balance',         label: '잔금',     placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
   { key: 'spare_payment_1', label: '커스텀 필드 1', placeholder: '',           type: 'text',   section: 'payment', defaultHidden: true },
   { key: 'spare_payment_2', label: '커스텀 필드 2', placeholder: '',           type: 'text',   section: 'payment', defaultHidden: true },
   // 기타

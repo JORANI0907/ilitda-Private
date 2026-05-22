@@ -30,6 +30,7 @@ import type { FormConfig, PanelConfig, PanelFieldOverride } from '@/types'
 const FORM_ALWAYS_KEYS = new Set([
   'business_name', 'phone', 'address',
   'care_scope', 'request_notes',
+  'payment_method', 'supply_amount', 'vat', 'balance',
 ])
 
 const FORM_TOGGLE_KEYS = new Set(Object.keys(DEFAULT_FORM_CONFIG.show_fields))
