@@ -10,6 +10,9 @@ import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
 
@@ -99,10 +102,26 @@ const fmtDate = (s: string) => s.slice(0, 10)
 
 // ─── 메인 페이지 ─────────────────────────────────────────────────
 
+const HELP_SECTIONS = [
+  {
+    title: '계약서 생성 방법',
+    content: '"새 계약서" 버튼을 누르면 신청서를 선택하고 계약 양식·기간·금액을 입력해 계약서를 만들 수 있습니다. 신청서가 먼저 등록되어 있어야 합니다.',
+  },
+  {
+    title: 'OTP 서명 방법',
+    content: '계약서를 생성한 뒤 "OTP 발송" 버튼을 누르면 고객 연락처로 인증번호가 발송됩니다. 고객이 인증번호를 입력하면 서명이 완료됩니다.',
+  },
+  {
+    title: '계약 상태 의미',
+    content: '초안 — 방금 생성된 상태, 아직 발송 전입니다.\n서명대기 — OTP를 발송해 고객 서명을 기다리는 중입니다.\n고객서명완료 — 고객이 서명을 마쳤습니다. 관리자가 완료 처리해 주세요.\n완료 — 계약이 최종 완료된 상태입니다.\n파기 — 계약이 취소된 상태입니다.',
+  },
+]
+
 export default function ContractsPage() {
   const router = useRouter()
   const { planType, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [contracts, setContracts] = useState<ContractRow[]>([])
   const [loading, setLoading]     = useState(true)
@@ -265,6 +284,15 @@ export default function ContractsPage() {
           새 계약서
         </Button>
       </div>
+
+      <HelpBanner label="계약서 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip variant="warning">계약서는 맥스 플랜에서 사용 가능합니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="계약서 관리 사용법"
+        sections={HELP_SECTIONS}
+      />
 
       {/* 탭 */}
       <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
