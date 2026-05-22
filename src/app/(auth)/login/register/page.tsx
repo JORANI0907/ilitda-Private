@@ -203,25 +203,33 @@ export default function RegisterPage() {
                   helpTitle: '작업자 계정',
                   helpDesc: '청소 일감을 찾아 수입을 올리는 용역자 계정입니다. 배정된 일정 확인과 출퇴근 기록이 가능해요.',
                 },
-              ]).map(({ key, label, desc, helpTitle, helpDesc }) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => { setRole(key); setError(null) }}
-                  className={`
-                    flex-1 flex flex-col items-center py-3 px-2 rounded-lg text-center transition-all
-                    ${role === key
-                      ? 'bg-white shadow-soft'
-                      : 'text-text-secondary hover:text-text-primary'}
-                  `}
-                >
-                  <span className={`text-sm font-semibold ${role === key ? 'text-brand-600' : 'text-text-primary'} flex items-center gap-1`}>
-                    {label}
-                    <HelpIcon title={helpTitle} description={helpDesc} />
-                  </span>
-                  <span className="text-xs text-text-tertiary mt-0.5">{desc}</span>
-                </button>
-              ))}
+              ]).map(({ key, label, desc, helpTitle, helpDesc }) => {
+                const isWorker = key === 'worker'
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { if (!isWorker) { setRole(key); setError(null) } }}
+                    disabled={isWorker}
+                    className={`
+                      flex-1 flex flex-col items-center py-3 px-2 rounded-lg text-center transition-all relative
+                      ${isWorker
+                        ? 'opacity-40 cursor-not-allowed'
+                        : role === key
+                          ? 'bg-white shadow-soft'
+                          : 'text-text-secondary hover:text-text-primary'}
+                    `}
+                  >
+                    <span className={`text-sm font-semibold ${role === key && !isWorker ? 'text-brand-600' : 'text-text-primary'} flex items-center gap-1`}>
+                      {label}
+                      {!isWorker && <HelpIcon title={helpTitle} description={helpDesc} />}
+                    </span>
+                    <span className="text-xs text-text-tertiary mt-0.5">
+                      {isWorker ? '준비 중' : desc}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
