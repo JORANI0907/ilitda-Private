@@ -60,7 +60,7 @@ export async function PATCH(request: NextRequest) {
   const service = createServiceClient()
 
   // 사업자 request_slug 수정
-  const ALLOWED_BUSINESS = ['request_slug'] as const
+  const ALLOWED_BUSINESS = ['request_slug', 'app_display_name'] as const
   const businessUpdates: Record<string, unknown> = {}
   for (const key of ALLOWED_BUSINESS) {
     if (key in (body as Record<string, unknown>)) {
