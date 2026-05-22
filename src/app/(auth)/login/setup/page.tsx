@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { ActiveRole } from '@/types'
 
 // ─── 타입 ────────────────────────────────────────────────────
@@ -132,6 +135,7 @@ export default function SetupPage() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // 활성 역할 결정 (기본값: 먼저 선택된 것)
   const activeRole: ActiveRole = isBusiness ? 'business' : 'worker'
@@ -235,8 +239,37 @@ export default function SetupPage() {
   const allTermsChecked =
     terms.terms && terms.privacy && terms.location && terms.matching
 
+  const HELP_SECTIONS = [
+    {
+      title: '왜 이 정보가 필요한가요?',
+      content: '서비스를 이용하려면 역할(사업자/용역자) 설정이 필요합니다. 역할에 따라 볼 수 있는 메뉴와 기능이 달라집니다.',
+    },
+    {
+      title: '사업자 정보 (상호명·사업자번호)',
+      content: '청소 일감 등록과 계산서 발행 시 사용됩니다. 나중에 설정 메뉴에서도 수정할 수 있어요.',
+    },
+    {
+      title: '용역자 정보 (생년월일·계좌번호)',
+      content: '일감 완료 후 정산 시 등록된 계좌로 입금됩니다. 입력하지 않아도 가입은 가능하지만, 정산을 받으려면 반드시 입력해야 합니다.',
+    },
+    {
+      title: '약관 동의',
+      content: '이용약관과 개인정보처리방침은 필수 동의 항목입니다. 위치정보 동의는 매칭 기능 사용 시 더 정확한 결과를 제공합니다.',
+    },
+  ]
+
   return (
     <div className="flex flex-col gap-6 py-8">
+      {/* 도움말 배너 */}
+      <HelpBanner label="프로필 설정 도움말" onClick={() => setHelpOpen(true)} />
+
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="프로필 설정 도움말"
+        sections={HELP_SECTIONS}
+      />
+
       {/* 헤더 */}
       <div className="text-center">
         <h1 className="text-2xl font-bold text-text-primary">프로필 설정</h1>
@@ -255,6 +288,9 @@ export default function SetupPage() {
         {/* 1단계: 역할 선택 */}
         {step === 0 && (
           <div className="flex flex-col gap-3">
+            <HelpTip>
+              두 역할 모두 선택할 수 있습니다. 사업자는 일감을 올리고, 용역자는 일감을 받습니다.
+            </HelpTip>
             <RoleCard
               role="business"
               selected={isBusiness}
@@ -279,20 +315,26 @@ export default function SetupPage() {
 
         {/* 2단계: 이름 */}
         {step === 1 && (
-          <Input
-            label="이름"
-            placeholder="홍길동"
-            value={name}
-            onChange={e => { setName(e.target.value); setError(null) }}
-            autoFocus
-            autoComplete="name"
-            name="name"
-          />
+          <>
+            <HelpTip className="mb-2">실명을 입력해주세요. 매칭 및 정산 시 본인 확인에 사용됩니다.</HelpTip>
+            <Input
+              label="이름"
+              placeholder="홍길동"
+              value={name}
+              onChange={e => { setName(e.target.value); setError(null) }}
+              autoFocus
+              autoComplete="name"
+              name="name"
+            />
+          </>
         )}
 
         {/* 3단계: 추가 정보 */}
         {step === 2 && (
           <div className="flex flex-col gap-4">
+            <HelpTip>
+              사업자번호와 주소는 선택 항목입니다. 계좌번호는 정산 시 사용되며 언제든 설정에서 수정할 수 있습니다.
+            </HelpTip>
             {isBusiness && (
               <>
                 <Input
