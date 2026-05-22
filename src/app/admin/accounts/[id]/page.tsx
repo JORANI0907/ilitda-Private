@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -69,6 +71,21 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+const ACCOUNT_DETAIL_HELP_SECTIONS = [
+  {
+    title: '정보 수정 방법',
+    content: '각 입력 필드를 탭해 직접 수정하세요. 수정 후 하단의 저장 버튼을 누르면 즉시 반영됩니다. 취소 버튼을 누르면 수정 전 값으로 돌아갑니다.',
+  },
+  {
+    title: '플랜 변경',
+    content: '플랜 설정 섹션에서 플랜을 선택하고 만료일을 지정하세요.\nFree: 무료\nBasic: 기본 유료\nPro: 프로\nMax: 최상위\n\n플랜 변경 후 반드시 저장 버튼을 눌러야 적용됩니다.',
+  },
+  {
+    title: '가입 정보 (수정 불가)',
+    content: '가입 정보 섹션(가입일, 생년월일)은 조회 전용입니다. 수정이 필요한 경우 관리자에게 문의하세요.',
+  },
+]
+
 export default function AdminAccountDetailPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
@@ -78,6 +95,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
   const [pageError, setPageError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [form, setForm] = useState<EditForm>({
     business_name: '',
@@ -213,6 +231,15 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
         <ArrowLeft size={16} />
         계정 목록
       </button>
+
+      {/* 도움말 배너 */}
+      <HelpBanner label="계정 상세 수정 방법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="계정 상세 수정 방법"
+        sections={ACCOUNT_DETAIL_HELP_SECTIONS}
+      />
 
       {/* 페이지 타이틀 */}
       <SectionHeader
