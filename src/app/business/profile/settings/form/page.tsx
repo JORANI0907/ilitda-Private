@@ -7,6 +7,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Input } from '@/components/ui/Input'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import { SHOW_FIELD_LABELS, WORKER_FIELD_LABELS } from '@/lib/settings-defaults'
 import type { FormConfig } from '@/types'
 
@@ -18,6 +21,7 @@ export default function FormSettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [newOption, setNewOption] = useState('')
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -137,6 +141,38 @@ export default function FormSettingsPage() {
         </button>
         <SectionHeader title="신청서 폼 설정" level="page" />
       </div>
+
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="폼 설정 안내 보기"
+        onClick={() => setShowHelpDrawer(true)}
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="폼 설정 안내"
+        sections={[
+          {
+            title: '신청서 폼이란 무엇인가요?',
+            content: '고객이 서비스를 신청할 때 작성하는 입력 화면입니다.\n이 설정에서 고객에게 보여줄 항목과 결제 방법 옵션을 직접 구성할 수 있습니다.',
+          },
+          {
+            title: '고객 신청서 폼 커스텀 방법',
+            content: '"표시 항목 설정" 섹션에서 각 항목의 토글을 끄면 고객의 신청서에서 해당 입력란이 숨겨집니다.\n\n"결제 방법" 섹션에서 고객이 선택할 수 있는 결제 방법 목록을 직접 추가하거나 삭제할 수 있습니다.',
+          },
+          {
+            title: '필수 / 선택 항목 설정',
+            content: '상호명, 전화번호, 주소, 청소 범위 등 기본 항목은 항상 표시됩니다.\n\n이메일, 사업자번호, 계좌번호 등 선택 항목은 토글로 표시 여부를 설정할 수 있습니다.',
+          },
+        ]}
+      />
+
+      {/* 도움말 팁 */}
+      <HelpTip>
+        폼 설정은 고객이 서비스를 신청할 때 보이는 입력 화면을 구성합니다.
+      </HelpTip>
 
       {/* 섹션 1: 결제 방법 */}
       <Card padding="md">
