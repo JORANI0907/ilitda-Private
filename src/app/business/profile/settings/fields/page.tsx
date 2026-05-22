@@ -16,6 +16,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import {
   DEFAULT_PANEL_FIELDS, PANEL_SECTIONS,
   SECTION_BORDER_COLOR, SECTION_TITLE_COLOR,
@@ -362,6 +365,7 @@ export default function FieldsSettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [editOrder, setEditOrder] = useState(false)
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   const [formShowFields, setFormShowFields] = useState<Record<string, boolean>>(DEFAULT_FORM_CONFIG.show_fields)
   const [workerNotifyFields, setWorkerNotifyFields] = useState<string[]>(DEFAULT_FORM_CONFIG.worker_notify_fields)
@@ -518,6 +522,39 @@ export default function FieldsSettingsPage() {
         </button>
         <SectionHeader title="필드 설정" level="page" />
       </div>
+
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="필드 설정 안내 보기"
+        onClick={() => setShowHelpDrawer(true)}
+        className="mb-3"
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="필드 설정 안내"
+        sections={[
+          {
+            title: '필드란 무엇인가요?',
+            content: '필드는 신청서와 관리 화면에 표시되는 각각의 입력 항목(상호명, 전화번호, 주소 등)을 말합니다.\n\n필드 설정에서 각 항목의 표시 이름을 바꾸거나 화면에서 숨길 수 있습니다.',
+          },
+          {
+            title: '필드를 숨기거나 이름 변경하는 방법',
+            content: '표시 이름 입력란을 직접 수정하면 이름을 바꿀 수 있습니다.\n\n오른쪽 "서비스관리" 토글을 끄면 관리 화면에서 해당 필드가 숨겨집니다.\n"폼" 토글을 끄면 고객 신청서에서도 숨겨집니다.',
+          },
+          {
+            title: 'SMS 변수에 반영되는 이름 변경',
+            content: '필드 이름을 변경하면 서비스 알림 문자(SMS)에서 해당 필드를 표시하는 변수 이름도 함께 바뀝니다.\n\nSMS 알림 설정 화면에서 변수 목록을 확인하면 변경된 이름으로 표시됩니다.',
+          },
+        ]}
+      />
+
+      {/* 도움말 팁 (warning) */}
+      <HelpTip variant="warning" className="mb-3">
+        필드 이름을 변경하면 SMS 알림 변수 목록에도 자동 반영됩니다.
+      </HelpTip>
 
       <div className="flex items-center justify-end mb-1">
         <Button variant={editOrder ? 'primary' : 'secondary'} size="sm" onClick={() => setEditOrder(v => !v)}>
