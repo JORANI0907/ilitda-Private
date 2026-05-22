@@ -16,6 +16,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import {
   DEFAULT_PANEL_FIELDS, PANEL_SECTIONS,
   SECTION_BORDER_COLOR, SECTION_TITLE_COLOR,
@@ -241,6 +244,7 @@ export default function PanelSettingsPage() {
   const [editOrder, setEditOrder] = useState(false)
   const [sectionOrder, setSectionOrder] = useState<string[]>(DEFAULT_SECTION_ORDER)
   const [fieldOrder, setFieldOrder] = useState<Record<string, string[]>>(DEFAULT_FIELD_ORDER)
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   const outerSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -341,6 +345,35 @@ export default function PanelSettingsPage() {
         </button>
         <SectionHeader title="서비스 관리 화면 설정" level="page" />
       </div>
+
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="패널 설정 안내 보기"
+        onClick={() => setShowHelpDrawer(true)}
+        className="mb-4"
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="패널 설정 안내"
+        sections={[
+          {
+            title: '패널이란 무엇인가요?',
+            content: '패널은 서비스 신청서의 상세 화면에 표시되는 정보 영역을 말합니다.\n\n고객이 신청서를 제출하면 관리 화면에서 신청서 상세 내용을 볼 수 있는데, 이때 어떤 항목을 보여줄지 설정하는 것이 패널 설정입니다.',
+          },
+          {
+            title: '표시할 정보 선택 방법',
+            content: '각 항목의 표시 이름을 직접 수정할 수 있습니다.\n오른쪽 "서비스관리" 토글을 켜거나 끄면 해당 항목을 관리 화면에서 보이거나 숨길 수 있습니다.\n\n"순서 편집" 버튼을 누르면 항목을 드래그해서 순서를 바꿀 수 있습니다.',
+          },
+        ]}
+      />
+
+      {/* 도움말 팁 */}
+      <HelpTip className="mb-3">
+        패널 설정은 서비스 신청서 상세 화면에 표시되는 항목을 결정합니다.
+      </HelpTip>
 
       {/* 툴바 */}
       <div className="flex items-center justify-between mb-1">
