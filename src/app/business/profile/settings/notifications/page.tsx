@@ -6,8 +6,14 @@ import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { DEFAULT_NOTIFICATION_CONFIG, DEFAULT_MSG_TEMPLATE } from '@/lib/settings-defaults'
-import type { NotificationConfig, NotificationRule } from '@/types'
+import {
+  DEFAULT_NOTIFICATION_CONFIG,
+  DEFAULT_MSG_TEMPLATE,
+  DEFAULT_PANEL_FIELDS,
+  PANEL_SECTIONS,
+  SMS_TOKEN_META,
+} from '@/lib/settings-defaults'
+import type { NotificationConfig, NotificationRule, PanelConfig } from '@/types'
 
 const SEND_TIME_OPTIONS = Array.from({ length: 17 }, (_, i) => {
   const h = (i + 6).toString().padStart(2, '0')
@@ -22,49 +28,85 @@ function offsetLabel(n: number): string {
   return `${n}일 후`
 }
 
-const DUMMY_PARAMS: Record<string, string> = {
-  name: '스타벅스 판교점',
-  date: '2025-01-15',
-  time: '09:00',
-  amount: '500,000',
-  account: '국민은행 000-0000-0000',
+const SECTION_LABEL: Record<string, string> = {
+  basic:    '기본정보',
+  site:     '현장',
+  schedule: '일정',
+  request:  '요청사항',
+  payment:  '결제',
 }
 
-// ─── SMS 변수 정의 ────────────────────────────────────────────
-const SMS_VARIABLES: { token: string; label: string; preview: string }[] = [
-  { token: '{이름}',      label: '업체명/이름',  preview: '스타벅스 판교점' },
-  { token: '{담당자}',    label: '담당자명',     preview: '홍길동' },
-  { token: '{연락처}',    label: '연락처',       preview: '010-1234-5678' },
-  { token: '{서비스일}',  label: '서비스일',     preview: '2025-01-15' },
-  { token: '{시간}',      label: '서비스시간',   preview: '09:00' },
-  { token: '{주소}',      label: '주소',         preview: '성남시 분당구' },
-  { token: '{서비스내용}',label: '서비스 내용',  preview: '주방 후드, 에어컨 2대' },
-  { token: '{금액}',      label: '금액',         preview: '500,000원' },
-  { token: '{계좌}',      label: '계좌',         preview: '국민은행 123-456' },
-]
+// ─── 동적 변수 목록 ────────────────────────────────────────────
+interface SmsVar { token: string; label: string; preview: string; section: string }
 
-function previewTemplate(template: string): string {
-  return SMS_VARIABLES.reduce(
-    (t, v) => t.replaceAll(v.token, v.preview),
-    template,
-  )
+function buildVarsFromConfig(panelConfig: PanelConfig | null): SmsVar[] {
+  return DEFAULT_PANEL_FIELDS
+    .filter(f => {
+      if (f.readOnly) return false
+      if (f.defaultHidden) return false
+      if (!(f.key in SMS_TOKEN_META)) return false
+      const isHidden = panelConfig?.fields?.[f.key]?.hidden ?? false
+      return !isHidden
+    })
+    .map(f => {
+      const override = panelConfig?.fields?.[f.key]
+      const label = override?.label?.trim() || f.label
+      return {
+        token:   `{${f.key}}`,
+        label,
+        section: f.section,
+        preview: SMS_TOKEN_META[f.key].preview,
+      }
+    })
+}
+
+function previewTemplate(template: string, vars: SmsVar[]): string {
+  return vars.reduce((t, v) => t.replaceAll(v.token, v.preview), template)
 }
 
 // ─── NotificationRuleCard ─────────────────────────────────────
 function NotificationRuleCard({
   rule,
   onChange,
+  smsVars,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
+  smsVars: SmsVar[]
 }) {
   const [useCustomTemplate, setUseCustomTemplate] = useState(
-    rule.template !== null && rule.template !== undefined
+    rule.template !== null && rule.template !== undefined,
   )
+  const [activeSection, setActiveSection] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const sections = PANEL_SECTIONS
+    .map(s => ({
+      id:    s.id,
+      label: SECTION_LABEL[s.id] ?? s.title,
+      vars:  smsVars.filter(v => v.section === s.id),
+    }))
+    .filter(s => s.vars.length > 0)
+
+  useEffect(() => {
+    if (!activeSection && sections.length > 0) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections.length, activeSection])
+
+  const activeSectionVars = sections.find(s => s.id === activeSection)?.vars ?? []
+
+  // DEFAULT_MSG_TEMPLATE은 영문 단축키 파라미터를 쓰므로 더미 맵 구성
+  const dummyParams: Record<string, string> = {
+    name:    '스타벅스 판교점',
+    date:    '2025-01-15',
+    time:    '09:00',
+    amount:  '500,000',
+    account: '국민은행 123-456',
+    contact: '031-759-4877',
+  }
   const defaultPreview = DEFAULT_MSG_TEMPLATE[rule.type]
-    ? DEFAULT_MSG_TEMPLATE[rule.type](DUMMY_PARAMS)
+    ? DEFAULT_MSG_TEMPLATE[rule.type](dummyParams)
     : null
 
   const handleToggleEnabled = () => onChange({ ...rule, enabled: !rule.enabled })
@@ -76,11 +118,7 @@ function NotificationRuleCard({
       onChange({
         ...rule,
         mode,
-        trigger: rule.trigger ?? {
-          base: 'construction_date',
-          offset_days: 0,
-          send_time: '09:00',
-        },
+        trigger: rule.trigger ?? { base: 'construction_date', offset_days: 0, send_time: '09:00' },
       })
     }
   }
@@ -99,9 +137,9 @@ function NotificationRuleCard({
     const el = textareaRef.current
     if (!el) return
     const start = el.selectionStart
-    const end = el.selectionEnd
-    const current = rule.template ?? ''
-    const next = current.slice(0, start) + token + current.slice(end)
+    const end   = el.selectionEnd
+    const cur   = rule.template ?? ''
+    const next  = cur.slice(0, start) + token + cur.slice(end)
     onChange({ ...rule, template: next })
     requestAnimationFrame(() => {
       el.focus()
@@ -111,7 +149,7 @@ function NotificationRuleCard({
 
   return (
     <Card padding="md">
-      {/* 헤더: 알림 타입 + ON/OFF 토글 */}
+      {/* 헤더: 알림 타입 + ON/OFF */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-text-primary break-keep">{rule.type}</span>
         <button
@@ -131,7 +169,7 @@ function NotificationRuleCard({
 
       {rule.enabled && (
         <div className="flex flex-col gap-3">
-          {/* 모드 선택 */}
+          {/* 수동/자동 모드 */}
           <div className="flex gap-2">
             {(['manual', 'auto'] as const).map((m) => (
               <button
@@ -202,30 +240,58 @@ function NotificationRuleCard({
 
             {useCustomTemplate && (
               <div className="flex flex-col gap-2">
-                {/* 변수 칩 */}
+                {/* 변수 삽입 영역 */}
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-[10px] font-medium text-text-tertiary">변수 클릭 시 커서 위치에 삽입</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SMS_VARIABLES.map((v) => (
+                  <p className="text-[10px] font-medium text-text-tertiary">
+                    변수 삽입 — 탭하면 커서 위치에 추가
+                  </p>
+
+                  {/* 카테고리 탭 */}
+                  <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                    {sections.map(s => (
                       <button
-                        key={v.token}
+                        key={s.id}
                         type="button"
-                        onClick={() => insertVariable(v.token)}
-                        className="inline-flex items-center h-6 px-2 rounded-full bg-brand-600/10 text-brand-600 text-[11px] font-medium hover:bg-brand-600/20 transition-colors active:scale-95"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                          activeSection === s.id
+                            ? 'bg-brand-600 text-white'
+                            : 'bg-surface-sunken text-text-secondary border border-border-subtle hover:border-border'
+                        }`}
                       >
-                        {v.label}
+                        {s.label}
                       </button>
                     ))}
                   </div>
+
+                  {/* 변수 칩 — onMouseDown preventDefault로 포커스 유지 */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeSectionVars.map(v => (
+                      <button
+                        key={v.token}
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => insertVariable(v.token)}
+                        className="inline-flex flex-col items-start px-2.5 py-1.5 rounded-xl bg-brand-600/10 text-brand-600 hover:bg-brand-600/20 transition-colors active:scale-95"
+                      >
+                        <span className="text-[11px] font-semibold leading-none">{v.label}</span>
+                        <span className="text-[9px] text-brand-600/60 leading-none mt-0.5">{v.preview}</span>
+                      </button>
+                    ))}
+                    {activeSectionVars.length === 0 && (
+                      <p className="text-[11px] text-text-tertiary py-1">표시할 변수가 없습니다.</p>
+                    )}
+                  </div>
                 </div>
 
-                {/* 편집 textarea */}
+                {/* 텍스트에어리어 */}
                 <textarea
                   ref={textareaRef}
                   rows={4}
                   value={rule.template ?? ''}
                   onChange={(e) => onChange({ ...rule, template: e.target.value })}
-                  placeholder={`예: [일잇다] {이름} 담당자님, 예약이 확정되었습니다.\n서비스일: {서비스일} {시간}`}
+                  placeholder={`예: [일잇다] {business_name} 담당자님, 예약이 확정되었습니다.\n서비스일: {construction_date} {construction_time}`}
                   className="w-full text-sm border border-border-subtle rounded-xl px-3 py-2.5 bg-surface outline-none focus:border-brand-600 resize-y"
                 />
 
@@ -234,7 +300,7 @@ function NotificationRuleCard({
                   <div className="bg-surface-sunken rounded-lg p-2.5">
                     <p className="text-[10px] text-text-tertiary mb-1">미리보기</p>
                     <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed">
-                      {previewTemplate(rule.template)}
+                      {previewTemplate(rule.template, smsVars)}
                     </p>
                   </div>
                 )}
@@ -250,19 +316,31 @@ function NotificationRuleCard({
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function NotificationsSettingsPage() {
   const router = useRouter()
-  const [config, setConfig] = useState<NotificationConfig | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [config, setConfig]         = useState<NotificationConfig | null>(null)
+  const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null)
+  const [isLoading, setIsLoading]   = useState(true)
+  const [isSaving, setIsSaving]     = useState(false)
+  const [saveError, setSaveError]   = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
+
+  const smsVars = buildVarsFromConfig(panelConfig)
 
   useEffect(() => {
     const load = async () => {
       setIsLoading(true)
       try {
-        const res = await fetch('/api/admin/settings/notifications')
-        const json = await res.json()
-        if (json.success) setConfig(json.data as NotificationConfig)
+        const [notifRes, fieldsRes] = await Promise.all([
+          fetch('/api/admin/settings/notifications'),
+          fetch('/api/admin/settings/fields'),
+        ])
+        const [notifJson, fieldsJson] = await Promise.all([
+          notifRes.json(),
+          fieldsRes.json(),
+        ])
+        if (notifJson.success) setConfig(notifJson.data as NotificationConfig)
+        if (fieldsJson.success && fieldsJson.data?.panelConfig) {
+          setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -355,10 +433,11 @@ export default function NotificationsSettingsPage() {
           key={rule.type}
           rule={rule}
           onChange={(updated) => handleRuleChange(i, updated)}
+          smsVars={smsVars}
         />
       ))}
 
-      {saveError && <p className="text-sm text-state-danger text-center">{saveError}</p>}
+      {saveError   && <p className="text-sm text-state-danger  text-center">{saveError}</p>}
       {saveSuccess && <p className="text-sm text-state-success text-center">저장되었습니다.</p>}
       <Button fullWidth onClick={handleSave} isLoading={isSaving}>저장</Button>
     </div>
