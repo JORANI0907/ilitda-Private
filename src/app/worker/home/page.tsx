@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Button } from '@/components/ui/Button'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
 
 interface ScheduleItem {
   id: string
@@ -50,9 +52,25 @@ function formatTime(startTime: string | null): string {
   return `${period} ${displayHour}:${min}`
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '오늘 일정 확인하기',
+    content: '홈 화면 아래쪽에서 오늘 포함 가장 가까운 일정을 바로 확인할 수 있어요.\n일정 카드를 탭하면 현장 주소, 작업 내용, 출퇴근 체크 화면으로 이동합니다.',
+  },
+  {
+    title: '출퇴근 체크 방법',
+    content: '일정 카드를 탭해서 상세 화면으로 들어가세요.\n당일 일정에만 "출근" / "퇴근" 버튼이 표시됩니다.\n현장 도착 후 "출근" 버튼을, 작업 완료 후 "퇴근" 버튼을 눌러주세요.',
+  },
+  {
+    title: 'KPI 카드 의미',
+    content: '상단 카드에는 이번 달 배정된 일정 수와 예상 정산 금액이 표시됩니다.\n· 이번 달 일정: 이번 달 배정된 작업 건수\n· 이번 달 예상 정산: 실제 근무 시간 기준 예상 금액',
+  },
+]
+
 export default function WorkerHomePage() {
   const [data, setData] = useState<HomeData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/worker/home')
@@ -64,6 +82,14 @@ export default function WorkerHomePage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
+      <HelpBanner label="작업자 홈 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="작업자 홈 안내"
+        sections={HELP_SECTIONS}
+      />
+
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
