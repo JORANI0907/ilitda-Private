@@ -1,0 +1,126 @@
+export type PlanType = 'free' | 'basic' | 'pro' | 'max'
+
+export const PLAN_NAMES: Record<PlanType, string> = {
+  free:  '무료',
+  basic: '베이직',
+  pro:   '프로',
+  max:   '맥스',
+}
+
+export const PLAN_PRICES: Record<PlanType, number> = {
+  free:  0,
+  basic: 9900,
+  pro:   14900,
+  max:   25000,
+}
+
+// 플랜 순서 (낮은 → 높은)
+const PLAN_ORDER: PlanType[] = ['free', 'basic', 'pro', 'max']
+
+// ─── 기능별 플랜 접근 권한 ────────────────────────────────────────
+interface PlanFeatureMap {
+  sms_daily_limit:    number
+  sms_auto_dispatch:  boolean
+  sms_custom_template: boolean
+  worker_limit:       number
+  inventory:          boolean
+  marketplace:        boolean
+  contracts:          boolean
+  app_name_custom:    boolean
+}
+
+export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
+  free: {
+    sms_daily_limit:     10,
+    sms_auto_dispatch:   false,
+    sms_custom_template: false,
+    worker_limit:        3,
+    inventory:           false,
+    marketplace:         false,
+    contracts:           false,
+    app_name_custom:     false,
+  },
+  basic: {
+    sms_daily_limit:     50,
+    sms_auto_dispatch:   false,
+    sms_custom_template: false,
+    worker_limit:        10,
+    inventory:           false,
+    marketplace:         false,
+    contracts:           false,
+    app_name_custom:     false,
+  },
+  pro: {
+    sms_daily_limit:     Infinity,
+    sms_auto_dispatch:   true,
+    sms_custom_template: true,
+    worker_limit:        Infinity,
+    inventory:           true,
+    marketplace:         true,
+    contracts:           false,
+    app_name_custom:     false,
+  },
+  max: {
+    sms_daily_limit:     Infinity,
+    sms_auto_dispatch:   true,
+    sms_custom_template: true,
+    worker_limit:        Infinity,
+    inventory:           true,
+    marketplace:         true,
+    contracts:           true,
+    app_name_custom:     true,
+  },
+}
+
+type BooleanFeatureKey = {
+  [K in keyof PlanFeatureMap]: PlanFeatureMap[K] extends boolean ? K : never
+}[keyof PlanFeatureMap]
+
+type NumericFeatureKey = {
+  [K in keyof PlanFeatureMap]: PlanFeatureMap[K] extends number ? K : never
+}[keyof PlanFeatureMap]
+
+/**
+ * 현재 플랜이 해당 boolean 기능을 사용할 수 있는지 반환
+ */
+export function canUseFeature(plan: PlanType, feature: BooleanFeatureKey): boolean {
+  return PLAN_FEATURES[plan][feature] as boolean
+}
+
+/**
+ * 현재 플랜의 숫자형 한도 반환
+ */
+export function getFeatureLimit(plan: PlanType, feature: NumericFeatureKey): number {
+  return PLAN_FEATURES[plan][feature] as number
+}
+
+/**
+ * 특정 기능을 사용하기 위해 필요한 최소 플랜 반환
+ * boolean 기능: true인 가장 낮은 플랜
+ * numeric 기능: 해당 값 이상인 가장 낮은 플랜
+ */
+export function getRequiredPlan(feature: keyof PlanFeatureMap): PlanType {
+  for (const plan of PLAN_ORDER) {
+    const val = PLAN_FEATURES[plan][feature]
+    if (typeof val === 'boolean' && val) return plan
+    if (typeof val === 'number' && val > 0) return plan
+  }
+  return 'max'
+}
+
+/**
+ * 현재 플랜의 다음 단계 반환 (max이면 null)
+ */
+export function getUpgradePlan(plan: PlanType): PlanType | null {
+  const idx = PLAN_ORDER.indexOf(plan)
+  if (idx === -1 || idx === PLAN_ORDER.length - 1) return null
+  return PLAN_ORDER[idx + 1]
+}
+
+/**
+ * 문자열을 PlanType으로 안전하게 변환 (잘못된 값이면 'free' 반환)
+ */
+export function toPlanType(value: string | null | undefined): PlanType {
+  if (value === 'basic' || value === 'pro' || value === 'max') return value
+  return 'free'
+}
