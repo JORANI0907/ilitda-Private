@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, GripVertical, Plus, X, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, GripVertical, Plus, X, SlidersHorizontal, Lock } from 'lucide-react'
 import {
   DndContext, closestCenter,
   KeyboardSensor, PointerSensor, TouchSensor,
@@ -22,6 +22,13 @@ import {
   type PanelFieldDef,
 } from '@/lib/settings-defaults'
 import type { PanelConfig, PanelFieldOverride } from '@/types'
+
+// 신청서 폼 설정에서 관리하는 필드 → 이 화면에서는 잠금
+const FORM_MANAGED_KEYS = new Set([
+  'owner_name', 'email', 'business_number', 'account_number',
+  'elevator', 'parking', 'building_access', 'access_method',
+  'payment_method',
+])
 
 // ─── 정적 맵 ─────────────────────────────────────────────────
 const SECTION_MAP = Object.fromEntries(PANEL_SECTIONS.map(s => [s.id, s]))
@@ -91,6 +98,19 @@ function FieldRow({ field, override, onChange, dragHandle }: FieldRowProps) {
 
   function update(patch: Partial<PanelFieldOverride>) {
     onChange(field.key, { ...override, ...patch })
+  }
+
+  if (FORM_MANAGED_KEYS.has(field.key)) {
+    return (
+      <div className="flex items-center gap-2 py-2.5 border-b border-border-subtle last:border-0 opacity-60">
+        {dragHandle}
+        <span className="text-xs font-medium text-text-tertiary w-20 shrink-0 leading-tight">{field.label}</span>
+        <div className="flex-1 flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-surface-sunken border border-border-subtle">
+          <Lock size={11} className="text-text-tertiary shrink-0" />
+          <span className="text-xs text-text-tertiary break-keep">신청서 폼 설정에서 수정 가능</span>
+        </div>
+      </div>
+    )
   }
 
   return (
