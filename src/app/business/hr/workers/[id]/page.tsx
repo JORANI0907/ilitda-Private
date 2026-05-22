@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, use } from 'react'
-import { ArrowLeft, Phone, Building2, CalendarClock } from 'lucide-react'
+import { ArrowLeft, Phone, Building2, CalendarClock, LogIn } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -65,6 +66,7 @@ export default function WorkerDetailPage({ params }: PageProps) {
 
   const [connection, setConnection] = useState<Connection | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isDemo, setIsDemo] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -92,6 +94,7 @@ export default function WorkerDetailPage({ params }: PageProps) {
         setPageError(json.error ?? '작업자를 불러오지 못했습니다.')
         return
       }
+      setIsDemo(json.isDemo === true)
       const conn: Connection = json.data
       setConnection(conn)
       setForm({
@@ -211,6 +214,23 @@ export default function WorkerDetailPage({ params }: PageProps) {
         <ArrowLeft size={16} />
         작업자 관리
       </button>
+
+      {/* 데모 배너 */}
+      {isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link
+            href="/login/register"
+            className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors"
+          >
+            <LogIn size={14} />
+            가입하기
+          </Link>
+        </div>
+      )}
 
       <HelpBanner label="직원 상세 페이지 안내 보기" onClick={() => setHelpOpen(true)} />
       <HelpTip>연결된 직원은 앱에서 출퇴근 체크와 일정을 확인할 수 있습니다.</HelpTip>

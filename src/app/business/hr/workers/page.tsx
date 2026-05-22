@@ -14,6 +14,9 @@ import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
 import type { Connection } from '@/types'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { getFeatureLimit, getUpgradePlan } from '@/lib/plan-features'
 
 type AddMode = 'invite' | 'manual'
 type FilterTab = 'all' | 'accepted' | 'pending' | 'manual'
@@ -105,6 +108,9 @@ export default function WorkersPage() {
   const [inviteSent, setInviteSent] = useState(false)
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const { planType, isLoading: planLoading } = usePlanType()
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const fetchConnections = useCallback(async () => {
     setIsLoading(true)
@@ -200,6 +206,15 @@ export default function WorkersPage() {
     setInviteSent(false)
   }
 
+  function handleOpenAdd() {
+    const limit = getFeatureLimit(planType, 'worker_limit')
+    if (!planLoading && connections.length >= limit) {
+      setUpgradeOpen(true)
+      return
+    }
+    setShowAddModal(true)
+  }
+
   const setField = (key: keyof AddForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
@@ -207,12 +222,23 @@ export default function WorkersPage() {
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
       <div className="flex items-center justify-between">
-        <SectionHeader
-          title="작업자 관리"
-          level="page"
-          description="함께 일하는 작업자를 관리합니다"
-        />
-        <Button size="sm" onClick={() => setShowAddModal(true)} className="shrink-0">
+        <div>
+          <SectionHeader
+            title="작업자 관리"
+            level="page"
+            description="함께 일하는 작업자를 관리합니다"
+          />
+          {!planLoading && getFeatureLimit(planType, 'worker_limit') !== Infinity && (
+            <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${
+              connections.length >= getFeatureLimit(planType, 'worker_limit')
+                ? 'bg-state-danger/10 text-state-danger font-medium'
+                : 'bg-surface-sunken text-text-tertiary'
+            }`}>
+              {connections.length}/{getFeatureLimit(planType, 'worker_limit')}명
+            </span>
+          )}
+        </div>
+        <Button size="sm" onClick={handleOpenAdd} className="shrink-0">
           <UserPlus size={15} className="mr-1" />
           작업자 추가
         </Button>
@@ -328,6 +354,14 @@ export default function WorkersPage() {
           </button>
         ))}
       </div>
+
+      <UpgradeModal
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        featureName="직원 추가"
+        requiredPlan={getUpgradePlan(planType) ?? 'pro'}
+        currentPlan={planType}
+      />
 
       {/* 작업자 추가 모달 */}
       <Modal

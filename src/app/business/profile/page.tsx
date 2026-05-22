@@ -18,6 +18,8 @@ import { HelpIcon } from '@/components/ui/HelpIcon'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
 import type { Profile, Business, Worker } from '@/types'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { canUseFeature, toPlanType } from '@/lib/plan-features'
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -53,6 +55,7 @@ export default function BusinessProfilePage() {
   const [appDisplayNameInput, setAppDisplayNameInput] = useState('')
   const [isSavingDisplayName, setIsSavingDisplayName] = useState(false)
   const [displayNameError, setDisplayNameError] = useState<string | null>(null)
+  const [appNameUpgradeOpen, setAppNameUpgradeOpen] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -92,6 +95,10 @@ export default function BusinessProfilePage() {
   }
 
   const handleSaveDisplayName = async () => {
+    if (!canUseFeature(toPlanType(data?.business?.plan_type), 'app_name_custom')) {
+      setAppNameUpgradeOpen(true)
+      return
+    }
     const trimmed = appDisplayNameInput.trim()
     if (trimmed.length > 20) {
       setDisplayNameError('20자 이내로 입력해 주세요.')
@@ -436,7 +443,14 @@ export default function BusinessProfilePage() {
 
       {/* 앱 이름 설정 */}
       <Card padding="md">
-        <SectionHeader title="앱 이름 설정" className="mb-3" />
+        <div className="flex items-center gap-2 mb-3">
+          <SectionHeader title="앱 이름 설정" />
+          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom') && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+              맥스 플랜
+            </span>
+          )}
+        </div>
         <div className="flex flex-col gap-3">
           <p className="text-xs text-text-secondary break-keep">
             상단 네비게이션에 표시될 이름을 설정하세요. 비워두면 기본값 &quot;일잇다&quot;가 표시됩니다.
@@ -448,6 +462,7 @@ export default function BusinessProfilePage() {
                 value={appDisplayNameInput}
                 onChange={(e) => setAppDisplayNameInput(e.target.value)}
                 maxLength={20}
+                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom')}
               />
             </div>
             <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>
@@ -592,6 +607,14 @@ export default function BusinessProfilePage() {
           로그아웃 후 다시 로그인이 필요합니다.
         </p>
       </Modal>
+
+      <UpgradeModal
+        open={appNameUpgradeOpen}
+        onClose={() => setAppNameUpgradeOpen(false)}
+        featureName="앱 이름 커스텀"
+        requiredPlan="max"
+        currentPlan={toPlanType(business?.plan_type)}
+      />
 
       {data && (
         <RoleSwitcher

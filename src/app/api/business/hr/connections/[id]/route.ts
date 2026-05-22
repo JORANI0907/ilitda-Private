@@ -3,6 +3,12 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
+const DEMO_WORKERS = [
+  { id: 'demo-worker-1', display_name: '김청소', manual_name: '김청소', manual_phone: '010-1111-1111', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: '국민은행', manual_account_number: '123-456-789012', manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+  { id: 'demo-worker-2', display_name: '이세정', manual_name: '이세정', manual_phone: '010-2222-2222', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: '신한은행', manual_account_number: '234-567-890123', manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+  { id: 'demo-worker-3', display_name: '박일꾼', manual_name: '박일꾼', manual_phone: '010-3333-3333', is_manual: true, status: 'accepted', profiles: null, invite_token: null, manual_account_bank: '하나은행', manual_account_number: '345-678-901234', manual_registration_number: null, manual_resident_number: null, manual_company_name: null },
+]
+
 async function getBusinessId(userId: string): Promise<string | null> {
   const service = createServiceClient()
   const { data, error } = await service
@@ -21,7 +27,8 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ success: false, error: '로그인이 필요합니다.' }, { status: 401 })
+    const demo = DEMO_WORKERS.find((w) => w.id === id) ?? DEMO_WORKERS[0]
+    return NextResponse.json({ success: true, data: demo, isDemo: true })
   }
 
   const businessId = await getBusinessId(user.id)
