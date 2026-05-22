@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { User, Lock, Phone, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { HelpTip } from '@/components/ui/HelpTip'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 
 type EmailStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
@@ -178,12 +180,30 @@ export default function RegisterPage() {
         <div className="flex flex-col gap-4">
           {/* 역할 토글 */}
           <div>
-            <p className="text-sm font-medium text-text-primary mb-2">역할 선택 <span className="text-state-danger">*</span></p>
+            <div className="flex items-center gap-1.5 mb-2">
+              <p className="text-sm font-medium text-text-primary">역할 선택 <span className="text-state-danger">*</span></p>
+              <HelpIcon
+                title="역할이란?"
+                description="사업자: 청소 일감을 등록하고 용역자를 관리하는 업주입니다. 직원을 초대하거나 스케줄을 관리할 수 있어요.&#10;&#10;작업자: 일감을 받아 현장에서 일하는 분입니다. 배정된 일정을 확인하고 출퇴근을 기록할 수 있어요."
+              />
+            </div>
             <div className="flex bg-surface-sunken rounded-xl p-1 gap-1">
               {([
-                { key: 'business' as const, label: '사업자', desc: '직원을 관리해요' },
-                { key: 'worker'   as const, label: '작업자', desc: '일감을 받아요'  },
-              ]).map(({ key, label, desc }) => (
+                {
+                  key: 'business' as const,
+                  label: '사업자',
+                  desc: '직원을 관리해요',
+                  helpTitle: '사업자 계정',
+                  helpDesc: '청소 일감을 등록하고 용역자를 구하는 업주 계정입니다. 스케줄 관리, 직원 초대, 매출 확인 등을 할 수 있어요.',
+                },
+                {
+                  key: 'worker' as const,
+                  label: '작업자',
+                  desc: '일감을 받아요',
+                  helpTitle: '작업자 계정',
+                  helpDesc: '청소 일감을 찾아 수입을 올리는 용역자 계정입니다. 배정된 일정 확인과 출퇴근 기록이 가능해요.',
+                },
+              ]).map(({ key, label, desc, helpTitle, helpDesc }) => (
                 <button
                   key={key}
                   type="button"
@@ -195,7 +215,10 @@ export default function RegisterPage() {
                       : 'text-text-secondary hover:text-text-primary'}
                   `}
                 >
-                  <span className={`text-sm font-semibold ${role === key ? 'text-brand-600' : 'text-text-primary'}`}>{label}</span>
+                  <span className={`text-sm font-semibold ${role === key ? 'text-brand-600' : 'text-text-primary'} flex items-center gap-1`}>
+                    {label}
+                    <HelpIcon title={helpTitle} description={helpDesc} />
+                  </span>
                   <span className="text-xs text-text-tertiary mt-0.5">{desc}</span>
                 </button>
               ))}
@@ -220,6 +243,9 @@ export default function RegisterPage() {
                 undefined
               }
             />
+            <HelpTip className="mt-1.5">
+              로그인 시 사용할 이메일 주소를 입력하세요. 나중에 변경하기 어려우니 자주 사용하는 이메일을 권장합니다.
+            </HelpTip>
             {emailStatus === 'available' && (
               <p className="mt-1 text-xs text-state-success">사용 가능한 이메일입니다.</p>
             )}
@@ -242,6 +268,7 @@ export default function RegisterPage() {
             autoComplete="new-password"
             name="password"
           />
+          <HelpTip>비밀번호는 8자 이상이어야 합니다. 영문, 숫자, 특수문자를 조합하면 더 안전합니다.</HelpTip>
           <Input
             label="비밀번호 확인"
             type="password"
@@ -287,6 +314,10 @@ export default function RegisterPage() {
 
       {step === 2 && (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <HelpTip>
+            휴대폰 번호로 인증코드를 발송합니다. 본인 명의의 번호를 입력하고 &apos;인증번호&apos; 버튼을 눌러주세요.
+          </HelpTip>
+
           {/* 연락처 */}
           <div>
             <p className="text-sm font-medium text-text-primary mb-1.5">
