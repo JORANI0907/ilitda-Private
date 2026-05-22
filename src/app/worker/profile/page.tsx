@@ -12,12 +12,30 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Modal } from '@/components/ui/Modal'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { Profile, Worker } from '@/types'
 
 interface ProfileData {
   profile: Profile
   worker: Worker | null
 }
+
+const HELP_SECTIONS = [
+  {
+    title: '역할 전환 방법',
+    content: '사업자 계정도 함께 가지고 있다면 "사업자로 전환" 버튼을 탭해서 사업자 모드로 이동할 수 있어요.\n전환 시 사업자 포털 홈 화면으로 이동합니다.',
+  },
+  {
+    title: '로그아웃 방법',
+    content: '화면 맨 아래 "로그아웃" 버튼을 탭하면 로그아웃됩니다.\n로그아웃 후 다시 로그인이 필요합니다.',
+  },
+  {
+    title: '설정 메뉴 안내',
+    content: '· 알림 설정: 일정 알림, 공지 알림 수신 여부를 변경할 수 있어요.\n· 계좌 수정: 급여를 받을 계좌 정보를 변경할 수 있어요.',
+  },
+]
 
 export default function WorkerProfilePage() {
   const router = useRouter()
@@ -29,6 +47,7 @@ export default function WorkerProfilePage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -102,6 +121,16 @@ export default function WorkerProfilePage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
+      <HelpBanner label="프로필 안내" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="프로필 안내"
+        sections={HELP_SECTIONS}
+      />
+
+      <HelpTip>역할을 전환하면 다른 포털로 이동합니다.</HelpTip>
+
       {/* 프로필 헤더 */}
       <Card padding="md">
         <div className="flex items-center gap-4">
