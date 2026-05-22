@@ -202,6 +202,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [notifyType, setNotifyType] = useState(NOTIFY_TYPES[0])
   const [isSendingNotify, setIsSendingNotify] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
+  const [isSendingFolderLink, setIsSendingFolderLink] = useState(false)
+  const [folderLinkError, setFolderLinkError] = useState<string | null>(null)
+  const [folderLinkSent, setFolderLinkSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [driveUrl, setDriveUrl] = useState<string | null>(app.drive_folder_url ?? null)
   const [isDriveLoading, setIsDriveLoading] = useState(false)
@@ -320,6 +323,22 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       if (!json.success) { setNotifyError(json.error ?? '발송 실패'); return }
       alert(`${notifyType} 발송 완료`)
     } catch { setNotifyError('네트워크 오류') } finally { setIsSendingNotify(false) }
+  }
+
+  async function handleSendFolderLink() {
+    setFolderLinkError(null)
+    setIsSendingFolderLink(true)
+    try {
+      const res = await fetch(`/api/admin/applications/${app.id}/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifyType: '폴더링크알림' }),
+      })
+      const json = await res.json()
+      if (!json.success) { setFolderLinkError(json.error ?? '발송 실패'); return }
+      setFolderLinkSent(true)
+      setTimeout(() => setFolderLinkSent(false), 3000)
+    } catch { setFolderLinkError('네트워크 오류') } finally { setIsSendingFolderLink(false) }
   }
 
   const notifyLogs: NotifyLog[] = (app.notification_log as NotifyLog[]) ?? []
@@ -601,7 +620,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               </>
             ) : (
               <>
-                <p className="text-xs text-text-tertiary">생성하면 작업전/작업후 폴더가 자동으로 만들어집니다.</p>
+                <p className="text-xs text-text-tertiary">각 고객 폴더(작업전/후)가 생성되며, 알림으로 링크를 쉽게 발송할 수 있습니다.</p>
                 <Button size="sm" variant="secondary" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
                   <FolderOpen size={14} />
                   작업 폴더 생성
@@ -632,6 +651,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               {form.phone || '연락처 없음'}으로 발송
             </Button>
             {notifyError && <p className="text-xs text-state-danger">{notifyError}</p>}
+
+            {/* 폴더 링크 보내기 */}
+            {driveUrl && (
+              <div className="border-t border-border-subtle pt-2 flex flex-col gap-1.5">
+                <p className="text-xs text-text-tertiary break-keep">폴더 링크 보내기 — 작업 사진 폴더 링크를 고객 연락처로 문자 발송합니다.</p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleSendFolderLink}
+                  isLoading={isSendingFolderLink}
+                  fullWidth
+                >
+                  <FolderOpen size={14} />
+                  {folderLinkSent ? '발송 완료!' : `${form.phone || '연락처 없음'}으로 폴더 링크 발송`}
+                </Button>
+                {folderLinkError && <p className="text-xs text-state-danger">{folderLinkError}</p>}
+              </div>
+            )}
           </div>
 
           {/* 알림 기록 */}

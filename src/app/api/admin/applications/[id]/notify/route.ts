@@ -19,6 +19,7 @@ const MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
   '예약취소알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.\n문의: ${p.contact}`,
   'A/S방문알림':          (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
   '방문견적알림':         (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
+  '폴더링크알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업 사진 폴더를 공유드립니다.\n작업전/후 사진 확인: ${p.folderUrl}\n문의: ${p.contact}`,
 }
 
 export async function POST(
@@ -57,6 +58,7 @@ export async function POST(
 
     if (fetchErr || !app) throw new Error('신청서를 찾을 수 없습니다.')
     if (!app.phone) throw new Error('연락처가 없습니다.')
+    if (notifyType === '폴더링크알림' && !app.drive_folder_url) throw new Error('작업 폴더가 아직 생성되지 않았습니다.')
 
     // SMS 발송 한도 확인 및 증가
     const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
@@ -82,12 +84,13 @@ export async function POST(
       const templateFn = MSG_TEMPLATE[notifyType]
       if (!templateFn) throw new Error('지원하지 않는 알림 유형입니다.')
       msgText = templateFn({
-        name:    app.owner_name ?? '고객',
-        date:    app.construction_date ?? '',
-        time:    app.construction_time ?? '',
-        amount:  app.balance?.toLocaleString('ko-KR') ?? '',
-        account: app.account_number ?? '',
-        contact: contactPhone,
+        name:      app.owner_name ?? '고객',
+        date:      app.construction_date ?? '',
+        time:      app.construction_time ?? '',
+        amount:    app.balance?.toLocaleString('ko-KR') ?? '',
+        account:   app.account_number ?? '',
+        contact:   contactPhone,
+        folderUrl: app.drive_folder_url ?? '',
       })
     }
 
