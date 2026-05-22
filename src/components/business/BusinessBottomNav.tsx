@@ -4,7 +4,7 @@ import { useContext } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Home, BarChart3, Users, Store, User,
+  Home, BarChart3, Users, Store, User, CreditCard,
 } from 'lucide-react'
 import { AuthContext } from '@/contexts/AuthContext'
 
@@ -15,11 +15,12 @@ interface NavItem {
 }
 
 const TABS: NavItem[] = [
-  { href: '/business/home',         label: '홈',    icon: <Home size={22} /> },
-  { href: '/business/applications', label: '일정',  icon: <BarChart3 size={22} /> },
-  { href: '/business/hr',           label: '운영',  icon: <Users size={22} /> },
-  { href: '/business/market',       label: '마켓',  icon: <Store size={22} /> },
-  { href: '/business/profile',      label: '프로필', icon: <User size={22} /> },
+  { href: '/business/home',          label: '홈',    icon: <Home size={22} /> },
+  { href: '/business/applications',  label: '일정',  icon: <BarChart3 size={22} /> },
+  { href: '/business/hr',            label: '운영',  icon: <Users size={22} /> },
+  { href: '/business/market',        label: '마켓',  icon: <Store size={22} /> },
+  { href: '/business/settings/plan', label: '플랜',  icon: <CreditCard size={22} /> },
+  { href: '/business/profile',       label: '프로필', icon: <User size={22} /> },
 ]
 
 export function BusinessBottomNav() {
