@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useContext } from 'react'
 import {
   Home, Calendar, Wallet,
-  BarChart3, Users, Briefcase, Store, CreditCard,
+  BarChart3, Users, Briefcase, Store, FileText,
 } from 'lucide-react'
 import { PlanChip } from '@/components/ui/PlanChip'
 import { AuthContext } from '@/contexts/AuthContext'
@@ -25,7 +25,7 @@ const BUSINESS_TABS: NavItem[] = [
   { href: '/business/applications', label: '일정',  icon: <BarChart3 size={18} /> },
   { href: '/business/hr',           label: '운영',  icon: <Users size={18} /> },
   { href: '/business/market',       label: '마켓',  icon: <Store size={18} /> },
-  { href: '/business/settings/plan', label: '플랜', icon: <CreditCard size={18} /> },
+  { href: '/business/form-preview', label: '신청서', icon: <FileText size={18} /> },
 ]
 
 const WORKER_TABS: NavItem[] = [
