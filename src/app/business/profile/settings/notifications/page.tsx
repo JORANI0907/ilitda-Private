@@ -236,7 +236,13 @@ function NotificationRuleCard({
             <div className="flex flex-col gap-2 bg-surface-sunken rounded-xl p-3">
               <p className="text-xs text-text-tertiary font-medium">기준: 서비스일</p>
               <div className="flex gap-2 items-center">
-                <label className="text-xs text-text-secondary whitespace-nowrap">발송 시점</label>
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-text-secondary whitespace-nowrap">발송 시점</label>
+                  <HelpIcon
+                    title="발송 시점이란?"
+                    description={`서비스일 기준으로 며칠 전/당일/후에 문자를 보낼지 설정합니다.\n\n예) '1일 전' = 서비스 하루 전날 발송\n예) '당일' = 서비스 당일 발송\n예) '1일 후' = 서비스 다음 날 발송`}
+                  />
+                </div>
                 <select
                   value={rule.trigger.offset_days}
                   onChange={(e) => handleTriggerChange('offset_days', Number(e.target.value))}
@@ -248,7 +254,13 @@ function NotificationRuleCard({
                 </select>
               </div>
               <div className="flex gap-2 items-center">
-                <label className="text-xs text-text-secondary whitespace-nowrap">발송 시각</label>
+                <div className="flex items-center gap-1">
+                  <label className="text-xs text-text-secondary whitespace-nowrap">발송 시각</label>
+                  <HelpIcon
+                    title="발송 시각이란?"
+                    description={`문자가 실제로 발송되는 시각입니다.\n\n고객이 확인하기 좋은 오전 9시~10시를 권장합니다.\n너무 이른 새벽이나 늦은 밤은 피하세요.`}
+                  />
+                </div>
                 <select
                   value={rule.trigger.send_time}
                   onChange={(e) => handleTriggerChange('send_time', e.target.value)}
@@ -298,6 +310,9 @@ function NotificationRuleCard({
                       description={`변수를 사용하면 고객별로 문자 내용이 자동으로 채워집니다.\n\n예) {business_name} → 실제 고객사 이름으로 치환\n예) {construction_date} → 실제 서비스 날짜로 치환\n\n변수 목록은 필드 설정에서 활성화된 항목이 자동으로 표시됩니다.`}
                     />
                   </div>
+                  <HelpTip>
+                    {`{변수명}을 입력하면 실제 고객 정보로 자동 교체됩니다.\n예) {business_name} → '스타벅스 판교점'`}
+                  </HelpTip>
 
                   {/* 카테고리 탭 */}
                   <div className="flex gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -350,12 +365,17 @@ function NotificationRuleCard({
 
                 {/* 미리보기 */}
                 {rule.template && rule.template.trim() && (
-                  <div className="bg-surface-sunken rounded-lg p-2.5">
-                    <p className="text-[10px] text-text-tertiary mb-1">미리보기</p>
-                    <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed">
-                      {previewTemplate(rule.template, smsVars)}
-                    </p>
-                  </div>
+                  <>
+                    <HelpTip>
+                      아래 미리보기는 샘플 데이터로 표시됩니다. 실제 발송 시에는 고객 정보로 대체됩니다.
+                    </HelpTip>
+                    <div className="bg-surface-sunken rounded-lg p-2.5">
+                      <p className="text-[10px] text-text-tertiary mb-1">미리보기</p>
+                      <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed">
+                        {previewTemplate(rule.template, smsVars)}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -510,12 +530,24 @@ export default function NotificationsSettingsPage() {
             content: '서비스 관리 화면에서 담당자가 직접 버튼을 눌러야 문자가 발송됩니다.\n원하는 타이밍에 보낼 수 있어 유연하지만, 잊으면 발송되지 않습니다.',
           },
           {
+            title: '자동 발송 설정 방법',
+            content: '① 발송 방식에서 "자동"을 선택합니다.\n② 발송 시점: 서비스일 기준 며칠 전/당일/후를 선택합니다.\n   예) "1일 전" = 서비스 하루 전날\n   예) "당일" = 서비스 당일\n③ 발송 시각: 문자가 나가는 정확한 시간을 선택합니다.\n   고객이 읽기 좋은 오전 9시~10시를 권장합니다.\n\n설정 후 반드시 "저장" 버튼을 눌러야 적용됩니다.',
+          },
+          {
             title: '자동 발송이란?',
             content: '서비스일 기준으로 설정한 시점에 시스템이 자동으로 문자를 보냅니다.\n예) "서비스 1일 전 오전 9시" 설정 시 매일 그 시간에 해당하는 고객에게 자동 발송됩니다.\n\n단, 서비스 신청서에 서비스일이 입력된 건에만 동작합니다.',
           },
           {
+            title: '변수 활용 예시',
+            content: '변수를 조합하면 고객 맞춤 문자를 자동으로 보낼 수 있습니다.\n\n예시 문자)\n"[일잇다] {business_name} 담당자님,\n{construction_date} {construction_time} 서비스가 확정되었습니다.\n문의: {contact}"\n\n→ 실제 발송 시:\n"[일잇다] 스타벅스 판교점 담당자님,\n2025년 1월 15일 오전 9시 서비스가 확정되었습니다.\n문의: 031-759-4877"',
+          },
+          {
             title: '변수를 사용하면 무엇이 좋나요?',
             content: '문자 내용에 {business_name}, {construction_date} 같은 변수를 넣으면\n실제 고객 정보가 자동으로 채워져 발송됩니다.\n\n예) "{business_name} 담당자님" → "스타벅스 판교점 담당자님"\n\n변수는 필드 설정에서 활성화한 항목만 표시됩니다.',
+          },
+          {
+            title: '주의사항',
+            content: '• 자동 발송은 서비스일이 입력된 신청건에만 동작합니다.\n  서비스일 미입력 시 해당 건은 자동 발송 대상에서 제외됩니다.\n\n• 요금제별 일일 SMS 발송 한도가 있습니다.\n  한도를 초과하면 당일 추가 발송이 불가능합니다.\n  자동 발송이 많은 경우 수동 발송 여유분을 미리 확인하세요.',
           },
           {
             title: 'SMS 발송 한도 주의사항',
