@@ -5,6 +5,9 @@ import { Download, Users } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import type { Connection } from '@/types'
 
 type WorkerTab = string // connection id
@@ -34,7 +37,23 @@ function formatAmount(n: number | null | undefined): string {
   return n.toLocaleString('ko-KR')
 }
 
+const HELP_SECTIONS = [
+  {
+    title: '급여 입력 및 저장 방법',
+    content: '각 작업자 행의 입력란에 급여를 입력한 뒤 다른 곳을 탭하면 자동으로 저장됩니다. "저장됨" 문구가 나타나면 저장이 완료된 것입니다.',
+  },
+  {
+    title: '엑셀 내보내기 방법',
+    content: '오른쪽 상단의 "엑셀" 버튼을 누르면 전체 급여 데이터를 엑셀 파일로 내려받을 수 있습니다. 계좌번호, 사업자번호 등 정산에 필요한 정보가 함께 포함됩니다.',
+  },
+  {
+    title: '총 급여 계산 방식',
+    content: '상단의 합계 표시는 현재 선택한 탭(전체 또는 특정 작업자)에 해당하는 모든 현장 급여의 합산 금액입니다.',
+  },
+]
+
 export default function PayrollPage() {
+  const [helpOpen, setHelpOpen] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
   const [applications, setApplications] = useState<ApplicationItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -184,6 +203,15 @@ export default function PayrollPage() {
             엑셀
           </Button>
         }
+      />
+
+      <HelpBanner label="급여 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip variant="warning">입력한 급여는 저장 버튼을 눌러야 반영됩니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="급여 관리 사용법"
+        sections={HELP_SECTIONS}
       />
 
       {/* 작업자 탭 */}
