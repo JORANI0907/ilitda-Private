@@ -47,6 +47,12 @@ export default function BusinessProfilePage() {
   const [slugError, setSlugError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
 
+  // 앱 이름 관련 상태
+  const [appDisplayName, setAppDisplayName] = useState('')
+  const [appDisplayNameInput, setAppDisplayNameInput] = useState('')
+  const [isSavingDisplayName, setIsSavingDisplayName] = useState(false)
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null)
+
   useEffect(() => {
     const fetchProfile = async () => {
       setIsLoading(true)
@@ -63,6 +69,9 @@ export default function BusinessProfilePage() {
           const requestSlug = json.data.business?.request_slug ?? ''
           setSlug(requestSlug)
           setSlugInput(requestSlug)
+          const displayName = json.data.business?.app_display_name ?? ''
+          setAppDisplayName(displayName)
+          setAppDisplayNameInput(displayName)
         }
       } finally {
         setIsLoading(false)
@@ -111,6 +120,33 @@ export default function BusinessProfilePage() {
       setSlugError('네트워크 오류가 발생했습니다.')
     } finally {
       setIsSavingSlug(false)
+    }
+  }
+
+  const handleSaveDisplayName = async () => {
+    const trimmed = appDisplayNameInput.trim()
+    if (trimmed.length > 20) {
+      setDisplayNameError('20자 이내로 입력해 주세요.')
+      return
+    }
+    setDisplayNameError(null)
+    setIsSavingDisplayName(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_display_name: trimmed || null }),
+      })
+      const json = await res.json()
+      if (!json.success) {
+        setDisplayNameError(json.error ?? '저장에 실패했습니다.')
+        return
+      }
+      setAppDisplayName(trimmed)
+    } catch {
+      setDisplayNameError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setIsSavingDisplayName(false)
     }
   }
 
@@ -396,6 +432,37 @@ export default function BusinessProfilePage() {
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
+        </div>
+      </Card>
+
+      {/* 앱 이름 설정 */}
+      <Card padding="md">
+        <SectionHeader title="앱 이름 설정" className="mb-3" />
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-secondary break-keep">
+            상단 네비게이션에 표시될 이름을 설정하세요. 비워두면 기본값 &quot;일잇다&quot;가 표시됩니다.
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="일잇다 (기본값)"
+                value={appDisplayNameInput}
+                onChange={(e) => setAppDisplayNameInput(e.target.value)}
+                maxLength={20}
+              />
+            </div>
+            <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>
+              저장
+            </Button>
+          </div>
+          {displayNameError && (
+            <p className="text-sm text-state-danger">{displayNameError}</p>
+          )}
+          {appDisplayName && (
+            <p className="text-xs text-text-tertiary">
+              현재 표시 이름: <span className="text-brand-600 font-medium">{appDisplayName}</span>
+            </p>
+          )}
         </div>
       </Card>
 
