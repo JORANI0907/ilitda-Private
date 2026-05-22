@@ -11,6 +11,9 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -194,8 +197,24 @@ function InfoBox({ title, rows }: { title: string; rows: [string, string][] }) {
 
 // ─── 메인 페이지 ─────────────────────────────────────────────────
 
+const HELP_SECTIONS = [
+  {
+    title: '견적서 생성 방법',
+    content: '목록에서 신청서를 탭하면 견적서 작성 화면이 열립니다. 신청서가 먼저 등록되어 있어야 견적서를 발행할 수 있습니다.',
+  },
+  {
+    title: '가격 입력 방식 3가지',
+    content: '항목별 — 품목마다 수량·단가를 입력해 자동 합산합니다.\n합계기준 — VAT 포함 최종 금액을 입력하면 공급가와 VAT를 자동 계산합니다.\n공급가기준 — VAT 제외 금액을 입력하면 VAT와 합계를 자동 계산합니다.',
+  },
+  {
+    title: '이메일·SMS 발송 방법',
+    content: '견적서 작성을 마친 뒤 "견적서 발송" 버튼을 누르면 고객의 이메일과 연락처로 PDF 견적서가 함께 발송됩니다. 발송 전 "미리보기"로 내용을 확인하세요.',
+  },
+]
+
 export default function QuotationsPage() {
   const router = useRouter()
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // 목록
   const [applications, setApplications] = useState<ApplicationRow[]>([])
@@ -541,6 +560,15 @@ export default function QuotationsPage() {
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
+
+      <HelpBanner label="견적서 발행 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip>견적서는 신청서를 선택한 후 발행할 수 있습니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="견적서 발행 사용법"
+        sections={HELP_SECTIONS}
+      />
 
       {/* 검색 */}
       <Input
