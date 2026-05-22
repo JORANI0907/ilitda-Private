@@ -6,6 +6,9 @@ import { ArrowLeft, Phone, Mail, BarChart2, CheckCircle2, XCircle, Loader2, Fold
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import { PLAN_SMS_LIMITS, type Business } from '@/types'
 
 // ─── 상태 배지 ───────────────────────────────────────────────
@@ -47,6 +50,7 @@ export default function IntegrationsPage() {
   const router = useRouter()
   const [biz, setBiz] = useState<Business | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
   // Solapi 상태
   const [phoneInput, setPhoneInput] = useState('')
@@ -198,6 +202,38 @@ export default function IntegrationsPage() {
         </button>
         <SectionHeader title="연동 설정" level="page" />
       </div>
+
+      {/* 도움말 배너 */}
+      <HelpBanner
+        label="외부 연동 안내 보기"
+        onClick={() => setShowHelpDrawer(true)}
+      />
+
+      {/* 도움말 드로어 */}
+      <HelpDrawer
+        open={showHelpDrawer}
+        onClose={() => setShowHelpDrawer(false)}
+        title="외부 연동 안내"
+        sections={[
+          {
+            title: '솔라피(Solapi) 연동이란?',
+            content: '솔라피는 문자 발송 서비스입니다.\n솔라피 연동을 완료하면 고객에게 보내는 알림 문자가 일잇다 기본 번호가 아닌 내 사업용 전화번호로 발송됩니다.',
+          },
+          {
+            title: '내 번호로 문자 발송하기',
+            content: '연동하면 고객이 받는 문자에 내 사업체 전화번호가 표시됩니다.\n고객 입장에서 모르는 번호가 아니라 익숙한 업체 번호로 알림이 오므로 신뢰도가 높아집니다.',
+          },
+          {
+            title: '연동 방법 (API키 발급 위치)',
+            content: '1. https://solapi.com 에 접속 후 회원가입 또는 로그인\n2. 좌측 메뉴 → [발신번호 관리] → 사용할 전화번호 등록\n3. 아래 [인증 요청] 버튼을 눌러 번호 인증을 진행하면 연동이 완료됩니다.',
+          },
+        ]}
+      />
+
+      {/* 도움말 팁 (warning) */}
+      <HelpTip variant="warning">
+        솔라피 연동 전에는 일잇다 기본 발신번호로 문자가 발송됩니다.
+      </HelpTip>
 
       {/* ── 알림 발신번호 ─────────────────────────── */}
       <Section
