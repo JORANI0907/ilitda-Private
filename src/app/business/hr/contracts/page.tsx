@@ -13,6 +13,7 @@ import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
 
@@ -104,16 +105,20 @@ const fmtDate = (s: string) => s.slice(0, 10)
 
 const HELP_SECTIONS = [
   {
-    title: '계약서 생성 방법',
-    content: '"새 계약서" 버튼을 누르면 신청서를 선택하고 계약 양식·기간·금액을 입력해 계약서를 만들 수 있습니다. 신청서가 먼저 등록되어 있어야 합니다.',
+    title: '계약서란?',
+    content: '청소 서비스 계약 내용을 디지털 문서로 작성하고 보관하는 기능입니다. OTP 전자 서명으로 고객과 관리자가 각각 서명할 수 있어, 분쟁 발생 시 법적 근거 자료로 활용할 수 있습니다.',
   },
   {
-    title: 'OTP 서명 방법',
-    content: '계약서를 생성한 뒤 "OTP 발송" 버튼을 누르면 고객 연락처로 인증번호가 발송됩니다. 고객이 인증번호를 입력하면 서명이 완료됩니다.',
+    title: 'OTP 전자 서명 방법',
+    content: '1. "새 계약서" 버튼으로 계약서를 생성합니다.\n2. 생성된 계약서 상세 페이지에서 "OTP 발송" 버튼을 누릅니다.\n3. 고객 연락처로 인증번호(OTP)가 문자 발송됩니다.\n4. 고객이 인증번호를 입력하면 고객 서명이 완료됩니다.\n5. 관리자가 최종 완료 처리를 하면 계약이 확정됩니다.',
   },
   {
-    title: '계약 상태 의미',
-    content: '초안 — 방금 생성된 상태, 아직 발송 전입니다.\n서명대기 — OTP를 발송해 고객 서명을 기다리는 중입니다.\n고객서명완료 — 고객이 서명을 마쳤습니다. 관리자가 완료 처리해 주세요.\n완료 — 계약이 최종 완료된 상태입니다.\n파기 — 계약이 취소된 상태입니다.',
+    title: '서명 완료 후 주의사항',
+    content: '서명이 완료된 계약서는 내용 수정이 불가능합니다. 내용 변경이 필요하다면 기존 계약서를 파기하고 새 계약서를 작성해야 합니다. 파기된 계약서는 기록으로 남아 조회할 수 있습니다.',
+  },
+  {
+    title: '계약서 활용 팁',
+    content: '정기 서비스 고객에게 계약서를 발행하면 서비스 범위·금액·기간이 명확히 기록되어 분쟁을 예방할 수 있습니다. "양식 관리(톱니바퀴)" 버튼에서 자주 사용하는 계약 양식을 미리 만들어 두면 빠르게 계약서를 생성할 수 있습니다.',
   },
 ]
 
@@ -283,10 +288,14 @@ export default function ContractsPage() {
           <Plus size={14} />
           새 계약서
         </Button>
+        <HelpIcon
+          title="계약서 생성"
+          description="계약서는 고객과의 서비스 계약 내용을 문서화합니다. 신청서를 선택하고 계약 기간·금액을 입력하면 생성됩니다. 생성 후 OTP 인증으로 고객 전자 서명을 받을 수 있습니다."
+        />
       </div>
 
       <HelpBanner label="계약서 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip variant="warning">계약서는 맥스 플랜에서 사용 가능합니다.</HelpTip>
+      <HelpTip variant="warning">계약서는 맥스 플랜에서 사용 가능합니다. 계약서 생성 전 서비스 신청서가 먼저 등록되어 있어야 합니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
@@ -312,6 +321,9 @@ export default function ContractsPage() {
           </button>
         ))}
       </div>
+      <HelpTip>
+        초안: 생성 직후, 아직 발송 전 · 서명대기: OTP 발송 후 고객 서명 대기 중 · 고객서명완료: 고객이 서명함, 관리자 완료 처리 필요 · 완료: 계약 최종 확정 · 파기: 취소된 계약
+      </HelpTip>
 
       {/* 에러 */}
       {errorMsg && (
