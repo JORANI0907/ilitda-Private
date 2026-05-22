@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Users, Package, LogIn } from 'lucide-react'
+import { Calendar, Users, Package, LogIn, Bell, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -20,6 +20,13 @@ interface DaySchedule {
   client: { name: string } | null
 }
 
+interface NewApplication {
+  id: string
+  business_name: string | null
+  care_scope: string | null
+  created_at: string
+}
+
 interface HomeData {
   businessName: string
   monthScheduleCount: number
@@ -28,6 +35,7 @@ interface HomeData {
   isDemo?: boolean
   todaySchedules: DaySchedule[]
   tomorrowSchedules: DaySchedule[]
+  newApplications: NewApplication[]
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: 'primary' | 'success' | 'warning' | 'info' }> = {
@@ -43,6 +51,17 @@ function formatTime(startTime: string | null): string {
   const period = hour < 12 ? '오전' : '오후'
   const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
   return `${period} ${displayHour}시`
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return '방금 전'
+  if (minutes < 60) return `${minutes}분 전`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}시간 전`
+  const days = Math.floor(hours / 24)
+  return `${days}일 전`
 }
 
 type DayFilter = 'today' | 'tomorrow'
@@ -97,6 +116,7 @@ export default function BusinessHomePage() {
     : (data?.tomorrowSchedules ?? [])
 
   const dayLabel = dayFilter === 'today' ? '오늘' : '내일'
+  const newApplications = data?.newApplications ?? []
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
@@ -118,6 +138,10 @@ export default function BusinessHomePage() {
           {
             title: 'KPI 카드 탭하기',
             content: '각 KPI 카드를 탭하면 해당 상세 화면으로 바로 이동할 수 있습니다.',
+          },
+          {
+            title: '신규 서비스 신청',
+            content: '고객이 신청 링크를 통해 보낸 신규 신청서 목록입니다.\n"전체 보기"를 탭하면 서비스 관리 화면에서 모든 신청 내역을 확인할 수 있습니다.',
           },
         ]}
       />
@@ -232,6 +256,69 @@ export default function BusinessHomePage() {
             </Card>
           )
         })}
+      </div>
+
+      {/* 신규 서비스 신청 */}
+      <div className="flex flex-col gap-3">
+        <SectionHeader
+          title="신규 서비스 신청"
+          action={
+            <div className="flex items-center gap-2">
+              {!isLoading && newApplications.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-state-danger text-white text-[10px] font-bold rounded-full">
+                  {newApplications.length}
+                </span>
+              )}
+              <button
+                onClick={() => router.push('/business/applications')}
+                className="flex items-center gap-0.5 text-xs text-brand-600 font-medium hover:text-brand-700 transition-colors"
+              >
+                전체 보기 <ChevronRight size={14} />
+              </button>
+            </div>
+          }
+          level="sub"
+        />
+
+        {isLoading && Array.from({ length: 2 }).map((_, i) => (
+          <Card key={i} padding="md">
+            <div className="flex flex-col gap-2">
+              <div className="h-4 w-28 bg-surface-sunken rounded animate-pulse" />
+              <div className="h-3 w-40 bg-surface-sunken rounded animate-pulse" />
+            </div>
+          </Card>
+        ))}
+
+        {!isLoading && newApplications.length === 0 && (
+          <div className="flex flex-col items-center justify-center gap-1.5 py-8 bg-surface-sunken rounded-2xl border border-dashed border-border">
+            <Bell size={24} className="text-text-tertiary" />
+            <p className="text-sm text-text-tertiary">새로운 서비스 신청이 없어요.</p>
+          </div>
+        )}
+
+        {!isLoading && newApplications.map((app) => (
+          <Card
+            key={app.id}
+            padding="md"
+            className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
+            onClick={() => router.push('/business/applications')}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-light text-brand-700">
+                    신규
+                  </span>
+                </div>
+                <p className="font-semibold text-text-primary truncate">{app.business_name ?? '-'}</p>
+                {app.care_scope && (
+                  <p className="text-sm text-text-secondary mt-0.5 truncate">{app.care_scope}</p>
+                )}
+              </div>
+              <p className="text-xs text-text-tertiary shrink-0 mt-0.5">{formatRelativeTime(app.created_at)}</p>
+            </div>
+          </Card>
+        ))}
       </div>
 
       <div className="h-4" />

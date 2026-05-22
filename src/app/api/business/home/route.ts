@@ -6,7 +6,7 @@ const DEMO_SCHEDULES_TODAY = () => {
   return [
     { id: 'demo-1', service_date: today, start_time: '10:00', status: '예약확정', service_type: '주방후드 청소', client: { name: '스타벅스 강남역점' } },
     { id: 'demo-2', service_date: today, start_time: '14:00', status: '서비스완료', service_type: '에어컨 청소', client: { name: '맥도날드 역삼점' } },
-    { id: 'demo-3', service_date: today, start_time: '17:30', status: '신규', service_type: '바닥 청소', client: { name: '이디야 선릉점' } },
+    { id: 'demo-3', service_date: today, start_time: '17:30', status: '예약확정', service_type: '바닥 청소', client: { name: '이디야 선릉점' } },
   ]
 }
 
@@ -14,7 +14,16 @@ const DEMO_SCHEDULES_TOMORROW = () => {
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
   return [
     { id: 'demo-4', service_date: tomorrow, start_time: '09:00', status: '예약확정', service_type: '덕트 청소', client: { name: '버거킹 삼성점' } },
-    { id: 'demo-5', service_date: tomorrow, start_time: '13:00', status: '신규', service_type: '식기세척기 청소', client: { name: '롯데리아 잠실점' } },
+    { id: 'demo-5', service_date: tomorrow, start_time: '13:00', status: '예약확정', service_type: '식기세척기 청소', client: { name: '롯데리아 잠실점' } },
+  ]
+}
+
+const DEMO_NEW_APPLICATIONS = () => {
+  const now = new Date()
+  return [
+    { id: 'demo-new-1', business_name: '할리스커피 홍대점', care_scope: '에어컨 실내기 4대', created_at: new Date(now.getTime() - 1000 * 60 * 30).toISOString() },
+    { id: 'demo-new-2', business_name: '파리바게뜨 신촌점', care_scope: '주방후드, 덕트 청소', created_at: new Date(now.getTime() - 1000 * 60 * 60 * 2).toISOString() },
+    { id: 'demo-new-3', business_name: '뚜레쥬르 종로점', care_scope: '바닥 왁스코팅', created_at: new Date(now.getTime() - 1000 * 60 * 60 * 5).toISOString() },
   ]
 }
 
@@ -33,6 +42,7 @@ export async function GET() {
         isDemo: true,
         todaySchedules: DEMO_SCHEDULES_TODAY(),
         tomorrowSchedules: DEMO_SCHEDULES_TOMORROW(),
+        newApplications: DEMO_NEW_APPLICATIONS(),
       },
     })
   }
@@ -55,8 +65,7 @@ export async function GET() {
   const today      = now.toISOString().slice(0, 10)
   const tomorrow   = new Date(now.getTime() + 86400000).toISOString().slice(0, 10)
 
-  const [monthApps, inventoryItems, todayRows, tomorrowRows] = await Promise.all([
-    // 이번달 일정 + 작업자 배정 (service_applications 기반)
+  const [monthApps, inventoryItems, todayRows, tomorrowRows, newApps] = await Promise.all([
     service
       .from('service_applications')
       .select('id, assigned_connection_ids')
@@ -66,7 +75,6 @@ export async function GET() {
       .not('construction_date', 'is', null)
       .neq('status', '예약취소'),
 
-    // 재고 현황 (부족 판별은 JS에서)
     service
       .from('inventory')
       .select('current_qty, min_qty')
@@ -74,7 +82,6 @@ export async function GET() {
       .not('min_qty', 'is', null)
       .is('deleted_at', null),
 
-    // 오늘 일정
     service
       .from('service_applications')
       .select('id, construction_date, construction_time, status, care_scope, business_name')
@@ -84,7 +91,6 @@ export async function GET() {
       .neq('status', '예약취소')
       .order('construction_time', { ascending: true, nullsFirst: false }),
 
-    // 내일 일정
     service
       .from('service_applications')
       .select('id, construction_date, construction_time, status, care_scope, business_name')
@@ -93,6 +99,14 @@ export async function GET() {
       .not('construction_date', 'is', null)
       .neq('status', '예약취소')
       .order('construction_time', { ascending: true, nullsFirst: false }),
+
+    service
+      .from('service_applications')
+      .select('id, business_name, care_scope, created_at')
+      .eq('business_id', business.id)
+      .eq('status', '신규')
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
 
   const apps = (monthApps.data ?? []) as { id: string; assigned_connection_ids: string[] | null }[]
@@ -131,8 +145,9 @@ export async function GET() {
       monthScheduleCount,
       monthWorkerCount,
       lowStockCount,
-      todaySchedules:    (todayRows.data    ?? []).map(s => mapSchedule(s as AppRow)),
-      tomorrowSchedules: (tomorrowRows.data ?? []).map(s => mapSchedule(s as AppRow)),
+      todaySchedules:     (todayRows.data    ?? []).map(s => mapSchedule(s as AppRow)),
+      tomorrowSchedules:  (tomorrowRows.data ?? []).map(s => mapSchedule(s as AppRow)),
+      newApplications:    (newApps.data ?? []) as { id: string; business_name: string | null; care_scope: string | null; created_at: string }[],
     },
   })
 }
