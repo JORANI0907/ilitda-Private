@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X } from 'lucide-react'
+import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -12,6 +13,7 @@ import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
 
@@ -62,16 +64,20 @@ const EMPTY_TX = { qty: '', note: '' }
 
 const HELP_SECTIONS = [
   {
-    title: '카테고리 및 품목 추가 방법',
-    content: '상단 "카테고리" 버튼으로 카테고리를 먼저 만들고, "항목 추가" 버튼으로 재고 품목을 등록하세요. 카테고리별로 품목을 구분해 관리할 수 있습니다.',
+    title: '재고 관리란?',
+    content: '청소 현장에서 사용하는 소모품·장비의 수량을 기록하고 관리하는 기능입니다. 재고가 기준치 이하로 내려가면 알림이 표시되어 발주 시점을 놓치지 않을 수 있습니다.',
   },
   {
-    title: '입고 / 출고 / 조정 거래 기록',
-    content: '각 품목 카드의 입고·출고·조정 버튼을 탭해 수량 변동을 기록하세요.\n입고: 재고가 늘어납니다.\n출고: 재고가 줄어듭니다.\n조정: 실제 수량으로 직접 맞춥니다.',
+    title: '카테고리 → 품목 순서로 설정',
+    content: '먼저 상단 "카테고리" 버튼으로 그룹을 만드세요. 예: 청소용품, 장비, 소모품.\n카테고리를 만든 후 "항목 추가" 버튼으로 각 품목을 등록합니다.\n카테고리를 먼저 만들어야 품목을 등록할 수 있습니다.',
   },
   {
-    title: '검색 및 CSV 내보내기',
-    content: '상단 검색창에서 품목명으로 빠르게 찾을 수 있습니다. "CSV" 버튼을 누르면 전체 재고 현황을 엑셀에서 열 수 있는 파일로 내려받습니다.',
+    title: '거래 기록 방법 (입고 / 출고 / 조정)',
+    content: '각 품목 카드에서 버튼을 탭해 수량 변동을 기록하세요.\n\n입고: 새로 구매해서 창고에 들어온 수량. 기존 재고에 더해집니다.\n출고: 현장에서 사용하거나 소비한 수량. 기존 재고에서 빠집니다.\n조정: 실제 재고와 시스템 수량이 맞지 않을 때 수동으로 맞추는 기능. 입력한 숫자가 새 재고량이 됩니다.',
+  },
+  {
+    title: '재고 부족 알림',
+    content: '품목 등록 시 "최소 수량"을 입력해 두면, 현재 재고가 그 기준치 이하로 내려갔을 때 빨간색으로 "수량 부족" 표시가 나타납니다. 상단의 "부족" 필터 버튼을 누르면 부족한 품목만 모아볼 수 있습니다.',
   },
 ]
 
@@ -80,6 +86,7 @@ export default function InventoryPage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
+  const [isDemo, setIsDemo] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [items, setItems] = useState<InventoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -138,6 +145,7 @@ export default function InventoryPage() {
       const res = await fetch('/api/business/inventory')
       const json = await res.json()
       if (!json.success) { setError(json.error ?? '데이터를 불러오지 못했습니다.'); return }
+      setIsDemo(json.isDemo === true)
       setItems(json.data ?? [])
     } catch {
       setError('데이터를 불러오는 중 오류가 발생했습니다.')
@@ -354,22 +362,47 @@ const filteredItems = useMemo(() => items.filter((item) => {
         title="재고 관리"
         level="page"
         action={
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Button size="sm" variant="secondary" onClick={handleExportCSV}>CSV</Button>
+            <HelpIcon
+              title="CSV 내보내기"
+              description="전체 재고 현황을 엑셀에서 열 수 있는 CSV 파일로 다운로드합니다. 이름, 카테고리, 현재 수량, 단위, 최소 수량이 포함됩니다."
+            />
             <Button size="sm" variant="secondary" onClick={() => { setShowCatMgmt(true); setCatError(null); setEditingCat(null); setShowAddCat(false) }}>
               <Settings size={15} />
               카테고리
             </Button>
+            <HelpIcon
+              title="카테고리란?"
+              description="카테고리는 청소용품, 장비, 소모품 등 재고를 분류하는 그룹입니다. 먼저 카테고리를 만들고 그 안에 품목을 추가하세요."
+            />
             <Button size="sm" onClick={() => { setShowAdd(true); setAddForm({ ...EMPTY_ITEM, category: defaultCat }); setAddError(null) }}>
               <Plus size={16} />
               항목 추가
             </Button>
+            <HelpIcon
+              title="품목 추가"
+              description="품목은 특정 청소 용품이나 장비를 의미합니다. 이름, 단위(개/L/kg 등), 최소 수량(부족 알림 기준)을 입력하세요."
+            />
           </div>
         }
       />
 
+      {/* 데모 배너 */}
+      {isDemo && (
+        <div className="flex items-center justify-between gap-3 bg-brand-50 border border-brand-200 rounded-2xl px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-brand-700">데모 모드로 둘러보는 중이에요</p>
+            <p className="text-xs text-brand-600 mt-0.5 break-keep">가입하면 나만의 사업장을 관리할 수 있어요.</p>
+          </div>
+          <Link href="/login/register" className="flex-shrink-0 flex items-center gap-1.5 bg-brand-600 text-white text-xs font-semibold px-3 h-9 rounded-lg hover:bg-brand-700 transition-colors">
+            <LogIn size={14} /> 가입하기
+          </Link>
+        </div>
+      )}
+
       <HelpBanner label="재고 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip>품목을 탭하면 거래 내역을 확인하고 새 거래를 추가할 수 있습니다.</HelpTip>
+      <HelpTip>처음 사용 시 카테고리를 먼저 만든 후 품목을 추가하세요. 각 품목 카드의 입고·출고·조정 버튼으로 수량 변동을 기록할 수 있습니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
@@ -378,6 +411,7 @@ const filteredItems = useMemo(() => items.filter((item) => {
       />
 
       <Input placeholder="재고명 검색…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <HelpTip>품목명으로 검색하거나 위 카테고리 탭을 눌러 분류별로 필터링할 수 있습니다. "부족" 버튼을 누르면 재고가 기준치 이하인 품목만 표시됩니다.</HelpTip>
 
       {/* 카테고리 필터 탭 */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -431,6 +465,12 @@ const filteredItems = useMemo(() => items.filter((item) => {
           description={search || filterCat !== 'all' || showLowOnly ? '검색 조건을 변경해 보세요.' : '항목 추가 버튼을 눌러 재고를 등록하세요.'}
           bordered
         />
+      )}
+
+      {!isLoading && !error && filteredItems.length > 0 && (
+        <HelpTip>
+          입고: 새로 들어온 수량 추가 · 출고: 사용·소비한 수량 차감 · 조정: 실제 재고량으로 직접 맞추기. 아래쪽 화살표(▼)를 누르면 변동 내역을 확인할 수 있습니다.
+        </HelpTip>
       )}
 
       {!isLoading && !error && filteredItems.map((item) => {
