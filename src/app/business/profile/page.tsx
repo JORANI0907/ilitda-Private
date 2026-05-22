@@ -40,11 +40,7 @@ export default function BusinessProfilePage() {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  // 신청 링크 slug 관련 상태
   const [slug, setSlug] = useState('')
-  const [slugInput, setSlugInput] = useState('')
-  const [isSavingSlug, setIsSavingSlug] = useState(false)
-  const [slugError, setSlugError] = useState<string | null>(null)
   const [isCopied, setIsCopied] = useState(false)
 
   // 앱 이름 관련 상태
@@ -66,9 +62,7 @@ export default function BusinessProfilePage() {
         const json = await res.json()
         if (json.success) {
           setData(json.data)
-          const requestSlug = json.data.business?.request_slug ?? ''
-          setSlug(requestSlug)
-          setSlugInput(requestSlug)
+          setSlug(json.data.business?.request_slug ?? '')
           const displayName = json.data.business?.app_display_name ?? ''
           setAppDisplayName(displayName)
           setAppDisplayNameInput(displayName)
@@ -89,37 +83,6 @@ export default function BusinessProfilePage() {
     } finally {
       setIsLoggingOut(false)
       setShowLogoutModal(false)
-    }
-  }
-
-  const handleSaveSlug = async () => {
-    const trimmed = slugInput.trim().toLowerCase()
-    if (!trimmed) {
-      setSlugError('슬러그를 입력해 주세요.')
-      return
-    }
-    if (!/^[a-z0-9-]{3,30}$/.test(trimmed)) {
-      setSlugError('영문 소문자, 숫자, 하이픈만 사용 가능하며 3~30자여야 합니다.')
-      return
-    }
-    setSlugError(null)
-    setIsSavingSlug(true)
-    try {
-      const res = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ request_slug: trimmed }),
-      })
-      const json = await res.json()
-      if (!json.success) {
-        setSlugError(json.error ?? '저장에 실패했습니다.')
-        return
-      }
-      setSlug(trimmed)
-    } catch {
-      setSlugError('네트워크 오류가 발생했습니다.')
-    } finally {
-      setIsSavingSlug(false)
     }
   }
 
@@ -466,45 +429,27 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
-      {/* 신청 링크 설정 */}
+      {/* 신청서 링크 */}
       <Card padding="md">
-        <SectionHeader title="신청 링크 설정" className="mb-3" />
+        <SectionHeader title="신청서 링크" className="mb-3" />
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <Link2 size={16} className="text-text-tertiary shrink-0" />
-            <p className="text-xs text-text-secondary break-all">
-              {slug
-                ? `${typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/${slug}`
-                : '링크를 설정하면 고객이 신청서를 보낼 수 있어요'}
+          {slug ? (
+            <>
+              <div className="flex items-center gap-2.5 bg-surface-sunken rounded-lg px-3 py-2.5">
+                <Link2 size={14} className="text-text-tertiary shrink-0" />
+                <p className="text-xs text-text-secondary break-all flex-1">
+                  {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={handleCopyLink}>
+                {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                {isCopied ? '복사됨' : '링크 복사'}
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-text-tertiary text-center py-1">
+              신청 링크가 설정되지 않았습니다.
             </p>
-          </div>
-
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                placeholder="영문/숫자/하이픈, 3~30자"
-                value={slugInput}
-                onChange={(e) => setSlugInput(e.target.value.toLowerCase())}
-              />
-            </div>
-            <Button size="md" onClick={handleSaveSlug} isLoading={isSavingSlug}>
-              저장
-            </Button>
-          </div>
-
-          {slugError && (
-            <p className="text-sm text-state-danger">{slugError}</p>
-          )}
-
-          {slug && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleCopyLink}
-            >
-              {isCopied ? <Check size={14} /> : <Copy size={14} />}
-              {isCopied ? '복사됨' : '링크 복사'}
-            </Button>
           )}
         </div>
       </Card>
