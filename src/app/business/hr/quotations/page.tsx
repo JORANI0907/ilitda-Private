@@ -14,6 +14,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -199,16 +200,20 @@ function InfoBox({ title, rows }: { title: string; rows: [string, string][] }) {
 
 const HELP_SECTIONS = [
   {
-    title: '견적서 생성 방법',
-    content: '목록에서 신청서를 탭하면 견적서 작성 화면이 열립니다. 신청서가 먼저 등록되어 있어야 견적서를 발행할 수 있습니다.',
+    title: '견적서란?',
+    content: '서비스 금액과 내용을 공식 문서로 고객에게 제공하는 기능입니다. PDF 형태로 생성되어 이메일 또는 SMS 링크로 고객에게 발송됩니다. 발송 이력이 기록되어 이전 견적서도 조회할 수 있습니다.',
   },
   {
-    title: '가격 입력 방식 3가지',
-    content: '항목별 — 품목마다 수량·단가를 입력해 자동 합산합니다.\n합계기준 — VAT 포함 최종 금액을 입력하면 공급가와 VAT를 자동 계산합니다.\n공급가기준 — VAT 제외 금액을 입력하면 VAT와 합계를 자동 계산합니다.',
+    title: '발행 순서',
+    content: '1. 아래 목록에서 신청서를 탭합니다.\n2. 견적서 작성 화면이 열리면 가격 입력 방식을 선택합니다.\n3. 금액과 서비스 항목을 입력합니다.\n4. 공급자 정보(회사 정보)를 입력합니다.\n5. "미리보기"로 최종 확인 후 "견적서 발송"을 누릅니다.\n\n견적서를 발행하려면 먼저 서비스 신청서가 등록되어 있어야 합니다.',
   },
   {
-    title: '이메일·SMS 발송 방법',
-    content: '견적서 작성을 마친 뒤 "견적서 발송" 버튼을 누르면 고객의 이메일과 연락처로 PDF 견적서가 함께 발송됩니다. 발송 전 "미리보기"로 내용을 확인하세요.',
+    title: '가격 방식 3가지 상황별 활용법',
+    content: '항목별: 서비스 항목을 하나씩 나열하고 수량·단가를 입력합니다. 고객이 항목별로 금액을 확인할 수 있어 투명한 견적에 적합합니다.\n\n합계기준: VAT 포함 최종 금액 하나만 입력합니다. 간단한 견적이나 패키지 요금제에 사용합니다.\n\n공급가기준: 공급가액과 부가세를 분리해서 입력합니다. 세금계산서 발행이 필요한 사업자 고객에게 사용합니다.',
+  },
+  {
+    title: '발송 방법 (이메일 / SMS)',
+    content: '"견적서 발송" 버튼을 누르면 PDF가 자동으로 생성됩니다.\n이메일: 고객 이메일로 PDF 파일이 첨부되어 발송됩니다.\nSMS: 고객 연락처로 견적서 링크가 문자로 발송됩니다.\n\n발송 전 반드시 "미리보기" 버튼으로 내용을 확인하세요. 한번 발송한 견적서는 수정할 수 없습니다.',
   },
 ]
 
@@ -562,7 +567,7 @@ export default function QuotationsPage() {
       </div>
 
       <HelpBanner label="견적서 발행 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip>견적서는 신청서를 선택한 후 발행할 수 있습니다.</HelpTip>
+      <HelpTip>견적서를 발행하려면 먼저 서비스 신청서가 등록되어 있어야 합니다. 아래 목록에서 신청서를 탭하면 견적서 작성 화면이 열립니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
@@ -577,6 +582,7 @@ export default function QuotationsPage() {
         size="sm"
         onChange={e => handleSearchChange(e.target.value)}
       />
+      <HelpTip>발송완료(초록): 이미 견적서를 발송한 신청서 · 미발송(주황): 아직 견적서를 발송하지 않은 신청서</HelpTip>
 
       {/* 목록 */}
       {loading ? (
@@ -655,6 +661,7 @@ export default function QuotationsPage() {
 
             {/* 공급자 정보 */}
             <EditorSection title="공급자 정보">
+              <HelpTip className="mb-3">회사 정보와 도장은 한 번 입력하고 "기본값 저장"을 누르면 이후 견적서에 자동으로 들어갑니다.</HelpTip>
               <div className="flex items-center justify-between mb-3">
                 <span />
                 <div className="flex items-center gap-2">
@@ -738,18 +745,24 @@ export default function QuotationsPage() {
             {/* 견적 항목 */}
             <EditorSection title="견적 항목">
               <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-                <div className="flex rounded-lg bg-surface-sunken border border-border-subtle p-0.5 gap-0.5">
-                  {(['itemized', 'total', 'supply'] as PricingMode[]).map(m => (
-                    <button key={m} type="button"
-                      onClick={() => { setPricingMode(m); setDirectAmount(0) }}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                        pricingMode === m
-                          ? 'bg-surface text-text-primary shadow-flat'
-                          : 'text-text-tertiary hover:text-text-secondary'
-                      }`}>
-                      {m === 'itemized' ? '항목별' : m === 'total' ? '합계기준' : '공급가기준'}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex rounded-lg bg-surface-sunken border border-border-subtle p-0.5 gap-0.5">
+                    {(['itemized', 'total', 'supply'] as PricingMode[]).map(m => (
+                      <button key={m} type="button"
+                        onClick={() => { setPricingMode(m); setDirectAmount(0) }}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                          pricingMode === m
+                            ? 'bg-surface text-text-primary shadow-flat'
+                            : 'text-text-tertiary hover:text-text-secondary'
+                        }`}>
+                        {m === 'itemized' ? '항목별' : m === 'total' ? '합계기준' : '공급가기준'}
+                      </button>
+                    ))}
+                  </div>
+                  <HelpIcon
+                    title="가격 입력 방식"
+                    description={'항목별: 서비스 항목을 하나씩 나열하고 각각 가격을 입력합니다. 고객이 항목별로 금액을 확인할 수 있습니다.\n\n합계기준: VAT 포함 총 금액 하나만 입력합니다. 간단한 견적에 사용합니다.\n\n공급가기준: 공급가액과 부가세를 분리해서 입력합니다. 세금계산서 발행이 필요한 사업자 고객에게 사용합니다.'}
+                  />
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" onClick={handleSaveDraft} disabled={savingDraft}
@@ -907,9 +920,15 @@ export default function QuotationsPage() {
                   {sending ? '발송 중…' : '견적서 발송'}
                 </Button>
               </div>
-              <p className="text-[11px] text-text-tertiary mt-2 text-center">
-                PDF 생성 → 이메일 · SMS 발송
-              </p>
+              <div className="flex items-center justify-center gap-1.5 mt-2">
+                <p className="text-[11px] text-text-tertiary text-center">
+                  PDF 생성 → 이메일 · SMS 발송
+                </p>
+                <HelpIcon
+                  title="발송 방법"
+                  description={'이메일로 발송 시 PDF 파일이 첨부되어 고객 이메일로 전달됩니다.\n\nSMS 발송 시 견적서 링크가 고객 연락처로 문자 발송됩니다.\n\n발송 전 "미리보기"로 내용을 꼭 확인하세요. 발송 후에는 수정이 불가합니다.'}
+                />
+              </div>
             </div>
 
             {/* 발송 이력 */}
