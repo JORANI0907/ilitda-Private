@@ -130,7 +130,7 @@ export const DEFAULT_PANEL_FIELDS: PanelFieldDef[] = [
   { key: 'account_number',  label: '계좌번호', placeholder: '은행 + 계좌번호', type: 'text',   section: 'payment'  },
   { key: 'supply_amount',   label: '공급가액', placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
   { key: 'vat',             label: '부가세',   placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
-  { key: 'supply_total',    label: '공급대가', placeholder: '',                type: 'number', section: 'payment', readOnly: true },
+  { key: 'supply_total',    label: '총액',     placeholder: '',                type: 'number', section: 'payment', readOnly: true },
   { key: 'balance',         label: '잔금',     placeholder: '0',               type: 'number', section: 'payment', readOnly: true },
   { key: 'spare_payment_1', label: '커스텀 필드 1', placeholder: '',           type: 'text',   section: 'payment', defaultHidden: true },
   { key: 'spare_payment_2', label: '커스텀 필드 2', placeholder: '',           type: 'text',   section: 'payment', defaultHidden: true },
@@ -158,6 +158,7 @@ export const SMS_TOKEN_META: Record<string, { preview: string }> = {
   account_number:    { preview: '국민은행 123-456' },
   supply_amount:     { preview: '500,000원' },
   vat:               { preview: '50,000원' },
+  supply_total:      { preview: '550,000원' },
   balance:           { preview: '450,000원' },
 }
 
