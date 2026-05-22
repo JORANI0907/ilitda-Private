@@ -1,9 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PROTECTED_PREFIXES = ['/business', '/worker']
-const PUBLIC_PATHS = ['/login', '/api/auth']
-
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -28,18 +25,8 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // 세션 갱신 트리거 — 반드시 이 위치에서만 호출
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
-
-  if (isProtected && !isPublic && !user) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    return NextResponse.redirect(loginUrl)
-  }
+  // 세션 쿠키 갱신만 수행 — 게스트 리다이렉트 없음
+  await supabase.auth.getUser()
 
   return supabaseResponse
 }
