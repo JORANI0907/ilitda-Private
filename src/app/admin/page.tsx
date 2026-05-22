@@ -6,6 +6,8 @@ import { Users, CreditCard, Clock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
 
 interface DashboardData {
   totalAccounts: number
@@ -13,10 +15,26 @@ interface DashboardData {
   pendingPayments: number
 }
 
+const DASHBOARD_HELP_SECTIONS = [
+  {
+    title: '총 가입 계정',
+    content: '일잇다에 가입한 사업자 계정의 총 수입니다. 계정 목록에서 각 계정의 상세 정보를 확인할 수 있어요.',
+  },
+  {
+    title: '활성 플랜',
+    content: 'Free 플랜을 제외하고 유료 플랜(Basic, Pro, Max)을 사용 중인 계정 수입니다. 플랜 변경은 계정 상세 화면에서 할 수 있어요.',
+  },
+  {
+    title: '대기 중 입금',
+    content: '아직 입금 확인이 완료되지 않은 결제 건수입니다. 입금 관리 화면에서 상태를 업데이트해주세요.',
+  },
+]
+
 export default function AdminDashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -76,6 +94,14 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <SectionHeader title="관리자 대시보드" level="page" />
+
+      <HelpBanner label="관리자 대시보드 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="관리자 대시보드 사용법"
+        sections={DASHBOARD_HELP_SECTIONS}
+      />
 
       <div className="flex flex-col gap-3">
         {STAT_CARDS.map(card => (
