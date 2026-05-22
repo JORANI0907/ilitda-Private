@@ -9,6 +9,9 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Modal } from '@/components/ui/Modal'
 import { Badge } from '@/components/ui/Badge'
 import { SectionHeader } from '@/components/ui/SectionHeader'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -98,6 +101,8 @@ const fmtDate = (s: string) => s.slice(0, 10)
 
 export default function ContractsPage() {
   const router = useRouter()
+  const { planType, isLoading: planLoading } = usePlanType()
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const [contracts, setContracts] = useState<ContractRow[]>([])
   const [loading, setLoading]     = useState(true)
@@ -197,6 +202,43 @@ export default function ContractsPage() {
     setForm(prev => ({ ...prev, [key]: value }))
 
   // ─── 렌더링 ──────────────────────────────────────────────────
+  if (!planLoading && !canUseFeature(planType, 'contracts')) {
+    return (
+      <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <SectionHeader title="계약서 관리" level="page" className="flex-1" />
+        </div>
+        <UpgradeModal
+          open={true}
+          onClose={() => setUpgradeOpen(false)}
+          featureName="계약서 관리"
+          requiredPlan="max"
+          currentPlan={planType}
+        />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">맥스 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+        {upgradeOpen && (
+          <UpgradeModal
+            open={upgradeOpen}
+            onClose={() => setUpgradeOpen(false)}
+            featureName="계약서 관리"
+            requiredPlan="max"
+            currentPlan={planType}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
 
