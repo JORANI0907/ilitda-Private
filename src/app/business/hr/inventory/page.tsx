@@ -9,6 +9,9 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { HelpBanner } from '@/components/ui/HelpBanner'
+import { HelpDrawer } from '@/components/ui/HelpDrawer'
+import { HelpTip } from '@/components/ui/HelpTip'
 import { usePlanType } from '@/hooks/usePlanType'
 import { canUseFeature } from '@/lib/plan-features'
 
@@ -57,9 +60,25 @@ const SELECT_CLASS =
 const EMPTY_ITEM = { name: '', unit: '', min_qty: '', category: '' }
 const EMPTY_TX = { qty: '', note: '' }
 
+const HELP_SECTIONS = [
+  {
+    title: '카테고리 및 품목 추가 방법',
+    content: '상단 "카테고리" 버튼으로 카테고리를 먼저 만들고, "항목 추가" 버튼으로 재고 품목을 등록하세요. 카테고리별로 품목을 구분해 관리할 수 있습니다.',
+  },
+  {
+    title: '입고 / 출고 / 조정 거래 기록',
+    content: '각 품목 카드의 입고·출고·조정 버튼을 탭해 수량 변동을 기록하세요.\n입고: 재고가 늘어납니다.\n출고: 재고가 줄어듭니다.\n조정: 실제 수량으로 직접 맞춥니다.',
+  },
+  {
+    title: '검색 및 CSV 내보내기',
+    content: '상단 검색창에서 품목명으로 빠르게 찾을 수 있습니다. "CSV" 버튼을 누르면 전체 재고 현황을 엑셀에서 열 수 있는 파일로 내려받습니다.',
+  },
+]
+
 export default function InventoryPage() {
   const { planType, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [items, setItems] = useState<InventoryItem[]>([])
@@ -347,6 +366,15 @@ const filteredItems = useMemo(() => items.filter((item) => {
             </Button>
           </div>
         }
+      />
+
+      <HelpBanner label="재고 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
+      <HelpTip>품목을 탭하면 거래 내역을 확인하고 새 거래를 추가할 수 있습니다.</HelpTip>
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title="재고 관리 사용법"
+        sections={HELP_SECTIONS}
       />
 
       <Input placeholder="재고명 검색…" value={search} onChange={(e) => setSearch(e.target.value)} />
