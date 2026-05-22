@@ -1,9 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { ShoppingBag, Megaphone, BarChart2, Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
 
 const FEATURES = [
   {
@@ -27,6 +32,37 @@ const FEATURES = [
 ]
 
 export default function MarketPage() {
+  const { planType, isLoading: planLoading } = usePlanType()
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+
+  if (!planLoading && !canUseFeature(planType, 'marketplace')) {
+    return (
+      <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
+        <SectionHeader title="마켓" level="page" />
+        <UpgradeModal
+          open={true}
+          onClose={() => setUpgradeOpen(false)}
+          featureName="마켓플레이스"
+          requiredPlan="pro"
+          currentPlan={planType}
+        />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">프로 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+        {upgradeOpen && (
+          <UpgradeModal
+            open={upgradeOpen}
+            onClose={() => setUpgradeOpen(false)}
+            featureName="마켓플레이스"
+            requiredPlan="pro"
+            currentPlan={planType}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
       <SectionHeader title="마켓" level="page" />
