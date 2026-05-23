@@ -109,7 +109,7 @@ export default function WorkersPage() {
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  const { planType, isLoading: planLoading } = usePlanType()
+  const { planType, features, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const fetchConnections = useCallback(async () => {
@@ -207,7 +207,7 @@ export default function WorkersPage() {
   }
 
   function handleOpenAdd() {
-    const limit = getFeatureLimit(planType, 'worker_limit')
+    const limit = getFeatureLimit(planType, 'worker_limit', features)
     if (!planLoading && connections.length >= limit) {
       setUpgradeOpen(true)
       return
@@ -228,13 +228,13 @@ export default function WorkersPage() {
             level="page"
             description="함께 일하는 작업자를 관리합니다"
           />
-          {!planLoading && getFeatureLimit(planType, 'worker_limit') !== Infinity && (
+          {!planLoading && getFeatureLimit(planType, 'worker_limit', features) !== Infinity && (
             <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${
-              connections.length >= getFeatureLimit(planType, 'worker_limit')
+              connections.length >= getFeatureLimit(planType, 'worker_limit', features)
                 ? 'bg-state-danger/10 text-state-danger font-medium'
                 : 'bg-surface-sunken text-text-tertiary'
             }`}>
-              {connections.length}/{getFeatureLimit(planType, 'worker_limit')}명
+              {connections.length}/{getFeatureLimit(planType, 'worker_limit', features)}명
             </span>
           )}
         </div>
