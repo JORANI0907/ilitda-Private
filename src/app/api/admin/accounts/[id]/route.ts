@@ -188,3 +188,65 @@ export async function PUT(
 
   return NextResponse.json({ success: true, data: null })
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<NextResponse<ApiResponse<null>>> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
+  }
+
+  const isAdmin = await checkAdmin(user.id)
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
+  }
+
+  const service = createServiceClient()
+
+  const { data: business, error: fetchError } = await service
+    .from('businesses')
+    .select('id, profile_id')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (fetchError) {
+    return NextResponse.json({ success: false, error: fetchError.message }, { status: 500 })
+  }
+
+  if (!business) {
+    return NextResponse.json({ success: false, error: '계정을 찾을 수 없습니다.' }, { status: 404 })
+  }
+
+  const profileId = business.profile_id
+
+  const { error: bizDeleteError } = await service
+    .from('businesses')
+    .delete()
+    .eq('id', id)
+
+  if (bizDeleteError) {
+    return NextResponse.json({ success: false, error: bizDeleteError.message }, { status: 500 })
+  }
+
+  const { error: profileDeleteError } = await service
+    .from('profiles')
+    .delete()
+    .eq('id', profileId)
+
+  if (profileDeleteError) {
+    return NextResponse.json({ success: false, error: profileDeleteError.message }, { status: 500 })
+  }
+
+  const { error: authDeleteError } = await service.auth.admin.deleteUser(profileId)
+
+  if (authDeleteError) {
+    return NextResponse.json({ success: false, error: authDeleteError.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, data: null })
+}
