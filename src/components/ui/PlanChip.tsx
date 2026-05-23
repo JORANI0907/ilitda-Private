@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useContext } from 'react'
 import { useRouter } from 'next/navigation'
+import { AuthContext } from '@/contexts/AuthContext'
 
 type PlanType = 'free' | 'basic' | 'pro' | 'max'
 
@@ -23,7 +24,6 @@ function isPlanType(value: string): value is PlanType {
   return ['free', 'basic', 'pro', 'max'].includes(value)
 }
 
-// fetch 없이 plan prop만으로 렌더링하는 순수 컴포넌트
 interface PlanBadgeProps {
   plan: string
 }
@@ -39,38 +39,17 @@ export function PlanBadge({ plan }: PlanBadgeProps) {
   )
 }
 
-// 마운트 시 /api/business/plan 조회 후 플랜 뱃지 렌더링, 클릭 시 플랜 설정 페이지 이동
 export function PlanChip() {
   const router = useRouter()
-  const [plan, setPlan] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const auth = useContext(AuthContext)
 
-  useEffect(() => {
-    const fetchPlan = async () => {
-      try {
-        const res = await fetch('/api/business/plan')
-        if (!res.ok) return
-        const json = await res.json() as { success: boolean; data?: { plan: string; plan_expires_at: string | null } }
-        if (json.success && json.data) {
-          setPlan(json.data.plan)
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlan()
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchPlan() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [])
-
-  if (isLoading) {
+  if (auth?.isLoading) {
     return (
       <span className="w-12 h-5 bg-surface-sunken rounded-full animate-pulse inline-block" />
     )
   }
 
+  const plan = auth?.business?.plan_type
   if (!plan) return null
 
   const safePlan: PlanType = isPlanType(plan) ? plan : 'free'
