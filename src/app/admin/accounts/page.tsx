@@ -15,12 +15,14 @@ interface BusinessAccount {
   id: string
   business_name: string
   registration_number: string | null
+  address: string | null
   plan: string
   plan_expires_at: string | null
   created_at: string
   profile: {
     name: string
     phone: string
+    email: string | null
   } | null
 }
 
@@ -79,29 +81,41 @@ function AccountCard({
         <div className="flex flex-col gap-1 text-sm text-text-secondary">
           {account.profile && (
             <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-12 shrink-0">대표자</span>
+              <span className="text-text-tertiary text-xs w-14 shrink-0">대표자</span>
               <span>{account.profile.name}</span>
+            </div>
+          )}
+          {account.profile?.email && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-14 shrink-0">이메일</span>
+              <span className="truncate">{account.profile.email}</span>
             </div>
           )}
           {account.profile?.phone && (
             <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-12 shrink-0">전화번호</span>
+              <span className="text-text-tertiary text-xs w-14 shrink-0">전화번호</span>
               <span>{account.profile.phone}</span>
             </div>
           )}
           {account.registration_number && (
             <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-12 shrink-0">사업자번호</span>
+              <span className="text-text-tertiary text-xs w-14 shrink-0">사업자번호</span>
               <span>{account.registration_number}</span>
             </div>
           )}
+          {account.address && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-text-tertiary text-xs w-14 shrink-0">주소</span>
+              <span className="truncate">{account.address}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
-            <span className="text-text-tertiary text-xs w-12 shrink-0">가입일</span>
+            <span className="text-text-tertiary text-xs w-14 shrink-0">가입일</span>
             <span>{formatDate(account.created_at)}</span>
           </div>
           {account.plan !== 'free' && account.plan_expires_at && (
             <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-12 shrink-0">만료일</span>
+              <span className="text-text-tertiary text-xs w-14 shrink-0">만료일</span>
               <span>{account.plan_expires_at}</span>
             </div>
           )}
