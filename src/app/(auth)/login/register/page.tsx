@@ -3,19 +3,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Lock, Phone, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail } from 'lucide-react'
+import { User, Lock, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { HelpTip } from '@/components/ui/HelpTip'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 
 type EmailStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+type BizVerifyStatus = 'idle' | 'loading' | 'valid' | 'invalid' | 'error'
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '')
   if (digits.length <= 3) return digits
   if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`
+}
+
+function formatBizNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length <= 3) return digits
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`
 }
 
 export default function RegisterPage() {
@@ -40,6 +48,8 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState('')
   const [address, setAddress] = useState('')
   const [businessNumber, setBusinessNumber] = useState('')
+  const [bizVerifyStatus, setBizVerifyStatus] = useState<BizVerifyStatus>('idle')
+  const [bizVerifyMessage, setBizVerifyMessage] = useState('')
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -83,6 +93,30 @@ export default function RegisterPage() {
     if (err) { setError(err); return }
     setError(null)
     setStep(2)
+  }
+
+  async function handleVerifyBiz() {
+    if (!businessNumber.trim()) return
+    setBizVerifyStatus('loading')
+    setBizVerifyMessage('')
+    try {
+      const res = await fetch('/api/auth/check-biz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessNumber: businessNumber.trim() }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        setBizVerifyStatus('error')
+        setBizVerifyMessage(json.message ?? '조회 중 오류가 발생했습니다.')
+        return
+      }
+      setBizVerifyStatus(json.valid ? 'valid' : 'invalid')
+      setBizVerifyMessage(json.message ?? '')
+    } catch {
+      setBizVerifyStatus('error')
+      setBizVerifyMessage('네트워크 오류가 발생했습니다.')
+    }
   }
 
   async function handleSendOtp() {
@@ -375,16 +409,71 @@ export default function RegisterPage() {
             />
           )}
 
-          {/* 사업자번호 (선택) */}
+          {/* 사업자번호 + 인증 (사업자일 때만) */}
           {role === 'business' && (
-            <Input
-              label="사업자번호 (선택)"
-              type="text"
-              placeholder="000-00-00000"
-              value={businessNumber}
-              onChange={(e) => setBusinessNumber(e.target.value)}
-              name="business_number"
-            />
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <p className="text-sm font-medium text-text-primary">사업자등록번호 (선택)</p>
+                <HelpIcon
+                  title="사업자등록번호 인증"
+                  description="국세청 데이터를 통해 사업자번호의 유효성을 확인합니다. 세금계산서 발행 시 필요합니다."
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="000-00-00000"
+                    value={businessNumber}
+                    maxLength={12}
+                    onChange={(e) => {
+                      const formatted = formatBizNumber(e.target.value)
+                      setBusinessNumber(formatted)
+                      setBizVerifyStatus('idle')
+                      setBizVerifyMessage('')
+                    }}
+                    className={`block w-full h-12 rounded-md bg-surface border text-text-primary placeholder:text-text-tertiary px-4 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors ${
+                      bizVerifyStatus === 'valid'
+                        ? 'border-state-success'
+                        : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error'
+                        ? 'border-state-danger'
+                        : 'border-border'
+                    }`}
+                    name="business_number"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleVerifyBiz}
+                  isLoading={bizVerifyStatus === 'loading'}
+                  disabled={businessNumber.replace(/-/g, '').length < 10 || bizVerifyStatus === 'loading'}
+                  className="flex-shrink-0 whitespace-nowrap"
+                >
+                  {bizVerifyStatus === 'loading' ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <><Search size={14} className="mr-1" />인증</>
+                  )}
+                </Button>
+              </div>
+              {bizVerifyStatus === 'valid' && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-success">
+                  <CheckCircle2 size={13} />
+                  <span>{bizVerifyMessage}</span>
+                </div>
+              )}
+              {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-danger">
+                  <XCircle size={13} />
+                  <span>{bizVerifyMessage}</span>
+                </div>
+              )}
+              {bizVerifyStatus === 'idle' && businessNumber && (
+                <HelpTip className="mt-1">번호 입력 후 &apos;인증&apos; 버튼을 눌러 유효성을 확인하세요.</HelpTip>
+              )}
+            </div>
           )}
 
           {/* 주소 (선택) */}
@@ -412,8 +501,8 @@ export default function RegisterPage() {
 
       <p className="text-center text-xs text-text-tertiary leading-normal px-4 pb-4">
         가입하면{' '}
-        <span className="text-text-secondary underline">이용약관</span> 및{' '}
-        <span className="text-text-secondary underline">개인정보처리방침</span>에
+        <Link href="/terms" className="text-text-secondary underline">이용약관</Link> 및{' '}
+        <Link href="/privacy" className="text-text-secondary underline">개인정보처리방침</Link>에
         동의한 것으로 간주됩니다.
       </p>
     </div>
