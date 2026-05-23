@@ -118,6 +118,8 @@ export default function NewApplicationPage() {
   const [error, setError] = useState<string | null>(null)
   const [vatEnabled, setVatEnabled] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [customFieldDefs, setCustomFieldDefs] = useState<Array<{key: string; label: string; placeholder: string}>>([])
+  const [spareValues, setSpareValues] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/admin/settings/fields')
@@ -127,6 +129,15 @@ export default function NewApplicationPage() {
         const { formConfig: fc, panelConfig: pc } = json.data as { formConfig: FormConfig; panelConfig: PanelConfig }
         setFormConfig({ ...DEFAULT_FORM_CONFIG, ...fc, show_fields: { ...DEFAULT_FORM_CONFIG.show_fields, ...fc.show_fields } })
         if (pc) setPanelConfig(pc)
+        const customKeys: string[] = fc.custom_form_fields ?? []
+        setCustomFieldDefs(customKeys.map(key => {
+          const def = DEFAULT_PANEL_FIELDS.find(f => f.key === key)
+          return {
+            key,
+            label: pc?.fields?.[key]?.label ?? def?.label ?? key,
+            placeholder: pc?.fields?.[key]?.placeholder ?? def?.placeholder ?? '',
+          }
+        }))
       })
       .catch(() => {})
   }, [])
@@ -168,6 +179,18 @@ export default function NewApplicationPage() {
       payload.vat = vatAmount
       payload.supply_amount = totalAmount
       payload.balance = balanceAmount
+      if (customFieldDefs.length > 0) {
+        const lines: string[] = []
+        for (const def of customFieldDefs) {
+          const val = (spareValues[def.key] ?? '').trim()
+          if (val) lines.push(`${def.label}: ${val}`)
+        }
+        if (lines.length > 0) {
+          const appendix = `\n[추가 정보]\n${lines.join('\n')}`
+          const base = form.admin_notes.trim()
+          payload.admin_notes = base ? base + appendix : appendix.trim()
+        }
+      }
       const res = await fetch('/api/admin/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -408,6 +431,22 @@ export default function NewApplicationPage() {
             <ST value={form.admin_request_notes} onChange={setF('admin_request_notes')} placeholder="관리자 추가 요청사항" />
           </div>
         </FormSection>
+
+        {/* 추가 정보 (커스텀 필드) */}
+        {customFieldDefs.length > 0 && (
+          <FormSection color="gray" icon={<Settings2 size={14} />} title="추가 정보">
+            {customFieldDefs.map(def => (
+              <div key={def.key}>
+                <FL>{def.label}</FL>
+                <SI
+                  value={spareValues[def.key] ?? ''}
+                  onChange={e => setSpareValues(prev => ({ ...prev, [def.key]: e.target.value }))}
+                  placeholder={def.placeholder || def.label}
+                />
+              </div>
+            ))}
+          </FormSection>
+        )}
 
         {/* 기타 */}
         <FormSection color="gray" icon={<Settings2 size={14} />} title="기타">
