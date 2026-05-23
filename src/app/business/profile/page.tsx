@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Sparkles,
   Bell, LogOut, ArrowLeftRight, ChevronRight,
-  CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck,
+  CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck, BookOpen,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -19,7 +19,8 @@ import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
 import type { Profile, Business, Worker } from '@/types'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
-import { canUseFeature, toPlanType } from '@/lib/plan-features'
+import { canUseFeature, toPlanType, PLAN_FEATURES } from '@/lib/plan-features'
+import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -46,6 +47,7 @@ export default function BusinessProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const [showHelpDrawer, setShowHelpDrawer] = useState(false)
+  const [planFeatures, setPlanFeatures] = useState<Record<PlanType, PlanFeatureMap>>(PLAN_FEATURES)
 
   const [slug, setSlug] = useState('')
   const [isCopied, setIsCopied] = useState(false)
@@ -62,20 +64,29 @@ export default function BusinessProfilePage() {
     const fetchProfile = async () => {
       setIsLoading(true)
       try {
-        const res = await fetch('/api/profile')
-        if (res.status === 401) {
+        const [profileRes, featuresRes] = await Promise.all([
+          fetch('/api/profile'),
+          fetch('/api/plan-features', { cache: 'no-store' }),
+        ])
+        if (profileRes.status === 401) {
           setIsUnauthorized(true)
           setShowLoginPrompt(true)
           return
         }
-        const json = await res.json()
-        if (json.success) {
-          setData(json.data)
-          setSlug(json.data.business?.request_slug ?? '')
-          const displayName = json.data.business?.app_display_name ?? ''
+        const [profileJson, featuresJson] = await Promise.all([
+          profileRes.json(),
+          featuresRes.json(),
+        ])
+        if (profileJson.success) {
+          setData(profileJson.data)
+          setSlug(profileJson.data.business?.request_slug ?? '')
+          const displayName = profileJson.data.business?.app_display_name ?? ''
           setAppDisplayName(displayName)
           setAppDisplayNameInput(displayName)
           setDataLoaded(true)
+        }
+        if (featuresJson.success && featuresJson.data) {
+          setPlanFeatures(featuresJson.data as Record<PlanType, PlanFeatureMap>)
         }
       } finally {
         setIsLoading(false)
@@ -107,7 +118,7 @@ export default function BusinessProfilePage() {
   }
 
   const handleSaveDisplayName = async () => {
-    if (!canUseFeature(toPlanType(data?.business?.plan_type), 'app_name_custom')) {
+    if (!canUseFeature(toPlanType(data?.business?.plan_type), 'app_name_custom', planFeatures)) {
       setAppNameUpgradeOpen(true)
       return
     }
@@ -457,7 +468,7 @@ export default function BusinessProfilePage() {
       <Card padding="md">
         <div className="flex items-center gap-2 mb-3">
           <SectionHeader title="앱 이름 설정" />
-          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom') && (
+          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures) && (
             <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
               맥스 플랜
             </span>
@@ -474,7 +485,7 @@ export default function BusinessProfilePage() {
                 value={appDisplayNameInput}
                 onChange={(e) => setAppDisplayNameInput(e.target.value)}
                 maxLength={20}
-                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom')}
+                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures)}
               />
             </div>
             <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>
@@ -563,6 +574,34 @@ export default function BusinessProfilePage() {
                 <div>
                   <span className="text-sm text-text-primary">입금 확인</span>
                   <p className="text-xs text-text-tertiary mt-0.5">무통장입금 신청 승인 · 거절</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-text-tertiary" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
+              onClick={() => router.push('/admin/policy')}
+            >
+              <div className="flex items-center gap-3">
+                <BookOpen size={16} className="text-text-tertiary" />
+                <div>
+                  <span className="text-sm text-text-primary">운영 정책</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">플랜 결제 정책 · 처리 기준</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-text-tertiary" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
+              onClick={() => router.push('/admin/plans')}
+            >
+              <div className="flex items-center gap-3">
+                <SlidersHorizontal size={16} className="text-text-tertiary" />
+                <div>
+                  <span className="text-sm text-text-primary">플랜 기능 관리</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">플랜별 기능 권한 수정 · 통제</p>
                 </div>
               </div>
               <ChevronRight size={16} className="text-text-tertiary" />
