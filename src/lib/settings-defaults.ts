@@ -4,7 +4,7 @@ export const NOTIFY_TYPES = [
   '예약확정알림', '예약1일전알림', '예약당일알림', '서비스완료알림',
   '결제알림', '결제완료알림', '결제완료알림(잔금)', '계산서발행완료알림',
   '예약금 입금완료 알림', '예약금환급완료알림', '예약취소알림',
-  'A/S방문알림', '방문견적알림',
+  'A/S방문알림', '방문견적알림', '폴더링크알림',
 ] as const
 
 export const DEFAULT_MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
@@ -21,6 +21,7 @@ export const DEFAULT_MSG_TEMPLATE: Record<string, (p: Record<string, string>) =>
   '예약취소알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.`,
   'A/S방문알림':          (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}`,
   '방문견적알림':         (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}`,
+  '폴더링크알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업 사진 폴더를 공유드립니다.\n작업전/후 사진 확인: ${p.folderUrl}\n문의: ${p.contact}`,
 }
 
 export const DEFAULT_FORM_CONFIG: FormConfig = {
@@ -162,6 +163,7 @@ export const SMS_TOKEN_META: Record<string, { preview: string }> = {
   vat:               { preview: '50,000원' },
   supply_total:      { preview: '550,000원' },
   balance:           { preview: '450,000원' },
+  drive_folder_url:  { preview: 'https://drive.google.com/drive/folders/예시링크' },
 }
 
 // 커스텀 알림 템플릿의 {fieldKey} 토큰을 실제 데이터로 치환
@@ -185,6 +187,7 @@ export function applyNotificationTemplate(
     supply_amount:     app.supply_amount ? `${Number(app.supply_amount).toLocaleString('ko-KR')}원` : '',
     vat:               app.vat ? `${Number(app.vat).toLocaleString('ko-KR')}원` : '',
     balance:           app.balance ? `${Number(app.balance).toLocaleString('ko-KR')}원` : '',
+    drive_folder_url:  String(app.drive_folder_url ?? ''),
   }
   return Object.entries(values).reduce(
     (msg, [key, val]) => msg.replaceAll(`{${key}}`, val),

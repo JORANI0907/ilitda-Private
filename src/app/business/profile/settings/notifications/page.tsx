@@ -113,14 +113,17 @@ function NotificationRuleCard({
 
   const activeSectionVars = sections.find(s => s.id === activeSection)?.vars ?? []
 
+  const isFolderLink = rule.type === '폴더링크알림'
+
   // DEFAULT_MSG_TEMPLATE은 영문 단축키 파라미터를 쓰므로 더미 맵 구성
   const dummyParams: Record<string, string> = {
-    name:    '스타벅스 판교점',
-    date:    '2025-01-15',
-    time:    '09:00',
-    amount:  '500,000',
-    account: '국민은행 123-456',
-    contact: '031-759-4877',
+    name:      '스타벅스 판교점',
+    date:      '2025-01-15',
+    time:      '09:00',
+    amount:    '500,000',
+    account:   '국민은행 123-456',
+    contact:   '031-759-4877',
+    folderUrl: 'https://drive.google.com/drive/folders/예시링크',
   }
   const defaultPreview = DEFAULT_MSG_TEMPLATE[rule.type]
     ? DEFAULT_MSG_TEMPLATE[rule.type](dummyParams)
@@ -204,7 +207,15 @@ function NotificationRuleCard({
 
       {rule.enabled && (
         <div className="flex flex-col gap-3">
-          {/* 수동/자동 모드 */}
+          {/* 폴더링크알림 전용 안내 */}
+          {isFolderLink && (
+            <HelpTip>
+              서비스 관리 화면의 "폴더 링크 발송" 버튼 클릭 시 전송되는 문자입니다. 수동 발송 전용이며 자동 발송은 지원되지 않습니다.
+            </HelpTip>
+          )}
+
+          {/* 수동/자동 모드 — 폴더링크알림은 항상 수동이므로 숨김 */}
+          {!isFolderLink && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-text-tertiary">발송 방식</span>
@@ -230,9 +241,10 @@ function NotificationRuleCard({
               ))}
             </div>
           </div>
+          )}
 
           {/* 자동 트리거 설정 */}
-          {rule.mode === 'auto' && rule.trigger && (
+          {!isFolderLink && rule.mode === 'auto' && rule.trigger && (
             <div className="flex flex-col gap-2 bg-surface-sunken rounded-xl p-3">
               <p className="text-xs text-text-tertiary font-medium">기준: 서비스일</p>
               <div className="flex gap-2 items-center">
@@ -347,10 +359,26 @@ function NotificationRuleCard({
                         <span className="text-[9px] text-brand-600/60 leading-none mt-0.5">{v.preview}</span>
                       </button>
                     ))}
-                    {activeSectionVars.length === 0 && (
+                    {activeSectionVars.length === 0 && !isFolderLink && (
                       <p className="text-[11px] text-text-tertiary py-1">표시할 변수가 없습니다.</p>
                     )}
                   </div>
+
+                  {/* 폴더링크알림 전용 — 드라이브 링크 특수 변수 칩 */}
+                  {isFolderLink && (
+                    <div className="mt-1">
+                      <p className="text-[10px] font-medium text-teal-600 mb-1.5">폴더 링크 특수 변수</p>
+                      <button
+                        type="button"
+                        onMouseDown={e => e.preventDefault()}
+                        onClick={() => insertVariable('{drive_folder_url}')}
+                        className="inline-flex flex-col items-start px-2.5 py-1.5 rounded-xl bg-teal-600/10 text-teal-700 hover:bg-teal-600/20 transition-colors active:scale-95"
+                      >
+                        <span className="text-[11px] font-semibold leading-none">폴더 링크</span>
+                        <span className="text-[9px] text-teal-600/60 leading-none mt-0.5">drive.google.com/…</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* 텍스트에어리어 */}
@@ -558,13 +586,21 @@ export default function NotificationsSettingsPage() {
 
       {/* 알림 규칙 카드 목록 */}
       {config.rules.map((rule, i) => (
-        <NotificationRuleCard
-          key={rule.type}
-          rule={rule}
-          onChange={(updated) => handleRuleChange(i, updated)}
-          smsVars={smsVars}
-          planType={planType}
-        />
+        <div key={rule.type}>
+          {rule.type === '폴더링크알림' && (
+            <div className="flex items-center gap-2 pt-1 pb-2">
+              <div className="flex-1 border-t border-border-subtle" />
+              <span className="text-[11px] text-text-tertiary whitespace-nowrap">폴더 링크 발송 문자</span>
+              <div className="flex-1 border-t border-border-subtle" />
+            </div>
+          )}
+          <NotificationRuleCard
+            rule={rule}
+            onChange={(updated) => handleRuleChange(i, updated)}
+            smsVars={smsVars}
+            planType={planType}
+          />
+        </div>
       ))}
 
       {saveError   && <p className="text-sm text-state-danger  text-center">{saveError}</p>}
