@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -32,10 +33,10 @@ interface TermsState {
 
 // ─── 약관 항목 ────────────────────────────────────────────────
 const TERMS_ITEMS = [
-  { key: 'terms' as const,    label: '이용약관 동의',           required: true },
-  { key: 'privacy' as const,  label: '개인정보처리방침 동의',   required: true },
-  { key: 'location' as const, label: '위치정보 이용 동의',      required: false },
-  { key: 'matching' as const, label: '매칭플랫폼 이용 고지 확인', required: false },
+  { key: 'terms' as const,    label: '이용약관 동의',           required: true,  href: '/terms' },
+  { key: 'privacy' as const,  label: '개인정보처리방침 동의',   required: true,  href: '/privacy' },
+  { key: 'location' as const, label: '위치정보 이용 동의',      required: false, href: null },
+  { key: 'matching' as const, label: '매칭플랫폼 이용 고지 확인', required: false, href: null },
 ]
 
 // ─── 단계 표시 ────────────────────────────────────────────────
@@ -422,16 +423,20 @@ export default function SetupPage() {
             </label>
 
             {TERMS_ITEMS.map(item => (
-              <label key={item.key} className="flex items-center gap-3 cursor-pointer py-1">
+              <div key={item.key} className="flex items-center gap-3 py-1">
                 <input
                   type="checkbox"
                   checked={terms[item.key]}
                   onChange={e =>
                     setTerms(p => ({ ...p, [item.key]: e.target.checked }))
                   }
-                  className="w-5 h-5 rounded accent-brand-600 cursor-pointer"
+                  className="w-5 h-5 rounded accent-brand-600 cursor-pointer flex-shrink-0"
                 />
-                <span className="text-sm text-text-primary flex-1">
+                <label
+                  htmlFor={`term-${item.key}`}
+                  className="text-sm text-text-primary flex-1 cursor-pointer"
+                  onClick={() => setTerms(p => ({ ...p, [item.key]: !p[item.key] }))}
+                >
                   {item.label}
                   {item.required && (
                     <span className="text-state-danger ml-1">(필수)</span>
@@ -439,8 +444,18 @@ export default function SetupPage() {
                   {!item.required && (
                     <span className="text-text-tertiary ml-1">(선택)</span>
                   )}
-                </span>
-              </label>
+                </label>
+                {item.href && (
+                  <Link
+                    href={item.href}
+                    target="_blank"
+                    className="text-xs text-brand-600 underline flex-shrink-0"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    보기
+                  </Link>
+                )}
+              </div>
             ))}
           </div>
         )}

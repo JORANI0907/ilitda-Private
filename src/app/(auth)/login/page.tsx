@@ -116,8 +116,8 @@ export default function LoginPage() {
 
       <p className="text-center text-xs text-text-tertiary leading-normal px-4">
         로그인하면{' '}
-        <span className="text-text-secondary underline">이용약관</span> 및{' '}
-        <span className="text-text-secondary underline">개인정보처리방침</span>에
+        <Link href="/terms" className="text-text-secondary underline">이용약관</Link> 및{' '}
+        <Link href="/privacy" className="text-text-secondary underline">개인정보처리방침</Link>에
         동의한 것으로 간주됩니다.
       </p>
     </div>
