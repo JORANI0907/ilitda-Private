@@ -24,7 +24,7 @@ export function usePlanType(): UsePlanTypeReturn {
       .then((res) => res.json())
       .then((json) => {
         if (cancelled) return
-        const raw = json.data?.business?.plan_type as string | null | undefined
+        const raw = (json.data?.business?.plan ?? json.data?.business?.plan_type) as string | null | undefined
         setPlanType(toPlanType(raw))
       })
       .catch(() => {

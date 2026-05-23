@@ -49,7 +49,7 @@ export function PlanChip() {
     )
   }
 
-  const plan = auth?.business?.plan_type
+  const plan = auth?.business?.plan ?? auth?.business?.plan_type
   if (!plan) return null
 
   const safePlan: PlanType = isPlanType(plan) ? plan : 'free'
