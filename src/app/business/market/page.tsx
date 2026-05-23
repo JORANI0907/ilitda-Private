@@ -51,13 +51,13 @@ const HELP_SECTIONS = [
 ]
 
 export default function MarketPage() {
-  const { planType, isLoading: planLoading } = usePlanType()
+  const { planType, features, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  if (!planLoading && !isGuest && !canUseFeature(planType, 'marketplace')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'marketplace', features)) {
     return (
       <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
         <SectionHeader title="마켓" level="page" />
