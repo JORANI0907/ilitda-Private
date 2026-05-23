@@ -7,8 +7,8 @@ import {
   CreditCard, ClipboardList, Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { DEFAULT_PANEL_FIELDS, SECTION_BORDER_COLOR, SECTION_TITLE_COLOR } from '@/lib/settings-defaults'
-import type { PanelConfig } from '@/types'
+import { DEFAULT_PANEL_FIELDS, DEFAULT_FORM_CONFIG, SECTION_BORDER_COLOR, SECTION_TITLE_COLOR } from '@/lib/settings-defaults'
+import type { PanelConfig, FormConfig } from '@/types'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
@@ -113,17 +113,26 @@ export default function NewApplicationPage() {
   const router = useRouter()
   const [form, setForm] = useState<Form>(INITIAL)
   const [panelConfig, setPanelConfig] = useState<PanelConfig | null>(null)
+  const [formConfig, setFormConfig] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [vatEnabled, setVatEnabled] = useState(true)
   const [helpOpen, setHelpOpen] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/settings/panel')
+    fetch('/api/admin/settings/fields')
       .then(r => r.json())
-      .then(json => { if (json.success && json.data?.panel_config) setPanelConfig(json.data.panel_config) })
+      .then(json => {
+        if (!json.success || !json.data) return
+        const { formConfig: fc, panelConfig: pc } = json.data as { formConfig: FormConfig; panelConfig: PanelConfig }
+        setFormConfig({ ...DEFAULT_FORM_CONFIG, ...fc, show_fields: { ...DEFAULT_FORM_CONFIG.show_fields, ...fc.show_fields } })
+        if (pc) setPanelConfig(pc)
+      })
       .catch(() => {})
   }, [])
+
+  const shown = (key: string): boolean =>
+    formConfig.show_fields[key as keyof typeof formConfig.show_fields] !== false
 
   const setF = (key: keyof Form) => (v: string) => setForm(p => ({ ...p, [key]: v }))
   const setFE = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -198,12 +207,12 @@ export default function NewApplicationPage() {
               content: '업체명과 연락처(*)는 반드시 입력해야 저장할 수 있습니다.\n나머지 항목은 나중에 수정할 수 있으니 아는 정보부터 입력하세요.',
             },
             {
-              title: '서비스 유형별 차이',
-              content: '• 1회성케어: 한 번만 방문하는 단발성 서비스입니다. 시공 날짜·시간을 입력하세요.\n• 정기딥케어: 주기적으로 방문하는 정기 딥 클리닝 서비스입니다.\n• 정기엔드케어: 주기적으로 방문하는 정기 엔드 클리닝 서비스입니다.',
-            },
-            {
               title: '저장 후 알림 발송',
               content: '저장 버튼을 누르면 신청서가 등록됩니다.\n고객에게 알림을 발송하려면 저장 후 상세 화면에서 "알림 발송" 버튼을 이용하세요.',
+            },
+            {
+              title: '데이터는 자산입니다',
+              content: '업체명·연락처·주소·결제 방법 등 저장된 정보가 많을수록 나중에 관리가 훨씬 편해집니다.\n알림 발송, 견적서 작성, 계약서 첨부, 작업자 배정까지 모두 저장된 데이터를 기반으로 자동화됩니다.\n처음에 꼼꼼히 입력해두면 반복 작업이 크게 줄어듭니다.',
             },
           ]}
         />
@@ -221,28 +230,40 @@ export default function NewApplicationPage() {
             <FL required>{lbl('business_name')}</FL>
             <SI value={form.business_name} onChange={setFE('business_name')} placeholder="예: 스타벅스 강남점" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <FL>{lbl('owner_name')}</FL>
-              <SI value={form.owner_name} onChange={setFE('owner_name')} placeholder="홍길동" />
+          {shown('owner_name') && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <FL>{lbl('owner_name')}</FL>
+                <SI value={form.owner_name} onChange={setFE('owner_name')} placeholder="홍길동" />
+              </div>
+              <div>
+                <FL>{lbl('platform_nickname')}</FL>
+                <SI value={form.platform_nickname} onChange={setFE('platform_nickname')} placeholder="닉네임" />
+              </div>
             </div>
+          )}
+          {!shown('owner_name') && (
             <div>
               <FL>{lbl('platform_nickname')}</FL>
               <SI value={form.platform_nickname} onChange={setFE('platform_nickname')} placeholder="닉네임" />
             </div>
-          </div>
+          )}
           <div>
             <FL required>{lbl('phone')}</FL>
             <SI type="tel" value={form.phone} onChange={setFE('phone')} placeholder="010-0000-0000" />
           </div>
-          <div>
-            <FL>{lbl('email')}</FL>
-            <SI type="email" value={form.email} onChange={setFE('email')} placeholder="example@email.com" />
-          </div>
-          <div>
-            <FL>{lbl('business_number')}</FL>
-            <SI value={form.business_number} onChange={setFE('business_number')} placeholder="000-00-00000" />
-          </div>
+          {shown('email') && (
+            <div>
+              <FL>{lbl('email')}</FL>
+              <SI type="email" value={form.email} onChange={setFE('email')} placeholder="example@email.com" />
+            </div>
+          )}
+          {shown('business_number') && (
+            <div>
+              <FL>{lbl('business_number')}</FL>
+              <SI value={form.business_number} onChange={setFE('business_number')} placeholder="000-00-00000" />
+            </div>
+          )}
           <div>
             <FL>{lbl('address')}</FL>
             <SI value={form.address} onChange={setFE('address')} placeholder="주소 입력" />
@@ -267,24 +288,34 @@ export default function NewApplicationPage() {
         {/* 현장 정보 */}
         <HelpTip>작업자가 현장에 도착했을 때 필요한 출입 정보를 입력하세요.</HelpTip>
         <FormSection color="green" icon={<MapPin size={14} />} title="현장 정보">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <FL>{lbl('elevator')}</FL>
-              <SS value={form.elevator} onChange={setF('elevator')} options={opts('elevator')} placeholder="선택" />
+          {(shown('elevator') || shown('parking')) && (
+            <div className={shown('elevator') && shown('parking') ? 'grid grid-cols-2 gap-2' : ''}>
+              {shown('elevator') && (
+                <div>
+                  <FL>{lbl('elevator')}</FL>
+                  <SS value={form.elevator} onChange={setF('elevator')} options={opts('elevator')} placeholder="선택" />
+                </div>
+              )}
+              {shown('parking') && (
+                <div>
+                  <FL>{lbl('parking')}</FL>
+                  <SS value={form.parking} onChange={setF('parking')} options={opts('parking')} placeholder="선택" />
+                </div>
+              )}
             </div>
+          )}
+          {shown('building_access') && (
             <div>
-              <FL>{lbl('parking')}</FL>
-              <SS value={form.parking} onChange={setF('parking')} options={opts('parking')} placeholder="선택" />
+              <FL>{lbl('building_access')}</FL>
+              <SS value={form.building_access} onChange={setF('building_access')} options={opts('building_access')} placeholder="선택" />
             </div>
-          </div>
-          <div>
-            <FL>{lbl('building_access')}</FL>
-            <SS value={form.building_access} onChange={setF('building_access')} options={opts('building_access')} placeholder="선택" />
-          </div>
-          <div>
-            <FL>{lbl('access_method')}</FL>
-            <SI value={form.access_method} onChange={setFE('access_method')} placeholder="예: 비밀번호 입력" />
-          </div>
+          )}
+          {shown('access_method') && (
+            <div>
+              <FL>{lbl('access_method')}</FL>
+              <SI value={form.access_method} onChange={setFE('access_method')} placeholder="예: 비밀번호 입력" />
+            </div>
+          )}
           <div>
             <FL>{lbl('door_password')}</FL>
             <SI value={form.door_password} onChange={setFE('door_password')} placeholder="예: 1234#" />
@@ -306,10 +337,12 @@ export default function NewApplicationPage() {
             <FL>{lbl('payment_method')}</FL>
             <SS value={form.payment_method} onChange={setF('payment_method')} options={opts('payment_method')} placeholder="선택" />
           </div>
-          <div>
-            <FL>{lbl('account_number')}</FL>
-            <SI value={form.account_number} onChange={setFE('account_number')} placeholder="은행 + 계좌번호" />
-          </div>
+          {shown('account_number') && (
+            <div>
+              <FL>{lbl('account_number')}</FL>
+              <SI value={form.account_number} onChange={setFE('account_number')} placeholder="은행 + 계좌번호" />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <FL>단가 (원)</FL>
