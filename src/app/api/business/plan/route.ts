@@ -13,8 +13,29 @@ interface PlanRequestBody {
 }
 
 const PLAN_AMOUNTS: Record<string, number> = {
-  basic: 49000,
-  pro: 99000,
+  basic: 9900,
+  pro: 14900,
+  max: 25000,
+}
+
+const PLAN_ORDER: Record<string, number> = {
+  free: 0, basic: 1, pro: 2, max: 3,
+}
+
+type RequestType = 'upgrade' | 'renewal' | 'downgrade'
+
+function getRequestType(currentPlan: string, newPlan: string): RequestType {
+  const curr = PLAN_ORDER[currentPlan] ?? 0
+  const next = PLAN_ORDER[newPlan] ?? 1
+  if (next > curr) return 'upgrade'
+  if (next === curr) return 'renewal'
+  return 'downgrade'
+}
+
+const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
+  upgrade: '⬆️ 업그레이드',
+  renewal: '🔄 갱신',
+  downgrade: '⬇️ 하향',
 }
 
 async function sendSlack(text: string): Promise<void> {
@@ -92,13 +113,16 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
 
   const { data: business, error: bizError } = await service
     .from('businesses')
-    .select('id, business_name')
+    .select('id, business_name, plan')
     .eq('profile_id', user.id)
     .maybeSingle()
 
   if (bizError || !business) {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
+
+  const currentPlan = business.plan ?? 'free'
+  const requestType = getRequestType(currentPlan, plan_name)
 
   const { error: insertError } = await service
     .from('payments')
@@ -108,13 +132,17 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>>
       amount,
       depositor_name: depositor_name.trim(),
       status: 'pending',
+      current_plan: currentPlan,
+      request_type: requestType,
     })
 
   if (insertError) {
     return NextResponse.json({ success: false, error: insertError.message }, { status: 500 })
   }
 
-  await sendSlack(`💳 *플랜 신청* | ${business.business_name} - ${plan_name} - ${depositor_name.trim()}`)
+  await sendSlack(
+    `💳 *플랜 신청* | ${business.business_name} - ${REQUEST_TYPE_LABEL[requestType]} ${currentPlan} → ${plan_name} - 입금자: ${depositor_name.trim()}`
+  )
 
   return NextResponse.json({ success: true }, { status: 201 })
 }
