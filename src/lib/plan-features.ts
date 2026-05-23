@@ -18,7 +18,7 @@ export const PLAN_PRICES: Record<PlanType, number> = {
 const PLAN_ORDER: PlanType[] = ['free', 'basic', 'pro', 'max']
 
 // ─── 기능별 플랜 접근 권한 ────────────────────────────────────────
-interface PlanFeatureMap {
+export interface PlanFeatureMap {
   sms_daily_limit:    number
   sms_auto_dispatch:  boolean
   sms_custom_template: boolean
@@ -81,17 +81,31 @@ type NumericFeatureKey = {
 }[keyof PlanFeatureMap]
 
 /**
- * 현재 플랜이 해당 boolean 기능을 사용할 수 있는지 반환
+ * 현재 플랜이 해당 boolean 기능을 사용할 수 있는지 반환.
+ * dynamicFeatures를 전달하면 DB에서 가져온 동적 설정을 사용하고,
+ * 생략하면 하드코딩된 PLAN_FEATURES를 fallback으로 사용.
  */
-export function canUseFeature(plan: PlanType, feature: BooleanFeatureKey): boolean {
-  return PLAN_FEATURES[plan][feature] as boolean
+export function canUseFeature(
+  plan: PlanType,
+  feature: BooleanFeatureKey,
+  dynamicFeatures?: Record<PlanType, PlanFeatureMap>,
+): boolean {
+  const featureMap = dynamicFeatures ?? PLAN_FEATURES
+  return (featureMap[plan]?.[feature] as boolean) ?? false
 }
 
 /**
- * 현재 플랜의 숫자형 한도 반환
+ * 현재 플랜의 숫자형 한도 반환.
+ * dynamicFeatures를 전달하면 DB에서 가져온 동적 설정을 사용하고,
+ * 생략하면 하드코딩된 PLAN_FEATURES를 fallback으로 사용.
  */
-export function getFeatureLimit(plan: PlanType, feature: NumericFeatureKey): number {
-  return PLAN_FEATURES[plan][feature] as number
+export function getFeatureLimit(
+  plan: PlanType,
+  feature: NumericFeatureKey,
+  dynamicFeatures?: Record<PlanType, PlanFeatureMap>,
+): number {
+  const featureMap = dynamicFeatures ?? PLAN_FEATURES
+  return (featureMap[plan]?.[feature] as number) ?? 0
 }
 
 /**
