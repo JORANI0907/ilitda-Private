@@ -18,9 +18,9 @@ import {
   PANEL_SECTIONS,
   SMS_TOKEN_META,
 } from '@/lib/settings-defaults'
-import { toPlanType, canUseFeature } from '@/lib/plan-features'
+import { toPlanType, canUseFeature, PLAN_FEATURES } from '@/lib/plan-features'
 import type { NotificationConfig, NotificationRule, PanelConfig } from '@/types'
-import type { PlanType } from '@/lib/plan-features'
+import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
 
 const SEND_TIME_OPTIONS = Array.from({ length: 17 }, (_, i) => {
   const h = (i + 6).toString().padStart(2, '0')
@@ -77,11 +77,13 @@ function NotificationRuleCard({
   onChange,
   smsVars,
   planType,
+  features,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
   smsVars: SmsVar[]
   planType: PlanType
+  features: Record<PlanType, PlanFeatureMap>
 }) {
   const [useCustomTemplate, setUseCustomTemplate] = useState(
     rule.template !== null && rule.template !== undefined,
@@ -94,8 +96,8 @@ function NotificationRuleCard({
     requiredPlan: PlanType
   } | null>(null)
 
-  const canAutoDispatch  = canUseFeature(planType, 'sms_auto_dispatch')
-  const canCustomTemplate = canUseFeature(planType, 'sms_custom_template')
+  const canAutoDispatch  = canUseFeature(planType, 'sms_auto_dispatch', features)
+  const canCustomTemplate = canUseFeature(planType, 'sms_custom_template', features)
 
   const sections = PANEL_SECTIONS
     .map(s => ({
@@ -421,6 +423,7 @@ export default function NotificationsSettingsPage() {
   const [config, setConfig]           = useState<NotificationConfig | null>(null)
   const [panelConfig, setPanelConfig]  = useState<PanelConfig | null>(null)
   const [planType, setPlanType]        = useState<PlanType>('free')
+  const [features, setFeatures]        = useState<Record<PlanType, PlanFeatureMap>>(PLAN_FEATURES)
   const [isLoading, setIsLoading]     = useState(true)
   const [isSaving, setIsSaving]       = useState(false)
   const [saveError, setSaveError]     = useState<string | null>(null)
@@ -433,13 +436,15 @@ export default function NotificationsSettingsPage() {
     const load = async () => {
       setIsLoading(true)
       try {
-        const [notifRes, fieldsRes] = await Promise.all([
+        const [notifRes, fieldsRes, featuresRes] = await Promise.all([
           fetch('/api/admin/settings/notifications'),
           fetch('/api/admin/settings/fields'),
+          fetch('/api/plan-features', { cache: 'no-store' }),
         ])
-        const [notifJson, fieldsJson] = await Promise.all([
+        const [notifJson, fieldsJson, featuresJson] = await Promise.all([
           notifRes.json(),
           fieldsRes.json(),
+          featuresRes.json(),
         ])
         if (notifJson.success) {
           const { plan_type, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string }
@@ -448,6 +453,9 @@ export default function NotificationsSettingsPage() {
         }
         if (fieldsJson.success && fieldsJson.data?.panelConfig) {
           setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)
+        }
+        if (featuresJson.success && featuresJson.data) {
+          setFeatures(featuresJson.data as Record<PlanType, PlanFeatureMap>)
         }
       } finally {
         setIsLoading(false)
@@ -599,6 +607,7 @@ export default function NotificationsSettingsPage() {
             onChange={(updated) => handleRuleChange(i, updated)}
             smsVars={smsVars}
             planType={planType}
+            features={features}
           />
         </div>
       ))}
