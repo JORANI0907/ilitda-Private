@@ -32,6 +32,7 @@ interface AccountDetail {
   profile: {
     name: string
     phone: string
+    email: string | null
   } | null
   worker: {
     account_bank: string | null
@@ -46,6 +47,7 @@ interface EditForm {
   address: string
   representative_name: string
   name: string
+  email: string
   phone: string
   plan: PlanType
   plan_expires_at: string
@@ -103,6 +105,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
     address: '',
     representative_name: '',
     name: '',
+    email: '',
     phone: '',
     plan: 'free',
     plan_expires_at: '',
@@ -126,6 +129,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
         address: data.business.address ?? '',
         representative_name: data.business.representative_name ?? '',
         name: data.profile?.name ?? '',
+        email: data.profile?.email ?? '',
         phone: data.profile?.phone ?? '',
         plan: (data.business.plan as PlanType) ?? 'free',
         plan_expires_at: data.business.plan_expires_at
@@ -160,6 +164,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
           address: form.address || null,
           representative_name: form.representative_name || null,
           name: form.name || null,
+          email: form.email || null,
           phone: form.phone || null,
           plan: form.plan,
           plan_expires_at: form.plan_expires_at || null,
@@ -188,6 +193,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
         address: detail.business.address ?? '',
         representative_name: detail.business.representative_name ?? '',
         name: detail.profile?.name ?? '',
+        email: detail.profile?.email ?? '',
         phone: detail.profile?.phone ?? '',
         plan: (detail.business.plan as PlanType) ?? 'free',
         plan_expires_at: detail.business.plan_expires_at
@@ -295,6 +301,13 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
           value={form.name}
           onChange={(e) => setField('name', e.target.value)}
           placeholder="이름"
+        />
+        <Input
+          label="이메일"
+          type="email"
+          value={form.email}
+          onChange={(e) => setField('email', e.target.value)}
+          placeholder="example@email.com"
         />
         <Input
           label="전화번호"
