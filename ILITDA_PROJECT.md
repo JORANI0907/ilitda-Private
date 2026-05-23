@@ -278,6 +278,21 @@ function handleAction() {
 }
 ```
 
+### 결제 정책 (무통장 입금)
+
+> 관리자 참조 페이지: `/admin/policy`
+
+| 신청 유형 | 조건 | 만료일 계산 | 관리자 처리 |
+|-----------|------|------------|------------|
+| 업그레이드 | 신청 플랜 > 현재 플랜 | 확인일 + 30일 (기존 기간 소멸) | 즉시 처리 |
+| 갱신 | 신청 플랜 = 현재 플랜 | 현재 만료일 + 30일 (만료 시 확인일 + 30일) | 즉시 처리 |
+| 하향 | 신청 플랜 < 현재 플랜 | 확인일 + 30일 | **현재 만료일 이후 처리** |
+
+- `payments.request_type`: `'upgrade' | 'renewal' | 'downgrade'`
+- `payments.current_plan`: 신청 시점의 현재 플랜 (히스토리 추적용)
+- 결제 수단: 무통장 입금 전용 (자동이체 없음)
+- 관련 파일: `api/business/plan/route.ts`, `api/admin/payments/route.ts`, `admin/payments/page.tsx`, `business/settings/plan/page.tsx`
+
 ---
 
 ## 인증 & 세션
