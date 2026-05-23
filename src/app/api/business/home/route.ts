@@ -138,16 +138,19 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      businessName:        business.business_name,
-      monthScheduleCount,
-      monthWorkerCount,
-      lowStockCount,
-      todaySchedules:     (todayRows.data    ?? []).map(s => mapSchedule(s as AppRow)),
-      tomorrowSchedules:  (tomorrowRows.data ?? []).map(s => mapSchedule(s as AppRow)),
-      newApplications:    (newApps.data ?? []) as { id: string; business_name: string | null; care_scope: string | null; created_at: string }[],
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        businessName:        business.business_name,
+        monthScheduleCount,
+        monthWorkerCount,
+        lowStockCount,
+        todaySchedules:     (todayRows.data    ?? []).map(s => mapSchedule(s as AppRow)),
+        tomorrowSchedules:  (tomorrowRows.data ?? []).map(s => mapSchedule(s as AppRow)),
+        newApplications:    (newApps.data ?? []) as { id: string; business_name: string | null; care_scope: string | null; created_at: string }[],
+      },
     },
-  })
+    { headers: { 'Cache-Control': 'private, max-age=0, stale-while-revalidate=30' } },
+  )
 }
