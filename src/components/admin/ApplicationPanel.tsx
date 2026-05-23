@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink } from 'lucide-react'
+import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users } from 'lucide-react'
 import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
 import {
@@ -633,8 +633,12 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           })}
 
           {/* 작업자 배정 */}
-          <SectionTitle>작업자 배정</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle p-3 shadow-flat flex flex-col gap-2">
+          <SectionTitle color="violet">작업자 배정</SectionTitle>
+          <div className="bg-violet-50 rounded-2xl border-2 border-violet-200 p-3 shadow-flat flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Users size={14} className="text-violet-500" />
+              <span className="text-xs font-semibold text-violet-700">작업자 선택</span>
+            </div>
             <select
               value=""
               onChange={(e) => {
@@ -645,7 +649,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                 handleSaveWorkers(next)
               }}
               disabled={savingWorkers || connections.length === 0}
-              className="w-full h-9 rounded-lg bg-surface border border-border text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:opacity-50"
+              className="w-full h-9 rounded-lg bg-white border border-violet-200 text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 disabled:opacity-50"
             >
               <option value="">
                 {connections.length === 0 ? '연결된 작업자 없음' : '작업자 추가…'}
@@ -664,7 +668,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                   const conn = connections.find(c => c.id === id)
                   if (!conn) return null
                   return (
-                    <span key={id} className="inline-flex items-center gap-1 text-xs text-text-secondary bg-surface-sunken rounded-full px-2.5 py-1 border border-border-subtle">
+                    <span key={id} className="inline-flex items-center gap-1 text-xs text-violet-700 bg-violet-100 rounded-full px-2.5 py-1 border border-violet-200">
                       {conn.display_name}
                       <button
                         type="button"
@@ -674,86 +678,109 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                           handleSaveWorkers(next)
                         }}
                         disabled={savingWorkers}
-                        className="text-text-tertiary hover:text-state-danger transition-colors disabled:opacity-40"
+                        className="text-violet-400 hover:text-state-danger transition-colors disabled:opacity-40"
                       >
                         <X size={10} />
                       </button>
                     </span>
                   )
                 })}
-                {savingWorkers && <span className="text-[11px] text-text-tertiary">저장 중…</span>}
+                {savingWorkers && <span className="text-[11px] text-violet-400">저장 중…</span>}
               </div>
             )}
           </div>
 
           {/* 구글 드라이브 */}
-          <SectionTitle>작업 폴더 (Google Drive)</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle p-3 shadow-flat flex flex-col gap-2">
+          <SectionTitle color="teal">작업 폴더 (Google Drive)</SectionTitle>
+          <div className="bg-teal-50 rounded-2xl border-2 border-teal-200 p-3 shadow-flat flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <FolderOpen size={14} className="text-teal-500" />
+              <span className="text-xs font-semibold text-teal-700">Google Drive</span>
+            </div>
             {driveUrl ? (
               <>
                 <a
                   href={driveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-brand-600 font-medium hover:underline"
+                  className="flex items-center gap-2 text-sm text-teal-700 font-medium hover:underline"
                 >
                   <FolderOpen size={15} />
                   폴더 열기 (작업전 / 작업후)
                   <ExternalLink size={13} className="opacity-60" />
                 </a>
-                <p className="text-xs text-text-tertiary">링크 아는 누구나 업로드 가능 · 작업자에게 링크를 공유하세요</p>
+                <p className="text-xs text-teal-600/70">링크 아는 누구나 업로드 가능 · 작업자에게 링크를 공유하세요</p>
                 <Button size="sm" variant="ghost" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
                   폴더 재생성
                 </Button>
               </>
             ) : (
               <>
-                <p className="text-xs text-text-tertiary">각 고객 폴더(작업전/후)가 생성되며, 알림으로 링크를 쉽게 발송할 수 있습니다.</p>
-                <Button size="sm" variant="secondary" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
-                  <FolderOpen size={14} />
+                <p className="text-xs text-teal-600/70">각 고객 폴더(작업전/후)가 생성되며, 알림으로 링크를 쉽게 발송할 수 있습니다.</p>
+                <button
+                  type="button"
+                  onClick={handleCreateDriveFolder}
+                  disabled={isDriveLoading}
+                  className="w-full h-9 rounded-lg bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {isDriveLoading ? (
+                    <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <FolderOpen size={14} />
+                  )}
                   작업 폴더 생성
-                </Button>
+                </button>
               </>
             )}
             {driveError && <p className="text-xs text-state-danger">{driveError}</p>}
           </div>
 
           {/* 알림 발송 */}
-          <SectionTitle>알림 발송 (SMS)</SectionTitle>
-          <div className="bg-surface rounded-2xl border border-border-subtle p-3 shadow-flat flex flex-col gap-2">
+          <SectionTitle color="amber">알림 발송 (SMS)</SectionTitle>
+          <div className="bg-amber-50 rounded-2xl border-2 border-amber-200 p-3 shadow-flat flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Megaphone size={14} className="text-amber-500" />
+              <span className="text-xs font-semibold text-amber-700">SMS 알림</span>
+            </div>
             <select
               value={notifyType}
               onChange={(e) => setNotifyType(e.target.value)}
-              className="w-full h-10 rounded-lg bg-surface border border-border text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              className="w-full h-10 rounded-lg bg-white border border-amber-200 text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
             >
               {NOTIFY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <Button
-              size="sm"
-              variant="secondary"
+            <button
+              type="button"
               onClick={handleNotify}
-              isLoading={isSendingNotify}
-              fullWidth
+              disabled={isSendingNotify}
+              className="w-full h-9 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
-              <Megaphone size={14} />
+              {isSendingNotify ? (
+                <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Megaphone size={14} />
+              )}
               {form.phone || '연락처 없음'}으로 발송
-            </Button>
+            </button>
             {notifyError && <p className="text-xs text-state-danger">{notifyError}</p>}
 
             {/* 폴더 링크 보내기 */}
             {driveUrl && (
-              <div className="border-t border-border-subtle pt-2 flex flex-col gap-1.5">
-                <p className="text-xs text-text-tertiary break-keep">폴더 링크 보내기 — 작업 사진 폴더 링크를 고객 연락처로 문자 발송합니다.</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
+              <div className="border-t border-amber-200 pt-2 flex flex-col gap-1.5">
+                <p className="text-xs text-amber-700/70 break-keep">폴더 링크 보내기 — 작업 사진 폴더 링크를 고객 연락처로 문자 발송합니다.</p>
+                <button
+                  type="button"
                   onClick={handleSendFolderLink}
-                  isLoading={isSendingFolderLink}
-                  fullWidth
+                  disabled={isSendingFolderLink}
+                  className="w-full h-9 rounded-lg bg-white hover:bg-amber-100 active:bg-amber-200 text-amber-700 border border-amber-300 text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
-                  <FolderOpen size={14} />
+                  {isSendingFolderLink ? (
+                    <span className="inline-block w-4 h-4 border-2 border-amber-300 border-t-amber-600 rounded-full animate-spin" />
+                  ) : (
+                    <FolderOpen size={14} />
+                  )}
                   {folderLinkSent ? '발송 완료!' : `${form.phone || '연락처 없음'}으로 폴더 링크 발송`}
-                </Button>
+                </button>
                 {folderLinkError && <p className="text-xs text-state-danger">{folderLinkError}</p>}
               </div>
             )}
