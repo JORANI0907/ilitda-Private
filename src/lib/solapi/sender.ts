@@ -16,7 +16,7 @@ function buildAuth(): string {
 
 // 1단계: 발신번호 등록 요청 → Solapi가 해당 번호로 OTP 발송
 export async function requestSenderVerification(phoneNumber: string): Promise<string> {
-  const res = await fetch(BASE, {
+  const res = await fetch(`${BASE}/requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: buildAuth() },
     body: JSON.stringify({ phoneNumber, memo: '일잇다 발신번호 인증' }),
@@ -32,7 +32,7 @@ export async function requestSenderVerification(phoneNumber: string): Promise<st
 
 // 2단계: OTP 검증 → 승인 완료
 export async function verifySenderRegistration(uniqueId: string, otp: string): Promise<void> {
-  const res = await fetch(`${BASE}/verify`, {
+  const res = await fetch(`${BASE}/requests/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: buildAuth() },
     body: JSON.stringify({ uniqueId, otp }),
