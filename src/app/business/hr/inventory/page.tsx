@@ -83,7 +83,7 @@ const HELP_SECTIONS = [
 ]
 
 export default function InventoryPage() {
-  const { planType, isLoading: planLoading } = usePlanType()
+  const { planType, features, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(true)
@@ -331,7 +331,7 @@ const filteredItems = useMemo(() => items.filter((item) => {
   const lowCount = items.filter((i) => i.min_qty !== null && i.current_qty <= i.min_qty).length
   const defaultCat = categories[0]?.name ?? ''
 
-  if (!planLoading && !isGuest && !canUseFeature(planType, 'inventory')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'inventory', features)) {
     return (
       <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
         <SectionHeader title="재고 관리" level="page" />
