@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, GripVertical, Plus, X, SlidersHorizontal } from 'lucide-react'
+import { ArrowLeft, GripVertical, Plus, X, SlidersHorizontal, RotateCcw, AlertTriangle } from 'lucide-react'
 import {
   DndContext, closestCenter,
   KeyboardSensor, PointerSensor, TouchSensor,
@@ -363,10 +363,12 @@ export default function FieldsSettingsPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [editOrder, setEditOrder] = useState(false)
   const [showHelpDrawer, setShowHelpDrawer] = useState(false)
+  const [resetModalOpen, setResetModalOpen] = useState(false)
 
   const [formShowFields, setFormShowFields] = useState<Record<string, boolean>>(DEFAULT_FORM_CONFIG.show_fields)
   const [workerNotifyFields, setWorkerNotifyFields] = useState<string[]>(DEFAULT_FORM_CONFIG.worker_notify_fields)
@@ -500,6 +502,35 @@ export default function FieldsSettingsPage() {
     }
   }
 
+  async function handleReset() {
+    setIsResetting(true)
+    try {
+      const res = await fetch('/api/admin/settings/fields', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formConfig: DEFAULT_FORM_CONFIG,
+          panelConfig: { fields: {}, order: { sections: DEFAULT_SECTION_ORDER, fields: DEFAULT_FIELD_ORDER } },
+        }),
+      })
+      const json = await res.json()
+      if (!json.success) return
+      setFormShowFields({ ...DEFAULT_FORM_CONFIG.show_fields })
+      setWorkerNotifyFields([...DEFAULT_FORM_CONFIG.worker_notify_fields])
+      setPaymentOptions([...DEFAULT_FORM_CONFIG.payment_options])
+      setHeroSubtitle(DEFAULT_FORM_CONFIG.hero_subtitle)
+      setCustomFormFields([])
+      setPanelOverrides({})
+      setSectionOrder([...DEFAULT_SECTION_ORDER])
+      setFieldOrder(buildDefaultFieldOrder())
+      setEditOrder(false)
+      setResetModalOpen(false)
+      router.refresh()
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 px-4 pt-6">
@@ -558,7 +589,11 @@ export default function FieldsSettingsPage() {
         필드 이름을 변경하면 SMS 알림 변수 목록에도 자동 반영됩니다.
       </HelpTip>
 
-      <div className="flex items-center justify-end mb-1">
+      <div className="flex items-center justify-between mb-1">
+        <Button variant="ghost" size="sm" onClick={() => setResetModalOpen(true)}>
+          <RotateCcw size={14} />
+          설정 초기화
+        </Button>
         <Button variant={editOrder ? 'primary' : 'secondary'} size="sm" onClick={() => setEditOrder(v => !v)}>
           <SlidersHorizontal size={14} />
           {editOrder ? '편집 완료' : '순서 편집'}
@@ -640,6 +675,50 @@ export default function FieldsSettingsPage() {
         )}
         <Button fullWidth onClick={handleSave} isLoading={isSaving}>저장</Button>
       </div>
+
+      {/* 설정 초기화 확인 모달 */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => !isResetting && setResetModalOpen(false)} />
+          <div className="relative w-full max-w-sm bg-surface rounded-t-3xl sm:rounded-2xl shadow-modal p-6 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-state-danger/10 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-state-danger" />
+              </div>
+              <div>
+                <p className="font-bold text-text-primary text-base">설정을 초기화할까요?</p>
+                <p className="text-sm text-text-secondary mt-1 break-keep leading-relaxed">
+                  필드 이름·순서·표시 여부·결제 방법 등 <span className="font-semibold text-state-danger">지금까지 변경한 모든 설정이 기본값으로 돌아갑니다.</span>
+                  이 작업은 되돌릴 수 없습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-1">
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setResetModalOpen(false)}
+                className="flex-1 h-11 rounded-xl border border-border text-sm font-medium text-text-secondary hover:border-border-strong transition-colors disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={handleReset}
+                className="flex-1 h-11 rounded-xl bg-state-danger text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isResetting ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <RotateCcw size={14} />
+                )}
+                {isResetting ? '초기화 중...' : '초기화'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
