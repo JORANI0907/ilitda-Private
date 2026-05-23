@@ -19,6 +19,42 @@ import type { PlanType } from '@/lib/plan-features'
 // ─── 플랜 정의 ────────────────────────────────────────────────
 const PLAN_KEYS: Exclude<PlanType, 'free'>[] = ['basic', 'pro', 'max']
 
+const PLAN_ORDER: Record<string, number> = {
+  free: 0, basic: 1, pro: 2, max: 3,
+}
+
+type RequestType = 'upgrade' | 'renewal' | 'downgrade'
+
+function getRequestType(current: PlanType, selected: Exclude<PlanType, 'free'>): RequestType {
+  const curr = PLAN_ORDER[current] ?? 0
+  const next = PLAN_ORDER[selected] ?? 1
+  if (next > curr) return 'upgrade'
+  if (next === curr) return 'renewal'
+  return 'downgrade'
+}
+
+function getRemainingDays(expiresAt: string | null): number {
+  if (!expiresAt) return 0
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const expiry = new Date(expiresAt)
+  expiry.setHours(0, 0, 0, 0)
+  const diff = expiry.getTime() - today.getTime()
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+}
+
+function getNewExpiryLabel(currentExpires: string | null): string {
+  const base = currentExpires ? new Date(currentExpires) : new Date()
+  const extended = new Date(base)
+  extended.setDate(extended.getDate() + 30)
+  return `${extended.getMonth() + 1}월 ${extended.getDate()}일`
+}
+
+function formatKoreanDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`
+}
+
 const PLAN_STYLE: Record<string, {
   badge: string
   border: string
@@ -145,6 +181,7 @@ export default function PlanPage() {
   const [isLoading, setIsLoading]     = useState(true)
 
   const [selectedPlan, setSelectedPlan] = useState<Exclude<PlanType, 'free'> | null>(null)
+  const [requestType, setRequestType]   = useState<RequestType>('upgrade')
   const [paymentOpen, setPaymentOpen]   = useState(false)
   const [depositorName, setDepositorName] = useState('')
   const [isSubmitting, setIsSubmitting]   = useState(false)
@@ -168,7 +205,8 @@ export default function PlanPage() {
   }, [])
 
   function handleSelect(plan: Exclude<PlanType, 'free'>) {
-    if (plan === currentPlan) return
+    const type = getRequestType(currentPlan, plan)
+    setRequestType(type)
     setSelectedPlan(plan)
     setPaymentOpen(true)
     setSubmitDone(false)
@@ -200,6 +238,16 @@ export default function PlanPage() {
   }
 
   const selectedStyle = selectedPlan ? PLAN_STYLE[selectedPlan] : null
+
+  const modalTitle = (() => {
+    if (!selectedPlan) return ''
+    const planName = PLAN_NAMES[selectedPlan]
+    if (requestType === 'renewal') return `${planName} 플랜 갱신 신청`
+    if (requestType === 'downgrade') return `${planName} 플랜 하향 신청`
+    return `${planName} 플랜 업그레이드 신청`
+  })()
+
+  const remainingDays = getRemainingDays(expiresAt)
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
@@ -244,19 +292,19 @@ export default function PlanPage() {
         </div>
       </div>
 
-      <HelpTip>플랜 카드를 탭하면 업그레이드를 신청할 수 있습니다. 입금 확인 후 영업일 기준 1일 이내 활성화됩니다.</HelpTip>
+      <HelpTip>플랜 카드를 탭해 업그레이드·갱신·하향 신청을 할 수 있습니다. 입금 확인 후 영업일 기준 1일 이내 반영됩니다.</HelpTip>
 
       {/* 플랜 카드 3개 */}
       <div className="flex flex-col gap-3">
         {PLAN_KEYS.map(key => {
           const style     = PLAN_STYLE[key]
           const isCurrent = key === currentPlan
+          const isLower   = (PLAN_ORDER[key] ?? 0) < (PLAN_ORDER[currentPlan] ?? 0)
           return (
             <button
               key={key}
               type="button"
               onClick={() => handleSelect(key)}
-              disabled={isCurrent}
               className={`text-left rounded-2xl border-2 p-4 transition-all active:scale-[0.98] relative ${
                 isCurrent
                   ? `${style.activeBorder} ${style.activeBg}`
@@ -276,6 +324,9 @@ export default function PlanPage() {
                   <span className={`font-bold text-[15px] ${style.accent}`}>{PLAN_NAMES[key]}</span>
                   {isCurrent && (
                     <span className="text-[10px] font-semibold text-white bg-gray-400 px-2 py-0.5 rounded-full">현재</span>
+                  )}
+                  {isLower && !isCurrent && (
+                    <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">하향</span>
                   )}
                 </div>
                 <div className="text-right">
@@ -332,13 +383,11 @@ export default function PlanPage() {
           {/* 카테고리별 섹션 */}
           {FEATURE_CATEGORIES.map((cat, catIdx) => (
             <div key={cat.title}>
-              {/* 카테고리 헤더 */}
               <div className={`flex items-center gap-2 px-3 py-2.5 bg-surface-sunken/70 ${catIdx > 0 ? 'border-t-2 border-border' : ''}`}>
                 {cat.icon}
                 <span className="text-xs font-bold text-text-secondary">{cat.title}</span>
               </div>
 
-              {/* 기능 행 */}
               {cat.rows.map((row, i) => (
                 <div
                   key={row.label}
@@ -363,11 +412,11 @@ export default function PlanPage() {
         </div>
       </div>
 
-      {/* 무통장 입금 안내 모달 */}
+      {/* 무통장 입금 신청 모달 */}
       <Modal
         open={paymentOpen}
         onClose={() => { if (!isSubmitting) setPaymentOpen(false) }}
-        title={submitDone ? '신청 완료' : `${selectedPlan ? PLAN_NAMES[selectedPlan] : ''} 플랜 신청`}
+        title={submitDone ? '신청 완료' : modalTitle}
         footer={
           submitDone ? (
             <Button fullWidth onClick={() => { setPaymentOpen(false); router.back() }}>
@@ -390,7 +439,7 @@ export default function PlanPage() {
             <CheckCircle2 size={44} className="text-state-success" />
             <p className="text-sm text-text-secondary leading-relaxed break-keep">
               신청이 접수되었습니다.<br />
-              입금 확인 후 영업일 기준 1일 이내 플랜이 활성화됩니다.
+              입금 확인 후 영업일 기준 1일 이내 플랜이 반영됩니다.
             </p>
           </div>
         ) : (
@@ -417,7 +466,38 @@ export default function PlanPage() {
               </div>
             </div>
 
-            <HelpTip>입금자명은 입금 시 사용하신 이름과 동일하게 입력해주세요. 확인 후 플랜이 활성화됩니다.</HelpTip>
+            {/* 신청 유형별 안내 */}
+            {requestType === 'upgrade' && currentPlan !== 'free' && remainingDays > 0 && (
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3">
+                <span className="text-amber-500 text-base leading-none mt-0.5">⚠️</span>
+                <p className="text-xs text-amber-700 leading-normal">
+                  현재 플랜({PLAN_NAMES[currentPlan]})의 남은 기간 {remainingDays}일이 소멸됩니다.
+                  확인 즉시 새로운 30일이 시작됩니다.
+                </p>
+              </div>
+            )}
+
+            {requestType === 'renewal' && expiresAt && (
+              <div className="flex items-start gap-2 rounded-xl bg-blue-50 border border-blue-100 p-3">
+                <span className="text-blue-500 text-base leading-none mt-0.5">📅</span>
+                <p className="text-xs text-blue-700 leading-normal">
+                  현재 만료일({formatKoreanDate(expiresAt)})에서 30일 연장됩니다.
+                  → {getNewExpiryLabel(expiresAt)}까지
+                </p>
+              </div>
+            )}
+
+            {requestType === 'downgrade' && expiresAt && (
+              <div className="flex items-start gap-2 rounded-xl bg-orange-50 border border-orange-100 p-3">
+                <span className="text-orange-500 text-base leading-none mt-0.5">ℹ️</span>
+                <p className="text-xs text-orange-700 leading-normal">
+                  현재 플랜 만료일({formatKoreanDate(expiresAt)}) 이후 적용됩니다.
+                  만료일까지 현재 {PLAN_NAMES[currentPlan]} 플랜이 유지됩니다.
+                </p>
+              </div>
+            )}
+
+            <HelpTip>입금자명은 입금 시 사용하신 이름과 동일하게 입력해주세요.</HelpTip>
 
             <Input
               label="입금자명"
