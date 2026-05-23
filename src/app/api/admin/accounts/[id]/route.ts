@@ -17,6 +17,7 @@ interface AccountDetail {
   profile: {
     name: string
     phone: string
+    email: string | null
   } | null
   worker: {
     account_bank: string | null
@@ -71,7 +72,7 @@ export async function GET(
   const [profileResult, workerResult] = await Promise.all([
     service
       .from('profiles')
-      .select('name, phone')
+      .select('name, phone, email')
       .eq('id', business.profile_id)
       .maybeSingle(),
     service
@@ -81,6 +82,7 @@ export async function GET(
       .maybeSingle(),
   ])
 
+  const profileData = profileResult.data
   const result: AccountDetail = {
     business: {
       id: business.id,
@@ -93,7 +95,11 @@ export async function GET(
       plan_expires_at: business.plan_expires_at ?? null,
       created_at: business.created_at,
     },
-    profile: profileResult.data ?? null,
+    profile: profileData ? {
+      name: profileData.name,
+      phone: profileData.phone,
+      email: (profileData as { name: string; phone: string; email?: string | null }).email ?? null,
+    } : null,
     worker: workerResult.data ?? null,
   }
 
@@ -168,7 +174,7 @@ export async function PUT(
   }
 
   // profile 허용 필드
-  const ALLOWED_PROFILE = ['name', 'phone'] as const
+  const ALLOWED_PROFILE = ['name', 'phone', 'email'] as const
 
   const profileUpdates: Record<string, unknown> = {}
   for (const key of ALLOWED_PROFILE) {
@@ -183,6 +189,17 @@ export async function PUT(
 
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    }
+  }
+
+  // 이메일 변경 시 Auth 유저에도 동기화
+  if ('email' in bodyRecord && typeof bodyRecord.email === 'string' && bodyRecord.email) {
+    const { error: authUpdateError } = await service.auth.admin.updateUserById(
+      business.profile_id,
+      { email: bodyRecord.email },
+    )
+    if (authUpdateError) {
+      return NextResponse.json({ success: false, error: authUpdateError.message }, { status: 500 })
     }
   }
 

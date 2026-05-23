@@ -6,12 +6,14 @@ interface BusinessAccount {
   id: string
   business_name: string
   registration_number: string | null
+  address: string | null
   plan: string
   plan_expires_at: string | null
   created_at: string
   profile: {
     name: string
     phone: string
+    email: string | null
   } | null
 }
 
@@ -42,7 +44,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<BusinessAccount[]>
 
   const { data: businesses, error } = await service
     .from('businesses')
-    .select('id, business_name, registration_number, plan, plan_expires_at, created_at, profile_id')
+    .select('id, business_name, registration_number, address, plan, plan_expires_at, created_at, profile_id')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -53,15 +55,16 @@ export async function GET(): Promise<NextResponse<ApiResponse<BusinessAccount[]>
 
   const { data: profiles } = await service
     .from('profiles')
-    .select('id, name, phone')
+    .select('id, name, phone, email')
     .in('id', profileIds)
 
-  const profileMap = new Map((profiles ?? []).map(p => [p.id, { name: p.name, phone: p.phone }]))
+  const profileMap = new Map((profiles ?? []).map(p => [p.id, { name: p.name, phone: p.phone, email: p.email as string | null }]))
 
   const result: BusinessAccount[] = (businesses ?? []).map(b => ({
     id: b.id,
     business_name: b.business_name,
     registration_number: b.registration_number,
+    address: b.address ?? null,
     plan: b.plan ?? 'free',
     plan_expires_at: b.plan_expires_at ?? null,
     created_at: b.created_at,
