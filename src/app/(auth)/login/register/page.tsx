@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { User, Lock, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail, Search } from 'lucide-react'
+import { User, Lock, Building2, ChevronLeft, CheckCircle2, XCircle, Loader2, Mail, Search, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { HelpTip } from '@/components/ui/HelpTip'
@@ -50,6 +50,7 @@ export default function RegisterPage() {
   const [businessNumber, setBusinessNumber] = useState('')
   const [bizVerifyStatus, setBizVerifyStatus] = useState<BizVerifyStatus>('idle')
   const [bizVerifyMessage, setBizVerifyMessage] = useState('')
+  const [noBusinessNumber, setNoBusinessNumber] = useState(false)
 
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -411,67 +412,106 @@ export default function RegisterPage() {
 
           {/* 사업자번호 + 인증 (사업자일 때만) */}
           {role === 'business' && (
-            <div>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <p className="text-sm font-medium text-text-primary">사업자등록번호 (선택)</p>
-                <HelpIcon
-                  title="사업자등록번호 인증"
-                  description="국세청 데이터를 통해 사업자번호의 유효성을 확인합니다. 세금계산서 발행 시 필요합니다."
-                />
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="000-00-00000"
-                    value={businessNumber}
-                    maxLength={12}
-                    onChange={(e) => {
-                      const formatted = formatBizNumber(e.target.value)
-                      setBusinessNumber(formatted)
+            <div className="flex flex-col gap-3">
+              {/* 사업자등록 전 체크박스 */}
+              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={noBusinessNumber}
+                  onChange={(e) => {
+                    setNoBusinessNumber(e.target.checked)
+                    if (e.target.checked) {
+                      setBusinessNumber('')
                       setBizVerifyStatus('idle')
                       setBizVerifyMessage('')
-                    }}
-                    className={`block w-full h-12 rounded-md bg-surface border text-text-primary placeholder:text-text-tertiary px-4 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors ${
-                      bizVerifyStatus === 'valid'
-                        ? 'border-state-success'
-                        : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error'
-                        ? 'border-state-danger'
-                        : 'border-border'
-                    }`}
-                    name="business_number"
-                  />
+                    }
+                  }}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-brand-600 cursor-pointer"
+                />
+                <span className="text-sm text-text-primary leading-snug">
+                  사업자등록 전입니다 (번호 없음)
+                </span>
+              </label>
+
+              {/* 사업자번호 없음 안내 배너 */}
+              {noBusinessNumber && (
+                <div className="rounded-xl bg-state-warning-bg border border-state-warning p-3.5 flex flex-col gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle size={14} className="text-state-warning flex-shrink-0" />
+                    <span className="text-xs font-semibold text-state-warning">사업자등록번호 없이 가입 시 유의사항</span>
+                  </div>
+                  <ul className="text-xs text-text-secondary leading-relaxed list-disc list-inside space-y-0.5 pl-0.5">
+                    <li>관리자 계정 승인까지 <span className="font-medium text-text-primary">다소 시간이 걸릴 수 있습니다.</span></li>
+                    <li>세금계산서 발행 등 <span className="font-medium text-text-primary">일부 기능 사용에 제한</span>이 있을 수 있습니다.</li>
+                  </ul>
                 </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleVerifyBiz}
-                  isLoading={bizVerifyStatus === 'loading'}
-                  disabled={businessNumber.replace(/-/g, '').length < 10 || bizVerifyStatus === 'loading'}
-                  className="flex-shrink-0 whitespace-nowrap"
-                >
-                  {bizVerifyStatus === 'loading' ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <><Search size={14} className="mr-1" />인증</>
+              )}
+
+              {/* 사업자번호 입력 + 인증 (사업자등록 전이 아닐 때만) */}
+              {!noBusinessNumber && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <p className="text-sm font-medium text-text-primary">사업자등록번호 (선택)</p>
+                    <HelpIcon
+                      title="사업자등록번호 인증"
+                      description="국세청 데이터를 통해 사업자번호의 유효성을 확인합니다. 세금계산서 발행 시 필요합니다."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="000-00-00000"
+                        value={businessNumber}
+                        maxLength={12}
+                        onChange={(e) => {
+                          const formatted = formatBizNumber(e.target.value)
+                          setBusinessNumber(formatted)
+                          setBizVerifyStatus('idle')
+                          setBizVerifyMessage('')
+                        }}
+                        className={`block w-full h-12 rounded-md bg-surface border text-text-primary placeholder:text-text-tertiary px-4 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors ${
+                          bizVerifyStatus === 'valid'
+                            ? 'border-state-success'
+                            : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error'
+                            ? 'border-state-danger'
+                            : 'border-border'
+                        }`}
+                        name="business_number"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleVerifyBiz}
+                      isLoading={bizVerifyStatus === 'loading'}
+                      disabled={businessNumber.replace(/-/g, '').length < 10 || bizVerifyStatus === 'loading'}
+                      className="flex-shrink-0 whitespace-nowrap"
+                    >
+                      {bizVerifyStatus === 'loading' ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <><Search size={14} className="mr-1" />인증</>
+                      )}
+                    </Button>
+                  </div>
+                  {bizVerifyStatus === 'valid' && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-success">
+                      <CheckCircle2 size={13} />
+                      <span>{bizVerifyMessage}</span>
+                    </div>
                   )}
-                </Button>
-              </div>
-              {bizVerifyStatus === 'valid' && (
-                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-success">
-                  <CheckCircle2 size={13} />
-                  <span>{bizVerifyMessage}</span>
+                  {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-danger">
+                      <XCircle size={13} />
+                      <span>{bizVerifyMessage}</span>
+                    </div>
+                  )}
+                  {bizVerifyStatus === 'idle' && businessNumber && (
+                    <HelpTip className="mt-1">번호 입력 후 &apos;인증&apos; 버튼을 눌러 유효성을 확인하세요.</HelpTip>
+                  )}
                 </div>
-              )}
-              {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
-                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-state-danger">
-                  <XCircle size={13} />
-                  <span>{bizVerifyMessage}</span>
-                </div>
-              )}
-              {bizVerifyStatus === 'idle' && businessNumber && (
-                <HelpTip className="mt-1">번호 입력 후 &apos;인증&apos; 버튼을 눌러 유효성을 확인하세요.</HelpTip>
               )}
             </div>
           )}
