@@ -99,10 +99,10 @@ export default function BusinessProfilePage() {
     setIsLoggingOut(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      window.location.href = '/login'
+    } catch {
+      // 네트워크 오류여도 로그아웃 처리 계속 진행
     } finally {
-      setIsLoggingOut(false)
-      setShowLogoutModal(false)
+      window.location.replace('/login')
     }
   }
 
