@@ -125,7 +125,7 @@ const HELP_SECTIONS = [
 
 export default function ContractsPage() {
   const router = useRouter()
-  const { planType, isLoading: planLoading } = usePlanType()
+  const { planType, features, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(true)
@@ -229,7 +229,7 @@ export default function ContractsPage() {
     setForm(prev => ({ ...prev, [key]: value }))
 
   // ─── 렌더링 ──────────────────────────────────────────────────
-  if (!planLoading && !isGuest && !canUseFeature(planType, 'contracts')) {
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'contracts', features)) {
     return (
       <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
         <div className="flex items-center gap-3">
