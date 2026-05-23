@@ -29,13 +29,6 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<{
 
   try {
     const uniqueId = await requestSenderVerification(phoneNumber)
-    // pending 상태 임시 저장 (인증 완료 시 덮어씀)
-    await auth.supabase
-      .schema('ilitda')
-      .from('businesses')
-      .update({ solapi_pending_id: uniqueId })
-      .eq('id', auth.biz.id)
-
     return NextResponse.json({ success: true, data: { uniqueId } })
   } catch (e) {
     const msg = e instanceof Error ? e.message : '요청 실패'
