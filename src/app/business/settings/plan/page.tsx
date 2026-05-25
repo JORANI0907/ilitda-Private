@@ -255,7 +255,7 @@ export default function PlanPage() {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push('/business/profile')}
           className="p-1 -ml-1 text-text-tertiary hover:text-text-primary"
         >
           <ArrowLeft size={20} />
@@ -419,7 +419,7 @@ export default function PlanPage() {
         title={submitDone ? '신청 완료' : modalTitle}
         footer={
           submitDone ? (
-            <Button fullWidth onClick={() => { setPaymentOpen(false); router.back() }}>
+            <Button fullWidth onClick={() => { setPaymentOpen(false); router.push('/business/profile') }}>
               확인
             </Button>
           ) : (

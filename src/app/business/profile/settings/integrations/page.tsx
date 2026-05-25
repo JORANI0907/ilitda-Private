@@ -237,7 +237,7 @@ export default function IntegrationsPage() {
     <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
       {/* 헤더 */}
       <div className="flex items-center gap-3 mb-1">
-        <button type="button" onClick={() => router.back()} className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors">
+        <button type="button" onClick={() => router.push('/business/profile')} className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors">
           <ArrowLeft size={20} />
         </button>
         <SectionHeader title="연동 설정" level="page" />

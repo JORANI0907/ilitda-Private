@@ -134,7 +134,7 @@ export default function FormSettingsPage() {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push('/business/profile')}
           className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors"
         >
           <ArrowLeft size={20} />

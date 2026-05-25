@@ -121,12 +121,12 @@ export default function AppNotificationsPage() {
       <div className="flex items-center gap-3 mb-1">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push('/business/profile')}
           className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
-        <SectionHeader title="알림 설정" level="page" />
+        <SectionHeader title="앱 알림설정" level="page" />
       </div>
 
       {/* 도움말 배너 */}
