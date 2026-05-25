@@ -20,7 +20,7 @@ export async function POST(
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('drive_root_folder_id')
+    .select('drive_root_folder_id, drive_subfolders')
     .eq('profile_id', user.id)
     .maybeSingle()
 
@@ -50,7 +50,10 @@ export async function POST(
     const clientName = (app.business_name || app.owner_name || '고객').replace(/[/\\?%*:|"<>]/g, '_')
     const date = app.construction_date ?? new Date().toISOString().slice(0, 10)
 
-    const folderUrl = await createApplicationFolder(biz.drive_root_folder_id, clientName, date)
+    const subfolders = Array.isArray(biz.drive_subfolders) && biz.drive_subfolders.length > 0
+      ? biz.drive_subfolders
+      : ['작업전', '작업후']
+    const folderUrl = await createApplicationFolder(biz.drive_root_folder_id, clientName, date, subfolders)
 
     await service
       .schema('ilitda')

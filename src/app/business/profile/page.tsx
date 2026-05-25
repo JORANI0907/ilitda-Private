@@ -18,8 +18,8 @@ import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
 import { PLAN_SMS_LIMITS, type Profile, type Business, type Worker } from '@/types'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
-import { canUseFeature, toPlanType, PLAN_FEATURES } from '@/lib/plan-features'
-import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
+import { canUseFeature, toPlanType } from '@/lib/plan-features'
+import { usePlanFeatures } from '@/contexts/PlanFeaturesContext'
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -46,7 +46,7 @@ export default function BusinessProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const [showHelpDrawer, setShowHelpDrawer] = useState(false)
-  const [planFeatures, setPlanFeatures] = useState<Record<PlanType, PlanFeatureMap>>(PLAN_FEATURES)
+  const { features: planFeatures } = usePlanFeatures()
 
   const [slug, setSlug] = useState('')
   const [isCopied, setIsCopied] = useState(false)
@@ -64,19 +64,13 @@ export default function BusinessProfilePage() {
     const fetchProfile = async () => {
       setIsLoading(true)
       try {
-        const [profileRes, featuresRes] = await Promise.all([
-          fetch('/api/profile'),
-          fetch('/api/plan-features', { cache: 'no-store' }),
-        ])
+        const profileRes = await fetch('/api/profile')
         if (profileRes.status === 401) {
           setIsUnauthorized(true)
           setShowLoginPrompt(true)
           return
         }
-        const [profileJson, featuresJson] = await Promise.all([
-          profileRes.json(),
-          featuresRes.json(),
-        ])
+        const profileJson = await profileRes.json()
         if (profileJson.success) {
           setData(profileJson.data)
           setSlug(profileJson.data.business?.request_slug ?? '')
@@ -84,9 +78,6 @@ export default function BusinessProfilePage() {
           setAppDisplayName(displayName)
           setAppDisplayNameInput(displayName)
           setDataLoaded(true)
-        }
-        if (featuresJson.success && featuresJson.data) {
-          setPlanFeatures(featuresJson.data as Record<PlanType, PlanFeatureMap>)
         }
       } finally {
         setIsLoading(false)
@@ -118,7 +109,7 @@ export default function BusinessProfilePage() {
   }
 
   const handleSaveDisplayName = async () => {
-    if (!canUseFeature(toPlanType(data?.business?.plan_type), 'app_name_custom', planFeatures)) {
+    if (!canUseFeature(toPlanType(data?.business?.plan_type), 'app_name_custom', planFeatures ?? undefined)) {
       setAppNameUpgradeOpen(true)
       return
     }
@@ -275,7 +266,7 @@ export default function BusinessProfilePage() {
       <Card padding="md">
         <div className="flex items-center gap-2 mb-3">
           <SectionHeader title="앱 이름 설정" />
-          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures) && (
+          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures ?? undefined) && (
             <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
               맥스 플랜
             </span>
@@ -292,7 +283,7 @@ export default function BusinessProfilePage() {
                 value={appDisplayNameInput}
                 onChange={(e) => setAppDisplayNameInput(e.target.value)}
                 maxLength={20}
-                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures)}
+                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures ?? undefined)}
               />
             </div>
             <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>

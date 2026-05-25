@@ -143,3 +143,61 @@ export async function PUT(request: NextRequest): Promise<NextResponse<ApiRespons
 
   return NextResponse.json({ success: true, data: null })
 }
+
+export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse<null>>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ success: false, error: '인증이 필요합니다.' }, { status: 401 })
+  }
+
+  const isAdmin = await checkAdmin(user.id)
+  if (!isAdmin) {
+    return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
+  }
+
+  let body: { feature_key: string; label: string; category: FeatureCategory; feature_type: FeatureType }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ success: false, error: '잘못된 요청 형식입니다.' }, { status: 400 })
+  }
+
+  const { feature_key, label, category, feature_type } = body
+  if (!feature_key || !label || !category || !feature_type) {
+    return NextResponse.json({ success: false, error: '필수 항목이 누락되었습니다.' }, { status: 400 })
+  }
+
+  if (!/^[a-z][a-z0-9_]*$/.test(feature_key)) {
+    return NextResponse.json({ success: false, error: 'feature_key는 소문자·숫자·밑줄만 허용됩니다.' }, { status: 400 })
+  }
+
+  const service = createServiceClient()
+  const { error } = await service
+    .schema('ilitda')
+    .from('plan_feature_configs')
+    .insert({
+      feature_key,
+      label,
+      category,
+      feature_type,
+      free_enabled:  false,
+      basic_enabled: false,
+      pro_enabled:   false,
+      max_enabled:   false,
+      free_limit:  null,
+      basic_limit: null,
+      pro_limit:   null,
+      max_limit:   null,
+    })
+
+  if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ success: false, error: '이미 존재하는 feature_key입니다.' }, { status: 409 })
+    }
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, data: null })
+}

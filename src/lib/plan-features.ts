@@ -19,14 +19,15 @@ const PLAN_ORDER: PlanType[] = ['free', 'basic', 'pro', 'max']
 
 // ─── 기능별 플랜 접근 권한 ────────────────────────────────────────
 export interface PlanFeatureMap {
-  sms_daily_limit:    number
-  sms_auto_dispatch:  boolean
+  sms_daily_limit:     number
+  sms_auto_dispatch:   boolean
   sms_custom_template: boolean
-  worker_limit:       number
-  inventory:          boolean
-  marketplace:        boolean
-  contracts:          boolean
-  app_name_custom:    boolean
+  worker_limit:        number
+  inventory:           boolean
+  marketplace:         boolean
+  contracts:           boolean
+  app_name_custom:     boolean
+  application_limit:   number
 }
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
@@ -34,21 +35,23 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     sms_daily_limit:     10,
     sms_auto_dispatch:   false,
     sms_custom_template: false,
-    worker_limit:        3,
-    inventory:           false,
+    worker_limit:        10,
+    inventory:           true,
     marketplace:         false,
     contracts:           false,
     app_name_custom:     false,
+    application_limit:   100,
   },
   basic: {
     sms_daily_limit:     20,
-    sms_auto_dispatch:   false,
-    sms_custom_template: false,
-    worker_limit:        10,
-    inventory:           false,
-    marketplace:         false,
+    sms_auto_dispatch:   true,
+    sms_custom_template: true,
+    worker_limit:        Infinity,
+    inventory:           true,
+    marketplace:         true,
     contracts:           false,
-    app_name_custom:     false,
+    app_name_custom:     true,
+    application_limit:   500,
   },
   pro: {
     sms_daily_limit:     50,
@@ -58,7 +61,8 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     inventory:           true,
     marketplace:         true,
     contracts:           false,
-    app_name_custom:     false,
+    app_name_custom:     true,
+    application_limit:   Infinity,
   },
   max: {
     sms_daily_limit:     100,
@@ -67,8 +71,9 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     worker_limit:        Infinity,
     inventory:           true,
     marketplace:         true,
-    contracts:           true,
+    contracts:           false,
     app_name_custom:     true,
+    application_limit:   Infinity,
   },
 }
 

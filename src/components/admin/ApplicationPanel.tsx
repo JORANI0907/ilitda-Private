@@ -758,7 +758,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                     className="flex items-center gap-2 text-sm text-teal-700 font-medium hover:underline flex-1"
                   >
                     <FolderOpen size={15} />
-                    폴더 열기 (작업전 / 작업후)
+                    폴더 열기
                     <ExternalLink size={13} className="opacity-60" />
                   </a>
                   <button

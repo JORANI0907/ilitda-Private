@@ -74,6 +74,7 @@ export interface Business {
   solapi_phone_verified?: boolean
   gmail_for_drive?: string | null
   drive_root_folder_id?: string | null
+  drive_subfolders?: string[] | null
   plan_type?: string
   plan?: string
   plan_expires_at?: string | null
@@ -87,7 +88,7 @@ export const PLAN_SMS_LIMITS: Record<string, number> = {
   free:  10,
   basic: 20,
   pro:   50,
-  max:   100,
+  max:   100,  // sms_daily_limit 값과 동기화 (plan-features.ts)
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────

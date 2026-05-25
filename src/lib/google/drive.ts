@@ -71,20 +71,18 @@ export async function createAndShareBusinessFolder(
   return bizFolder
 }
 
-// 신청서 작업 폴더 생성 — 작업전/작업후 하위 폴더 포함, 링크 공개
+// 신청서 작업 폴더 생성 — 하위 폴더 포함, 링크 공개
 export async function createApplicationFolder(
   rootFolderId: string,
   clientName: string,
   date: string,
+  subfolders: string[] = ['작업전', '작업후'],
 ): Promise<string> {
   const folderName = `${clientName}_${date}`
   const appFolderId = await createFolder(folderName, rootFolderId)
 
-  // 작업전/작업후 하위 폴더 동시 생성
-  await Promise.all([
-    createFolder('작업전', appFolderId),
-    createFolder('작업후', appFolderId),
-  ])
+  const names = subfolders.length > 0 ? subfolders : ['작업전', '작업후']
+  await Promise.all(names.map(name => createFolder(name, appFolderId)))
 
   // 링크 아는 누구나 업로드 가능 (작업자 사진 업로드용)
   const folderUrl = await setAnyoneWithLinkWriter(appFolderId)
