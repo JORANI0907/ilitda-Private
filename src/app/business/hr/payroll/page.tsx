@@ -10,7 +10,6 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
-import { HelpIcon } from '@/components/ui/HelpIcon'
 import type { Connection } from '@/types'
 
 type WorkerTab = string // connection id
@@ -352,39 +351,32 @@ export default function PayrollPage() {
       </div>
 
       {/* 작업자 탭 */}
-      <div className="flex items-center justify-between mb-0.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-text-tertiary">직원 선택</span>
-          <HelpIcon
-            title="직원 탭 사용법"
-            description={`직원별 탭을 선택해서 해당 직원의 이번 달 급여를 입력하고 저장하세요.\n\n'전체' 탭에서는 모든 직원의 급여를 한 화면에서 볼 수 있습니다.`}
-          />
+      <div className="flex items-center gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-1">
+          {workerTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveWorker(tab.id)}
+              className={`
+                shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
+                ${activeWorker === tab.id
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-surface-sunken text-text-secondary hover:bg-border'}
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
         <button
           type="button"
           onClick={handleExport}
           title="엑셀 다운로드"
-          className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:bg-surface-sunken hover:text-text-primary transition-colors"
+          className="h-9 w-9 flex items-center justify-center rounded-lg text-text-secondary hover:bg-surface-sunken hover:text-text-primary transition-colors shrink-0"
         >
-          <Download size={16} />
+          <Download size={18} />
         </button>
-      </div>
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {workerTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveWorker(tab.id)}
-            className={`
-              shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
-              ${activeWorker === tab.id
-                ? 'bg-brand-600 text-white'
-                : 'bg-surface-sunken text-text-secondary hover:bg-border'}
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* 합계 카드 */}
