@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn, Calendar } from 'lucide-react'
@@ -136,10 +136,12 @@ export default function RevenuePage() {
   const [isCustomRange, setIsCustomRange] = useState(false)
   const [rangeStart, setRangeStart] = useState('')
   const [rangeEnd, setRangeEnd]     = useState('')
+  const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set())
 
   const fetchMonthly = useCallback(async (y: number, m: number) => {
     setIsLoading(true)
     setSelectedIds(new Set())
+    setSelectedMethods(new Set())
     try {
       const res = await fetch(`/api/business/revenue?year=${y}&month=${m}`)
       const json = await res.json()
@@ -151,6 +153,7 @@ export default function RevenuePage() {
   const fetchRange = useCallback(async (from: string, to: string) => {
     setIsLoading(true)
     setSelectedIds(new Set())
+    setSelectedMethods(new Set())
     try {
       const res = await fetch(`/api/business/revenue?from=${from}&to=${to}`)
       const json = await res.json()
@@ -172,7 +175,8 @@ export default function RevenuePage() {
   useEffect(() => {
     if (view === 'monthly') {
       if (isCustomRange && rangeStart && rangeEnd) fetchRange(rangeStart, rangeEnd)
-      else fetchMonthly(year, month)
+      else if (!isCustomRange) fetchMonthly(year, month)
+      // isCustomRange=true지만 날짜 미입력 상태 → 재조회 없이 현재 데이터 유지
     } else {
       fetchAnnual(year)
     }
@@ -199,11 +203,24 @@ export default function RevenuePage() {
   }
 
   const schedules = monthlyData?.schedules ?? []
-  const allSelected = schedules.length > 0 && schedules.every(s => selectedIds.has(s.id))
+
+  const availableMethods = useMemo(() => {
+    const methods = new Set<string>()
+    schedules.forEach(s => { if (s.client?.payment_method) methods.add(s.client.payment_method) })
+    return Array.from(methods).sort()
+  }, [schedules])
+
+  const displaySchedules = useMemo(() =>
+    selectedMethods.size > 0
+      ? schedules.filter(s => selectedMethods.has(s.client?.payment_method ?? ''))
+      : schedules
+  , [schedules, selectedMethods])
+
+  const allSelected = displaySchedules.length > 0 && displaySchedules.every(s => selectedIds.has(s.id))
 
   function toggleAll() {
     if (allSelected) setSelectedIds(new Set())
-    else setSelectedIds(new Set(schedules.map(s => s.id)))
+    else setSelectedIds(new Set(displaySchedules.map(s => s.id)))
   }
 
   function toggleOne(id: string) {
@@ -331,23 +348,66 @@ export default function RevenuePage() {
             </>
           )}
         </div>
-        {isCustomRange && view === 'monthly' && (
-          <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
-            <input
-              type="date"
-              value={rangeStart}
-              onChange={(e) => setRangeStart(e.target.value)}
-              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            />
-            <span className="text-text-tertiary text-sm shrink-0">~</span>
-            <input
-              type="date"
-              value={rangeEnd}
-              onChange={(e) => setRangeEnd(e.target.value)}
-              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            />
+        {/* CSS 아코디언 - DOM 유지하여 레이아웃 shift 방지 */}
+        <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
+          isCustomRange && view === 'monthly' ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+        }`}>
+          <div className="flex flex-col gap-2 pt-0.5">
+            {/* 날짜 직접 설정 */}
+            <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+                className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+              <span className="text-text-tertiary text-sm shrink-0">~</span>
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+                className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+            </div>
+            {/* 결제방법 필터 */}
+            <div className="flex flex-wrap items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+              <span className="text-xs text-text-tertiary shrink-0">결제방법</span>
+              <button
+                type="button"
+                onClick={() => setSelectedMethods(new Set())}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  selectedMethods.size === 0
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'bg-surface text-text-secondary border-border hover:border-brand-300 hover:text-brand-600'
+                }`}
+              >
+                전체
+              </button>
+              {availableMethods.map(method => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => setSelectedMethods(prev => {
+                    const next = new Set(prev)
+                    if (next.has(method)) next.delete(method)
+                    else next.add(method)
+                    return next
+                  })}
+                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                    selectedMethods.has(method)
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-surface text-text-secondary border-border hover:border-brand-300 hover:text-brand-600'
+                  }`}
+                >
+                  {method}
+                </button>
+              ))}
+              {availableMethods.length === 0 && (
+                <span className="text-xs text-text-tertiary">이 기간 데이터 조회 후 표시됩니다</span>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* 로딩 스켈레톤 */}
@@ -372,7 +432,11 @@ export default function RevenuePage() {
               <p className="text-2xl font-bold text-white mt-0.5">
                 ₩ {fmtKr(monthlyData.total)}
               </p>
-              <p className="text-xs text-brand-300 mt-0.5">{schedules.length}건</p>
+              <p className="text-xs text-brand-300 mt-0.5">
+                {selectedMethods.size > 0
+                  ? `${displaySchedules.length}건 (전체 ${schedules.length}건)`
+                  : `${schedules.length}건`}
+              </p>
             </div>
           </div>
 
@@ -432,11 +496,11 @@ export default function RevenuePage() {
           </div>
 
           {/* 일정 목록 */}
-          {schedules.length === 0 ? (
-            <EmptyState title={`${dayLabel} 매출 내역이 없어요.`} />
+          {displaySchedules.length === 0 ? (
+            <EmptyState title={selectedMethods.size > 0 ? '선택한 결제방법의 매출이 없어요.' : `${dayLabel} 매출 내역이 없어요.`} />
           ) : (
             <div className="flex flex-col gap-2">
-              {schedules.map((s) => (
+              {displaySchedules.map((s) => (
                 <div
                   key={s.id}
                   onClick={() => toggleOne(s.id)}
