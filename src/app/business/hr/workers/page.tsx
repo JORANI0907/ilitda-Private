@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useContext } from 'react'
 import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft, Download, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,7 +16,8 @@ import { HelpTip } from '@/components/ui/HelpTip'
 import type { Connection } from '@/types'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { usePlanType } from '@/hooks/usePlanType'
-import { getFeatureLimit, getUpgradePlan } from '@/lib/plan-features'
+import { getFeatureLimit, getUpgradePlan, canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 type AddMode = 'invite' | 'manual'
 type FilterTab = 'all' | 'accepted' | 'pending' | 'manual'
@@ -113,6 +114,8 @@ export default function WorkersPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   const { planType, features, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -312,6 +315,24 @@ export default function WorkersPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '작업자목록')
     XLSX.writeFile(wb, `작업자목록_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'workers', features)) {
+    return (
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="작업자 관리" level="page" />
+        </div>
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} featureName="작업자 관리" requiredPlan="basic" currentPlan={planType} />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">베이직 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
