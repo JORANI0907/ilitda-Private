@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import { Download, Users, LogIn, ChevronLeft, ChevronRight, Calendar, Search } from 'lucide-react'
 import Link from 'next/link'
@@ -10,6 +10,10 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 import type { Connection } from '@/types'
 
 type WorkerTab = string // connection id
@@ -68,6 +72,10 @@ const HELP_SECTIONS = [
 
 export default function PayrollPage() {
   const router = useRouter()
+  const { planType, features, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
@@ -243,6 +251,24 @@ export default function PayrollPage() {
     { id: 'all', label: '전체' },
     ...connections.map((c) => ({ id: c.id, label: c.display_name })),
   ]
+
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'payroll', features)) {
+    return (
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="급여 관리" level="page" />
+        </div>
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} featureName="급여 관리" requiredPlan="basic" currentPlan={planType} />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">베이직 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">

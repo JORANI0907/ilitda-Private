@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -15,6 +15,10 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpIcon } from '@/components/ui/HelpIcon'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 // ─── 타입 ────────────────────────────────────────────────────────
 
@@ -219,6 +223,10 @@ const HELP_SECTIONS = [
 
 export default function QuotationsPage() {
   const router = useRouter()
+  const { planType, features, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isDemo, setIsDemo]     = useState(false)
 
@@ -615,6 +623,24 @@ export default function QuotationsPage() {
   }
 
   // ─── 렌더링 ──────────────────────────────────────────────────
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'quotations', features)) {
+    return (
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="견적서 관리" level="page" />
+        </div>
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} featureName="견적서 관리" requiredPlan="pro" currentPlan={planType} />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">프로 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
 

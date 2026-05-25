@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useContext } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, LogIn, Calendar, Search } from 'lucide-react'
@@ -8,6 +8,10 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
+import { usePlanType } from '@/hooks/usePlanType'
+import { canUseFeature } from '@/lib/plan-features'
+import { AuthContext } from '@/contexts/AuthContext'
 
 // ─── 타입 ────────────────────────────────────────────────────
 interface MonthlySchedule {
@@ -122,6 +126,10 @@ type ViewMode = 'monthly' | 'annual'
 
 export default function RevenuePage() {
   const router = useRouter()
+  const { planType, features, isLoading: planLoading } = usePlanType()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
   const now = new Date()
 
   const [view, setView]             = useState<ViewMode>('monthly')
@@ -279,6 +287,24 @@ export default function RevenuePage() {
   const dayLabel = isCustomRange && rangeStart && rangeEnd
     ? `${rangeStart}~${rangeEnd}`
     : view === 'monthly' ? `${month}월` : `${year}년`
+
+  if (!planLoading && !isGuest && !canUseFeature(planType, 'revenue', features)) {
+    return (
+      <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="매출 관리" level="page" />
+        </div>
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} featureName="매출 관리" requiredPlan="basic" currentPlan={planType} />
+        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+          <p className="text-sm text-text-secondary break-keep">베이직 이상 플랜에서 이용할 수 있습니다.</p>
+          <Button variant="secondary" size="sm" onClick={() => setUpgradeOpen(true)}>플랜 업그레이드 안내</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">

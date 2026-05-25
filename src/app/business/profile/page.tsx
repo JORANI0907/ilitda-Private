@@ -525,30 +525,56 @@ export default function BusinessProfilePage() {
 
       {/* 신청서 링크 */}
       <Card padding="md" id="request-link-section">
-        <SectionHeader title="고객용 신청서 폼 링크" className="mb-3" />
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-text-tertiary">고객 신청서 작성 → 일정에 자동등록</p>
-          {slug ? (
-            <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2.5">
-              <Link2 size={14} className="text-brand-500 shrink-0" />
-              <p className="text-xs text-brand-700 break-all flex-1 min-w-0">
-                {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
-              </p>
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="shrink-0 flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors"
-              >
-                {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                {isCopied ? '복사됨' : '복사'}
-              </button>
-            </div>
-          ) : (
-            <p className="text-sm text-text-tertiary text-center py-1">
-              신청 링크가 설정되지 않았습니다.
-            </p>
+        <div className="flex items-center gap-2 mb-3">
+          <SectionHeader title="고객용 신청서 폼 링크" />
+          {!canUseFeature(toPlanType(business?.plan_type), 'public_form', planFeatures ?? undefined) && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+              베이직 플랜
+            </span>
           )}
         </div>
+        {canUseFeature(toPlanType(business?.plan_type), 'public_form', planFeatures ?? undefined) ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-text-tertiary">고객 신청서 작성 → 일정에 자동등록</p>
+            {slug ? (
+              <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2.5">
+                <Link2 size={14} className="text-brand-500 shrink-0" />
+                <p className="text-xs text-brand-700 break-all flex-1 min-w-0">
+                  {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="shrink-0 flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors"
+                >
+                  {isCopied ? <Check size={13} /> : <Copy size={13} />}
+                  {isCopied ? '복사됨' : '복사'}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-text-tertiary text-center py-1">
+                신청 링크가 설정되지 않았습니다.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2.5 select-none pointer-events-none blur-sm">
+              <Link2 size={14} className="text-brand-500 shrink-0" />
+              <p className="text-xs text-brand-700 break-all flex-1 min-w-0">https://ilitda.vercel.app/request/••••••</p>
+              <Copy size={13} className="text-brand-600" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => router.push('/business/settings/plan')}
+                className="flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+              >
+                베이직 플랜으로 업그레이드
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* 관리자 패널 (is_admin만 노출) */}
