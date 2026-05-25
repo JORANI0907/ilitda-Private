@@ -62,6 +62,7 @@ function formatPhone(value: string): string {
 interface AddForm {
   name: string
   phone: string
+  address: string
   account_bank: string
   account_number: string
   registration_number: string
@@ -71,6 +72,7 @@ interface AddForm {
 const EMPTY_FORM: AddForm = {
   name: '',
   phone: '',
+  address: '',
   account_bank: '',
   account_number: '',
   registration_number: '',
@@ -222,8 +224,8 @@ export default function WorkersPage() {
       setAddError('이름을 입력해 주세요.')
       return
     }
-    if (addMode === 'invite' && !form.phone.trim()) {
-      setAddError('초대할 전화번호를 입력해 주세요.')
+    if (!form.phone.trim()) {
+      setAddError(addMode === 'invite' ? '초대할 전화번호를 입력해 주세요.' : '연락처를 입력해 주세요.')
       return
     }
     setIsAdding(true)
@@ -236,6 +238,7 @@ export default function WorkersPage() {
           type: addMode,
           name: form.name.trim(),
           phone: form.phone.trim() || null,
+          address: form.address.trim() || null,
           account_bank: form.account_bank.trim() || null,
           account_number: form.account_number.trim() || null,
           registration_number: form.registration_number.trim() || null,
@@ -678,7 +681,7 @@ export default function WorkersPage() {
             />
 
             <Input
-              label={addMode === 'invite' ? '전화번호 *' : '전화번호'}
+              label="연락처 *"
               type="tel"
               placeholder="010-0000-0000"
               value={form.phone}
@@ -688,6 +691,12 @@ export default function WorkersPage() {
 
             {addMode === 'manual' && (
               <>
+                <Input
+                  label="주소"
+                  placeholder="예: 서울시 강남구 테헤란로 123"
+                  value={form.address}
+                  onChange={(e) => setField('address', e.target.value)}
+                />
                 <div className="flex gap-3">
                   <Input
                     label="은행"
