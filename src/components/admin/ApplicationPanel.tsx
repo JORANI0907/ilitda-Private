@@ -231,6 +231,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [driveError, setDriveError] = useState<string | null>(null)
   const [isFolderLinkCopied, setIsFolderLinkCopied] = useState(false)
   const [vatEnabled, setVatEnabled] = useState(true)
+  const [notifyLogs, setNotifyLogs] = useState<NotifyLog[]>((app.notification_log as NotifyLog[]) ?? [])
 
   useEffect(() => {
     fetch('/api/business/hr/connections?status=accepted')
@@ -360,6 +361,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       })
       const json = await res.json()
       if (!json.success) { setNotifyError(json.error ?? '발송 실패'); return }
+      setNotifyLogs(prev => [...prev, { type: notifyType, sent_at: new Date().toISOString(), method: 'manual' }])
       // 알림 규칙에 status_value가 있으면 상태 자동 변경
       const newStatus = json.data?.newStatus as string | undefined
       if (newStatus) {
@@ -383,6 +385,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       })
       const json = await res.json()
       if (!json.success) { setFolderLinkError(json.error ?? '발송 실패'); return }
+      setNotifyLogs(prev => [...prev, { type: '폴더링크알림', sent_at: new Date().toISOString(), method: 'manual' }])
       setFolderLinkSent(true)
       setTimeout(() => setFolderLinkSent(false), 3000)
     } catch { setFolderLinkError('네트워크 오류') } finally { setIsSendingFolderLink(false) }
@@ -397,8 +400,6 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       })
       .catch(() => {})
   }
-
-  const notifyLogs: NotifyLog[] = (app.notification_log as NotifyLog[]) ?? []
 
   // ─── 섹션별 border color ──────────────────────────────────
   const sectionBorder = (sectionId: string): string => {
