@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Plus, X, FileText, ExternalLink, RefreshCw,
+  Plus, X, FileText, ExternalLink, RefreshCw,
   ChevronLeft, ChevronRight, Save, RotateCcw, Upload, Trash2, Eye, LogIn, Settings,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -626,13 +626,13 @@ export default function QuotationsPage() {
       )}
 
       {/* 헤더 */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-1 -ml-1 text-text-tertiary hover:text-text-primary transition-colors"
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
         >
-          <ArrowLeft size={20} />
+          <ChevronLeft size={24} />
         </button>
         <SectionHeader title="견적서 관리" level="page" className="flex-1" />
         <button
@@ -786,7 +786,7 @@ export default function QuotationsPage() {
           <div className="space-y-5">
 
             {/* 공급자 정보 (1회성 편집 — 저장 없음) */}
-            <EditorSection title="공급자 정보">
+            <EditorSection title="공급자 정보" accent="blue">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[11px] text-text-tertiary">이번 발송에만 적용됩니다. 영구 저장은 페이지의 공급자 정보 버튼을 이용하세요.</p>
                 <button type="button" onClick={() => setLocalCompanyInfo({ ...companyInfo })} title="저장된 정보로 초기화"
@@ -811,7 +811,7 @@ export default function QuotationsPage() {
             </EditorSection>
 
             {/* 고객 정보 */}
-            <EditorSection title="고객 정보">
+            <EditorSection title="고객 정보" accent="green">
               <div className="grid grid-cols-2 gap-3">
                 <Input label="대표자" size="sm" value={ownerName}
                   onChange={e => setOwnerName(e.target.value)} />
@@ -831,66 +831,48 @@ export default function QuotationsPage() {
             </EditorSection>
 
             {/* 견적 항목 */}
-            <EditorSection title="견적 항목">
-              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <div className="flex rounded-lg bg-surface-sunken border border-border-subtle p-0.5 gap-0.5">
-                    {(['itemized', 'total', 'supply'] as PricingMode[]).map(m => (
-                      <button key={m} type="button"
-                        onClick={() => { setPricingMode(m); setDirectAmount(0) }}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                          pricingMode === m
-                            ? 'bg-surface text-text-primary shadow-flat'
-                            : 'text-text-tertiary hover:text-text-secondary'
-                        }`}>
-                        {m === 'itemized' ? '항목별' : m === 'total' ? '합계기준' : '공급가기준'}
-                      </button>
-                    ))}
-                  </div>
-                  <HelpIcon
-                    title="가격 입력 방식"
-                    description={'항목별: 서비스 항목을 하나씩 나열하고 각각 가격을 입력합니다. 고객이 항목별로 금액을 확인할 수 있습니다.\n\n합계기준: VAT 포함 총 금액 하나만 입력합니다. 간단한 견적에 사용합니다.\n\n공급가기준: 공급가액과 부가세를 분리해서 입력합니다. 세금계산서 발행이 필요한 사업자 고객에게 사용합니다.'}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={handleSaveDraft} disabled={savingDraft}
-                    className="flex items-center gap-1.5 text-xs">
-                    <Save size={12} />{savingDraft ? '저장 중…' : '저장'}
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={addItem} className="flex items-center gap-1 text-xs">
-                    <Plus size={12} />항목 추가
-                  </Button>
+            <EditorSection
+              title="견적 항목"
+              action={
+                <Button size="sm" variant="secondary" onClick={handleSaveDraft} disabled={savingDraft}
+                  className="flex items-center gap-1.5 text-xs">
+                  <Save size={12} />{savingDraft ? '저장 중…' : '저장'}
+                </Button>
+              }
+            >
+              {/* 금액: + 토글 */}
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-xs font-medium text-text-secondary whitespace-nowrap">금액:</span>
+                <div className="flex rounded-lg bg-surface-sunken border border-border-subtle p-0.5 gap-0.5">
+                  {(['itemized', 'total', 'supply'] as PricingMode[]).map(m => (
+                    <button key={m} type="button"
+                      onClick={() => { setPricingMode(m); setDirectAmount(0) }}
+                      className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        pricingMode === m
+                          ? 'bg-surface text-text-primary shadow-flat'
+                          : 'text-text-tertiary hover:text-text-secondary'
+                      }`}>
+                      {m === 'itemized' ? '항목별' : m === 'total' ? '공급대가기준' : '공급가액기준'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {pricingMode !== 'itemized' && (
-                <div className="mb-4 p-4 rounded-xl bg-surface-sunken border border-border-subtle">
-                  <label className="block text-xs font-medium text-text-secondary mb-2">
-                    {pricingMode === 'total' ? '합계금액 (VAT 포함)' : '공급가액 (VAT 제외)'}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input type="number" size="sm" value={directAmount || ''} min={0}
-                      onChange={e => setDirectAmount(Number(e.target.value))} placeholder="0" />
-                    <span className="text-sm text-text-tertiary flex-shrink-0">원</span>
-                  </div>
-                  {directAmount > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center p-2 rounded-lg bg-surface border border-border-subtle">
-                        <div className="text-text-tertiary mb-0.5">공급가액</div>
-                        <div className="font-semibold tabular-nums">{fmtKr(supplyAmount)}</div>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-surface border border-border-subtle">
-                        <div className="text-text-tertiary mb-0.5">부가세</div>
-                        <div className="font-semibold tabular-nums">{fmtKr(vatAmount)}</div>
-                      </div>
-                      <div className="text-center p-2 rounded-lg bg-violet-50 border border-violet-200">
-                        <div className="text-violet-600 mb-0.5">합계</div>
-                        <div className="font-bold text-violet-600 tabular-nums">{fmtKr(totalAmount)}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* 인라인 도움말 */}
+              <p className="text-xs text-text-tertiary mb-3">
+                {pricingMode === 'itemized'
+                  ? '항목별로 금액을 다르게하여 자동으로 공급가가 산출됩니다.'
+                  : pricingMode === 'total'
+                    ? '공급대가를 기준으로 금액이 자동 계산됩니다.'
+                    : '공급가액을 기준으로 금액이 자동 계산됩니다.'}
+              </p>
+
+              {/* 항목 추가 버튼 */}
+              <div className="flex justify-end mb-2">
+                <Button size="sm" variant="secondary" onClick={addItem} className="flex items-center gap-1 text-xs">
+                  <Plus size={12} />항목 추가
+                </Button>
+              </div>
 
               {quoteItems.length === 0 ? (
                 <div className="py-8 text-center text-sm text-text-tertiary border border-dashed border-border-subtle rounded-xl">
@@ -955,24 +937,59 @@ export default function QuotationsPage() {
                   </table>
                 </div>
               )}
+
+              {/* 계산 박스 — 항목 테이블 아래 */}
+              {pricingMode !== 'itemized' && (
+                <div className="mt-4 p-4 rounded-xl bg-surface-sunken border border-border-subtle">
+                  <label className="block text-xs font-medium text-text-secondary mb-2">
+                    {pricingMode === 'total' ? '공급대가 (VAT 포함)' : '공급가액 (VAT 제외)'}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" size="sm" value={directAmount || ''} min={0}
+                      onChange={e => setDirectAmount(Number(e.target.value))} placeholder="0" />
+                    <span className="text-sm text-text-tertiary flex-shrink-0">원</span>
+                  </div>
+                  {directAmount > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                      <div className="text-center p-2 rounded-lg bg-surface border border-border-subtle">
+                        <div className="text-text-tertiary mb-0.5">공급가액</div>
+                        <div className="font-semibold tabular-nums">{fmtKr(supplyAmount)}</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-surface border border-border-subtle">
+                        <div className="text-text-tertiary mb-0.5">부가세</div>
+                        <div className="font-semibold tabular-nums">{fmtKr(vatAmount)}</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-violet-50 border border-violet-200">
+                        <div className="text-violet-600 mb-0.5">합계</div>
+                        <div className="font-bold text-violet-600 tabular-nums">{fmtKr(totalAmount)}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 특이사항 */}
+              <div className="mt-4">
+                <p className="text-xs text-text-tertiary mb-2">특이사항을 작성하면 그 내용이 견적서에 포함됩니다.</p>
+                <Textarea
+                  label="특이사항(선택)"
+                  value={notes}
+                  onChange={e => setNotes(e.target.value)}
+                  placeholder="견적서에 포함할 안내, 특이 사항 등 특약을 입력하세요."
+                  rows={3}
+                />
+              </div>
             </EditorSection>
 
             {/* 견적 조건 */}
-            <EditorSection title="견적 조건">
-              <div className="flex items-center gap-3 mb-3">
+            <EditorSection title="견적 조건" accent="amber">
+              <div className="flex items-center gap-3">
                 <label className="text-xs text-text-secondary whitespace-nowrap">유효기간</label>
                 <Input type="number" size="sm" value={validDays} min={1} max={365}
                   onChange={e => setValidDays(Math.max(1, Math.min(365, Number(e.target.value))))}
                   className="w-20" />
                 <span className="text-xs text-text-secondary flex-shrink-0">일 후 만료</span>
               </div>
-              <Textarea
-                label="특이사항 (선택 — PDF에 포함)"
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="견적서에 포함할 안내사항을 입력하세요."
-                rows={3}
-              />
             </EditorSection>
 
             {/* 금액 요약 */}
@@ -1021,7 +1038,7 @@ export default function QuotationsPage() {
 
             {/* 발송 이력 */}
             {selected.quote_log && selected.quote_log.length > 0 && (
-              <EditorSection title={`발송 이력 (${selected.quote_log.length}건)`}>
+              <EditorSection title={`발송 이력 (${selected.quote_log.length}건)`} accent="slate">
                 <ul className="divide-y divide-border-subtle -mx-4 px-4">
                   {[...selected.quote_log].reverse().map((log, idx) => (
                     <li key={log.quote_no} className="py-3 flex items-center justify-between gap-3">
@@ -1135,12 +1152,29 @@ export default function QuotationsPage() {
 
 // ─── 헬퍼 컴포넌트 ───────────────────────────────────────────────
 
-function EditorSection({ title, children }: { title: string; children: React.ReactNode }) {
+type AccentColor = 'blue' | 'green' | 'violet' | 'amber' | 'slate'
+
+const ACCENT_STYLES: Record<AccentColor, { bar: string; border: string; bg: string }> = {
+  blue:   { bar: 'bg-blue-500',   border: 'border-blue-100',   bg: 'bg-blue-50/40'   },
+  green:  { bar: 'bg-green-500',  border: 'border-green-100',  bg: 'bg-green-50/40'  },
+  violet: { bar: 'bg-violet-500', border: 'border-violet-100', bg: 'bg-violet-50/30' },
+  amber:  { bar: 'bg-amber-400',  border: 'border-amber-100',  bg: 'bg-amber-50/40'  },
+  slate:  { bar: 'bg-slate-400',  border: 'border-border-subtle', bg: 'bg-surface-sunken' },
+}
+
+function EditorSection({ title, children, action, accent = 'violet' }: {
+  title: string
+  children: React.ReactNode
+  action?: React.ReactNode
+  accent?: AccentColor
+}) {
+  const s = ACCENT_STYLES[accent]
   return (
-    <div>
+    <div className={`rounded-2xl border ${s.border} ${s.bg} p-4`}>
       <div className="flex items-center gap-2 mb-3">
-        <span className="block w-[3px] h-[14px] rounded-full bg-violet-500 flex-shrink-0" />
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
+        <span className={`block w-[3px] h-[14px] rounded-full ${s.bar} flex-shrink-0`} />
+        <h3 className="text-sm font-semibold text-text-primary flex-1">{title}</h3>
+        {action}
       </div>
       {children}
     </div>
