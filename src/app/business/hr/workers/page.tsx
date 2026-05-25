@@ -119,6 +119,7 @@ export default function WorkersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   function toggleSelect(id: string) {
     setSelectedIds(prev => {
@@ -135,17 +136,26 @@ export default function WorkersPage() {
 
   async function handleBulkDelete() {
     setIsDeleting(true)
+    setDeleteError(null)
     try {
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedIds).map(id =>
           fetch(`/api/business/hr/connections/${id}`, { method: 'DELETE' })
         )
       )
+      if (results.some(r => !r.ok)) {
+        setDeleteError('일부 항목 삭제에 실패했습니다. 다시 시도해주세요.')
+        return
+      }
       setConnections(prev => prev.filter(c => !selectedIds.has(c.id)))
       setSelectedIds(new Set())
       setShowDeleteModal(false)
       setSelectMode(false)
-    } catch { /* silent */ } finally { setIsDeleting(false) }
+    } catch {
+      setDeleteError('삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const fetchConnections = useCallback(async () => {
@@ -711,7 +721,7 @@ export default function WorkersPage() {
       {/* 삭제 확인 모달 */}
       <Modal
         open={showDeleteModal}
-        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        onClose={() => { if (!isDeleting) { setShowDeleteModal(false); setDeleteError(null) } }}
         title="작업자 삭제"
       >
         <div className="flex flex-col gap-4">
@@ -721,11 +731,14 @@ export default function WorkersPage() {
               선택한 작업자 {selectedIds.size}명이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
             </p>
           </div>
+          {deleteError && (
+            <p className="text-sm text-state-danger text-center">{deleteError}</p>
+          )}
           <div className="flex flex-col gap-2">
             <Button variant="danger" fullWidth onClick={handleBulkDelete} isLoading={isDeleting}>
               {selectedIds.size}명 영구 삭제
             </Button>
-            <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+            <Button variant="ghost" fullWidth onClick={() => { setShowDeleteModal(false); setDeleteError(null) }} disabled={isDeleting}>
               취소
             </Button>
           </div>
