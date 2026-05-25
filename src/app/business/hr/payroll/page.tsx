@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Download, Users, LogIn, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Download, Users, LogIn, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -80,12 +80,17 @@ export default function PayrollPage() {
   const now = new Date()
   const [viewYear, setViewYear] = useState(now.getFullYear())
   const [viewMonth, setViewMonth] = useState(now.getMonth() + 1)
+  const [isCustomRange, setIsCustomRange] = useState(false)
+  const [rangeStart, setRangeStart] = useState('')
+  const [rangeEnd, setRangeEnd] = useState('')
 
   function prevMonth() {
+    setIsCustomRange(false)
     if (viewMonth === 1) { setViewYear((y) => y - 1); setViewMonth(12) }
     else setViewMonth((m) => m - 1)
   }
   function nextMonth() {
+    setIsCustomRange(false)
     if (viewMonth === 12) { setViewYear((y) => y + 1); setViewMonth(1) }
     else setViewMonth((m) => m + 1)
   }
@@ -174,9 +179,12 @@ export default function PayrollPage() {
 
   const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
   const filteredApps = applications.filter((app) => {
-    const matchesMonth = app.construction_date?.startsWith(monthPrefix) ?? false
-    if (activeWorker === 'all') return matchesMonth
-    return matchesMonth && (app.assigned_connection_ids ?? []).includes(activeWorker)
+    const date = app.construction_date ?? ''
+    const matchesFilter = isCustomRange && rangeStart && rangeEnd
+      ? date >= rangeStart && date <= rangeEnd
+      : date.startsWith(monthPrefix)
+    if (activeWorker === 'all') return matchesFilter
+    return matchesFilter && (app.assigned_connection_ids ?? []).includes(activeWorker)
   })
 
   const totalForWorker = filteredApps.reduce((sum, app) => {
@@ -215,7 +223,10 @@ export default function PayrollPage() {
     const ws = xlsx.utils.json_to_sheet(rows)
     const wb = xlsx.utils.book_new()
     xlsx.utils.book_append_sheet(wb, ws, '급여명세')
-    xlsx.writeFile(wb, `급여명세_${viewYear}${String(viewMonth).padStart(2, '0')}.xlsx`)
+    const filename = isCustomRange && rangeStart && rangeEnd
+      ? `급여명세_${rangeStart}~${rangeEnd}.xlsx`
+      : `급여명세_${viewYear}${String(viewMonth).padStart(2, '0')}.xlsx`
+    xlsx.writeFile(wb, filename)
   }
 
   const workerTabs = [
@@ -228,18 +239,6 @@ export default function PayrollPage() {
       <SectionHeader
         title="급여 관리"
         level="page"
-        action={
-          <div className="flex items-center gap-1.5">
-            <Button size="sm" variant="secondary" onClick={handleExport}>
-              <Download size={14} />
-              엑셀
-            </Button>
-            <HelpIcon
-              title="엑셀 내보내기"
-              description={`전체 직원의 급여 내역을 엑셀 파일(.xlsx)로 다운로드합니다.\n\n세무사 제출, 급여 명세서 발급, 월별 인건비 정리에 활용하세요.\n계좌번호, 사업자번호 등 정산 정보도 함께 포함됩니다.`}
-            />
-          </div>
-        }
       />
 
       {/* 데모 배너 */}
@@ -265,35 +264,75 @@ export default function PayrollPage() {
       />
 
       {/* 월 네비게이션 */}
-      <div className="flex items-center justify-between bg-surface-sunken rounded-2xl px-2 py-1.5">
-        <button
-          type="button"
-          onClick={prevMonth}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
-          aria-label="이전 달"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <span className="text-sm font-semibold text-text-primary">
-          {viewYear}년 {viewMonth}월
-        </span>
-        <button
-          type="button"
-          onClick={nextMonth}
-          className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
-          aria-label="다음 달"
-        >
-          <ChevronRight size={18} />
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center bg-surface-sunken rounded-2xl px-2 py-1.5 gap-1">
+          <button
+            type="button"
+            onClick={prevMonth}
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors shrink-0"
+            aria-label="이전 달"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="flex-1 text-center text-sm font-semibold text-text-primary">
+            {isCustomRange && rangeStart && rangeEnd
+              ? `${rangeStart} ~ ${rangeEnd}`
+              : `${viewYear}년 ${viewMonth}월`}
+          </span>
+          <button
+            type="button"
+            onClick={nextMonth}
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors shrink-0"
+            aria-label="다음 달"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <div className="w-px h-4 bg-border shrink-0" />
+          <button
+            type="button"
+            onClick={() => setIsCustomRange((v) => !v)}
+            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-colors shrink-0 ${
+              isCustomRange
+                ? 'bg-brand-100 text-brand-700'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+            }`}
+          >
+            <Calendar size={12} />
+            직접설정
+          </button>
+        </div>
+        {isCustomRange && (
+          <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+            <input
+              type="date"
+              value={rangeStart}
+              onChange={(e) => setRangeStart(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+            <span className="text-text-tertiary text-sm shrink-0">~</span>
+            <input
+              type="date"
+              value={rangeEnd}
+              onChange={(e) => setRangeEnd(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+          </div>
+        )}
       </div>
 
       {/* 작업자 탭 */}
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <span className="text-xs text-text-tertiary">직원 선택</span>
-        <HelpIcon
-          title="직원 탭 사용법"
-          description={`직원별 탭을 선택해서 해당 직원의 이번 달 급여를 입력하고 저장하세요.\n\n'전체' 탭에서는 모든 직원의 급여를 한 화면에서 볼 수 있습니다.`}
-        />
+      <div className="flex items-center justify-between mb-0.5">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-tertiary">직원 선택</span>
+          <HelpIcon
+            title="직원 탭 사용법"
+            description={`직원별 탭을 선택해서 해당 직원의 이번 달 급여를 입력하고 저장하세요.\n\n'전체' 탭에서는 모든 직원의 급여를 한 화면에서 볼 수 있습니다.`}
+          />
+        </div>
+        <Button size="sm" variant="secondary" onClick={handleExport}>
+          <Download size={14} />
+          엑셀
+        </Button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {workerTabs.map((tab) => (
@@ -342,7 +381,7 @@ export default function PayrollPage() {
       {!isLoading && !error && filteredApps.length === 0 && (
         <EmptyState
           icon={<Users size={40} />}
-          title={`${viewMonth}월 급여 데이터가 없어요`}
+          title={isCustomRange && rangeStart && rangeEnd ? '선택한 기간에 급여 데이터가 없어요' : `${viewMonth}월 급여 데이터가 없어요`}
           description="해당 월에 작업자가 배정된 신청서가 없습니다. 다른 달을 확인하거나 신청서에서 작업자를 배정해 주세요."
           bordered
         />
