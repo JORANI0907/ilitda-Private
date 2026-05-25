@@ -301,23 +301,28 @@ export default function PayrollPage() {
             직접설정
           </button>
         </div>
-        {isCustomRange && (
-          <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
-            <input
-              type="date"
-              value={rangeStart}
-              onChange={(e) => setRangeStart(e.target.value)}
-              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            />
-            <span className="text-text-tertiary text-sm shrink-0">~</span>
-            <input
-              type="date"
-              value={rangeEnd}
-              onChange={(e) => setRangeEnd(e.target.value)}
-              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-            />
+        {/* CSS 아코디언 - DOM 유지하여 레이아웃 shift 방지 */}
+        <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
+          isCustomRange ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+        }`}>
+          <div className="pt-0.5">
+            <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+                className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+              <span className="text-text-tertiary text-sm shrink-0">~</span>
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+                className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* 작업자 탭 */}
