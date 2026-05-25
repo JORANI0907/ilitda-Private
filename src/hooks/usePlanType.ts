@@ -37,7 +37,8 @@ export function usePlanType(): UsePlanTypeReturn {
         setPlanType(toPlanType(raw))
 
         if (featuresJson.success && featuresJson.data) {
-          setFeatures(featuresJson.data as Record<PlanType, PlanFeatureMap>)
+          const featuresData = featuresJson.data?.features ?? featuresJson.data
+          setFeatures(featuresData as Record<PlanType, PlanFeatureMap>)
         }
       })
       .catch(() => {
