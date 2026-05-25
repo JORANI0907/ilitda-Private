@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, BarChart2, CheckCircle2, XCircle, Loader2, FolderOpen } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, Loader2, FolderOpen } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
-import { PLAN_SMS_LIMITS, type Business } from '@/types'
+import type { Business } from '@/types'
 
 // ─── 상태 배지 ───────────────────────────────────────────────
 function StatusBadge({ verified, label }: { verified: boolean; label: string }) {
@@ -186,11 +186,6 @@ export default function IntegrationsPage() {
     )
   }
 
-  const plan = biz?.plan_type ?? 'free'
-  const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
-  const used = biz?.daily_sms_count ?? 0
-  const usedRatio = Math.min(used / limit, 1)
-
   return (
     <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
       {/* 헤더 */}
@@ -343,35 +338,6 @@ export default function IntegrationsPage() {
         </div>
       </Section>
 
-      {/* ── 플랜 & 발송 현황 ─────────────────────── */}
-      <Section icon={<BarChart2 size={16} />} title="플랜 & 오늘 발송 현황">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-text-tertiary">현재 플랜</span>
-          <span className="text-sm font-bold text-text-primary capitalize">{plan.toUpperCase()} 플랜</span>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-text-tertiary">오늘 발송</span>
-            <span className="text-sm font-medium text-text-primary">{used} / {limit} 건</span>
-          </div>
-          <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${usedRatio >= 0.9 ? 'bg-state-danger' : usedRatio >= 0.7 ? 'bg-state-warning' : 'bg-brand-600'}`}
-              style={{ width: `${usedRatio * 100}%` }}
-            />
-          </div>
-          {usedRatio >= 1 && (
-            <p className="text-xs text-state-danger">오늘 발송 한도에 도달했습니다. 내일 초기화됩니다.</p>
-          )}
-        </div>
-
-        <div className="pt-1 border-t border-border-subtle">
-          <p className="text-xs text-text-tertiary">
-            Pro · Max 플랜 업그레이드 시 발송 한도가 늘어납니다. (플랜 관리는 준비 중입니다)
-          </p>
-        </div>
-      </Section>
     </div>
   )
 }

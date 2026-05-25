@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   Building2, Sparkles,
   Bell, LogOut, ArrowLeftRight, ChevronRight, ChevronLeft,
-  CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck, BookOpen,
+  CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck, BookOpen, BarChart2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
@@ -14,10 +14,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Modal } from '@/components/ui/Modal'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
-import { HelpIcon } from '@/components/ui/HelpIcon'
 import { LoginPrompt } from '@/components/shared/LoginPrompt'
 import { RoleSwitcher } from '@/components/shared/RoleSwitcher'
-import type { Profile, Business, Worker } from '@/types'
+import { PLAN_SMS_LIMITS, type Profile, type Business, type Worker } from '@/types'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { canUseFeature, toPlanType, PLAN_FEATURES } from '@/lib/plan-features'
 import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
@@ -249,15 +248,24 @@ export default function BusinessProfilePage() {
           <div className="w-14 h-14 rounded-full bg-brand-light flex items-center justify-center shrink-0">
             <Building2 size={28} className="text-brand-600" />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-lg font-bold text-text-primary truncate">
               {business?.business_name ?? profile.name}
             </p>
-            {business?.registration_number && (
-              <p className="text-xs text-text-tertiary mt-0.5">
-                사업자번호: {business.registration_number}
-              </p>
-            )}
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
+                <Sparkles size={10} />
+                {PLAN_LABEL[business?.plan ?? 'free']} 플랜
+              </span>
+              <button
+                type="button"
+                onClick={() => router.push('/business/settings/plan')}
+                className="inline-flex items-center gap-0.5 text-xs text-brand-600 hover:text-brand-700 font-medium transition-colors"
+              >
+                플랜 보러가기
+                <ChevronRight size={12} />
+              </button>
+            </div>
           </div>
         </div>
       </Card>
@@ -364,47 +372,6 @@ export default function BusinessProfilePage() {
         </Card>
       )}
 
-      {/* 구독 플랜 */}
-      <button
-        type="button"
-        className="w-full text-left rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
-        style={{
-          background: 'linear-gradient(135deg, #1E40AF 0%, #2563EB 55%, #7C3AED 100%)',
-          boxShadow: '0 6px 28px rgba(37,99,235,0.35)',
-        }}
-        onClick={() => router.push('/business/settings/plan')}
-      >
-        <div className="p-5 relative overflow-hidden">
-          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }} />
-          <div className="absolute -bottom-8 right-10 w-20 h-20 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
-
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="flex items-center gap-1.5">
-                <Sparkles size={14} className="text-yellow-300" />
-                <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>구독 플랜</span>
-                <HelpIcon
-                  title="플랜별 기능 차이"
-                  description={'Free: 기본 기능, 하루 10건 발송\nBasic: 하루 30건 발송\nPro: 하루 100건 + 고급 기능\nMax: 무제한 발송 + 모든 기능\n\n상위 플랜일수록 더 많은 알림을 보내고 고급 기능을 이용할 수 있습니다.'}
-                />
-              </div>
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)', color: '#fff' }}>
-                {PLAN_LABEL[business?.plan ?? 'free'] ?? 'Free'} 플랜
-              </span>
-            </div>
-
-            <p className="text-[15px] font-bold text-white leading-snug break-keep mb-3">
-              플랜을 변경하고 나만의<br />스마트 비서를 운영하세요
-            </p>
-
-            <div className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5" style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
-              <span className="text-xs font-semibold text-white">플랜 보러가기</span>
-              <ChevronRight size={13} className="text-white" />
-            </div>
-          </div>
-        </div>
-      </button>
-
       {/* 설정 */}
       <Card padding="md">
         <SectionHeader title="설정" className="mb-3" />
@@ -416,7 +383,10 @@ export default function BusinessProfilePage() {
           >
             <div className="flex items-center gap-3">
               <Bell size={16} className="text-text-tertiary" />
-              <span className="text-sm text-text-primary">알림 설정</span>
+              <div>
+                <span className="text-sm text-text-primary">앱 알림설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">앱 내 활동 알림 수신 on/off 관리</p>
+              </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
@@ -429,18 +399,6 @@ export default function BusinessProfilePage() {
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
               <span className="text-sm text-text-primary">발신번호 · 드라이브 연동</span>
-            </div>
-            <ChevronRight size={16} className="text-text-tertiary" />
-          </button>
-
-          <button
-            type="button"
-            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
-            onClick={() => router.push('/business/profile/settings/business')}
-          >
-            <div className="flex items-center gap-3">
-              <Users size={16} className="text-text-tertiary" />
-              <span className="text-sm text-text-primary">직원 권한 설정</span>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>
@@ -459,8 +417,8 @@ export default function BusinessProfilePage() {
             <div className="flex items-center gap-3">
               <SlidersHorizontal size={16} className="text-text-tertiary" />
               <div>
-                <span className="text-sm text-text-primary">필드 설정</span>
-                <p className="text-xs text-text-tertiary mt-0.5">표시 이름, 폼 노출, SMS 포함, 순서</p>
+                <span className="text-sm text-text-primary">서비스(폼) 화면 구성 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">서비스관리(폼)에서 사용할 화면을 직접 커스텀</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
@@ -521,23 +479,57 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
+      {/* 오늘 SMS 발송량 현황 */}
+      {business && (() => {
+        const plan = business.plan_type ?? 'free'
+        const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
+        const used = business.daily_sms_count ?? 0
+        const usedRatio = Math.min(used / limit, 1)
+        return (
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart2 size={16} className="text-brand-600" />
+              <SectionHeader title="오늘 SMS 발송량 현황" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-tertiary">오늘 발송</span>
+                <span className="text-sm font-medium text-text-primary">{used} / {limit === Number.MAX_SAFE_INTEGER ? '무제한' : `${limit}건`}</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${usedRatio >= 0.9 ? 'bg-state-danger' : usedRatio >= 0.7 ? 'bg-state-warning' : 'bg-brand-600'}`}
+                  style={{ width: `${limit === Number.MAX_SAFE_INTEGER ? 0 : usedRatio * 100}%` }}
+                />
+              </div>
+              {usedRatio >= 1 && (
+                <p className="text-xs text-state-danger">오늘 발송 한도에 도달했습니다. 내일 초기화됩니다.</p>
+              )}
+            </div>
+          </Card>
+        )
+      })()}
+
       {/* 신청서 링크 */}
       <Card padding="md" id="request-link-section">
-        <SectionHeader title="신청서 링크" className="mb-3" />
-        <div className="flex flex-col gap-3">
+        <SectionHeader title="고객용 신청서 폼 링크" className="mb-3" />
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-text-tertiary">고객 신청서 작성 → 일정에 자동등록</p>
           {slug ? (
-            <>
-              <div className="flex items-center gap-2.5 bg-surface-sunken rounded-lg px-3 py-2.5">
-                <Link2 size={14} className="text-text-tertiary shrink-0" />
-                <p className="text-xs text-text-secondary break-all flex-1">
-                  {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
-                </p>
-              </div>
-              <Button variant="secondary" size="sm" onClick={handleCopyLink}>
-                {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                {isCopied ? '복사됨' : '링크 복사'}
-              </Button>
-            </>
+            <div className="flex items-center gap-2 bg-surface-sunken rounded-lg px-3 py-2.5">
+              <Link2 size={14} className="text-text-tertiary shrink-0" />
+              <p className="text-xs text-text-secondary break-all flex-1 min-w-0">
+                {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
+              </p>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="shrink-0 flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+              >
+                {isCopied ? <Check size={13} /> : <Copy size={13} />}
+                {isCopied ? '복사됨' : '복사'}
+              </button>
+            </div>
           ) : (
             <p className="text-sm text-text-tertiary text-center py-1">
               신청 링크가 설정되지 않았습니다.
