@@ -47,6 +47,8 @@ export interface NotificationRule {
     send_time: string
   }
   template?: string | null
+  status_value?: string   // 이 알림 발송 시 자동으로 변경될 상태값
+  is_custom?: boolean     // 사용자가 추가한 커스텀 알림 여부
 }
 
 export interface NotificationConfig {
@@ -274,10 +276,7 @@ export interface Payroll {
 }
 
 // ─── 서비스 신청 (관리자용 영업관리) ──────────────────────────
-export type ApplicationStatus =
-  '신규' | '견적발송' | '예약확정' | '예약1일전' | '예약당일' | '서비스완료' |
-  '결제' | '결제완료' | '결제완료(잔금)' | '계산서발행완료' | '비과세' |
-  '카드결제 완료' | '예약금환급완료' | '예약금 입금' | '예약취소' | 'A/S방문' | '방문견적'
+export type ApplicationStatus = string
 
 export interface NotifyLog {
   type: string

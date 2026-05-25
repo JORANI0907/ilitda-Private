@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users, Copy, Check } from 'lucide-react'
 import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
 import {
@@ -10,7 +10,7 @@ import {
   SECTION_BORDER_COLOR,
   SECTION_TITLE_COLOR,
 } from '@/lib/settings-defaults'
-import type { ServiceApplication, ApplicationStatus, NotifyLog, PanelConfig } from '@/types'
+import type { ServiceApplication, ApplicationStatus, NotifyLog, PanelConfig, NotificationConfig } from '@/types'
 
 // ─── 타입 ────────────────────────────────────────────────────
 interface ConnectionOption {
@@ -20,14 +20,18 @@ interface ConnectionOption {
   profiles?: { name: string; phone: string } | null
 }
 
-// ─── 상수 ────────────────────────────────────────────────────
-const ALL_STATUSES: ApplicationStatus[] = [
-  '신규', '견적발송', '예약확정', '예약1일전', '예약당일', '서비스완료',
-  '결제', '결제완료', '결제완료(잔금)', '계산서발행완료', '비과세',
-  '카드결제 완료', '예약금환급완료', '예약금 입금', '예약취소', 'A/S방문', '방문견적',
+// ─── 기본 상수 (알림 설정 미로드 시 폴백) ─────────────────────
+const FALLBACK_NOTIFY_TYPES = [
+  '예약확정알림', '예약1일전알림', '예약당일알림', '서비스완료알림',
+  '결제알림', '결제완료알림', '결제완료알림(잔금)', '계산서발행완료알림',
+  '예약금 입금완료 알림', '예약금환급완료알림',
+  '예약취소알림', 'A/S방문알림', '방문견적알림',
 ]
 
-const STATUS_BADGE: Record<ApplicationStatus, string> = {
+// 기본 상태 목록 (notification_config와 무관하게 항상 포함)
+const BASE_STATUSES = ['신규', '견적발송', '비과세', '카드결제 완료']
+
+const STATUS_BADGE: Record<string, string> = {
   '신규':           'bg-brand-100 text-brand-700',
   '견적발송':       'bg-indigo-100 text-indigo-700',
   '예약확정':       'bg-green-100 text-green-800',
@@ -46,13 +50,6 @@ const STATUS_BADGE: Record<ApplicationStatus, string> = {
   'A/S방문':        'bg-yellow-100 text-yellow-700',
   '방문견적':       'bg-purple-100 text-purple-700',
 }
-
-const NOTIFY_TYPES = [
-  '예약확정알림', '예약1일전알림', '예약당일알림', '서비스완료알림',
-  '결제알림', '결제완료알림', '결제완료알림(잔금)', '계산서발행완료알림',
-  '예약금 입금완료 알림', '예약금환급완료알림',
-  '예약취소알림', 'A/S방문알림', '방문견적알림',
-]
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────
 function FieldRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
@@ -190,21 +187,38 @@ interface Props {
   onUpdate: (updated: ServiceApplication) => void
   onDelete: (id: string) => void
   panelConfig?: PanelConfig
+  notificationConfig?: NotificationConfig
 }
 
 // ─── 메인 패널 ────────────────────────────────────────────────
-export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig }: Props) {
+export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig, notificationConfig }: Props) {
   useModalBackButton(true, onClose)
 
   const [form, setForm] = useState<FormState>(() => toForm(app))
-  const [status, setStatus] = useState<ApplicationStatus>(app.status)
+  const [status, setStatus] = useState<string>(app.status)
   const [isFavorite, setIsFavorite] = useState(app.is_favorite)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [connections, setConnections] = useState<ConnectionOption[]>([])
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>(app.assigned_connection_ids ?? [])
   const [savingWorkers, setSavingWorkers] = useState(false)
-  const [notifyType, setNotifyType] = useState(NOTIFY_TYPES[0])
+
+  // 알림 타입 목록: notificationConfig에서 동적으로 파생 (폴더링크알림 제외)
+  const activeNotifyTypes = useMemo(() => {
+    const rules = notificationConfig?.rules
+    if (!rules?.length) return FALLBACK_NOTIFY_TYPES
+    return rules.filter(r => r.type !== '폴더링크알림').map(r => r.type)
+  }, [notificationConfig])
+
+  // 상태 목록: BASE_STATUSES + notification_config의 status_value 동적 파생
+  const allStatuses = useMemo(() => {
+    const fromRules = (notificationConfig?.rules ?? [])
+      .filter(r => r.status_value)
+      .map(r => r.status_value!)
+    return Array.from(new Set([...BASE_STATUSES, ...fromRules]))
+  }, [notificationConfig])
+
+  const [notifyType, setNotifyType] = useState(() => activeNotifyTypes[0] ?? FALLBACK_NOTIFY_TYPES[0])
   const [isSendingNotify, setIsSendingNotify] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
   const [isSendingFolderLink, setIsSendingFolderLink] = useState(false)
@@ -214,6 +228,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [driveUrl, setDriveUrl] = useState<string | null>(app.drive_folder_url ?? null)
   const [isDriveLoading, setIsDriveLoading] = useState(false)
   const [driveError, setDriveError] = useState<string | null>(null)
+  const [isFolderLinkCopied, setIsFolderLinkCopied] = useState(false)
   const [vatEnabled, setVatEnabled] = useState(true)
 
   useEffect(() => {
@@ -222,6 +237,13 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       .then(d => { if (d.success) setConnections(d.data ?? []) })
       .catch(() => {})
   }, [])
+
+  // notificationConfig 로드 후 notifyType 초기값 동기화
+  useEffect(() => {
+    if (activeNotifyTypes.length > 0) {
+      setNotifyType(prev => activeNotifyTypes.includes(prev) ? prev : activeNotifyTypes[0])
+    }
+  }, [activeNotifyTypes])
 
   const setF = (key: keyof FormState) => (v: string) =>
     setForm((prev) => ({ ...prev, [key]: v }))
@@ -337,7 +359,15 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       })
       const json = await res.json()
       if (!json.success) { setNotifyError(json.error ?? '발송 실패'); return }
-      alert(`${notifyType} 발송 완료`)
+      // 알림 규칙에 status_value가 있으면 상태 자동 변경
+      const newStatus = json.data?.newStatus as string | undefined
+      if (newStatus) {
+        setStatus(newStatus)
+        onUpdate({ ...app, status: newStatus })
+        alert(`${notifyType} 발송 완료\n상태가 '${newStatus}'(으)로 변경되었습니다.`)
+      } else {
+        alert(`${notifyType} 발송 완료`)
+      }
     } catch { setNotifyError('네트워크 오류') } finally { setIsSendingNotify(false) }
   }
 
@@ -355,6 +385,16 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
       setFolderLinkSent(true)
       setTimeout(() => setFolderLinkSent(false), 3000)
     } catch { setFolderLinkError('네트워크 오류') } finally { setIsSendingFolderLink(false) }
+  }
+
+  function handleCopyFolderLink() {
+    if (!driveUrl) return
+    navigator.clipboard.writeText(driveUrl)
+      .then(() => {
+        setIsFolderLinkCopied(true)
+        setTimeout(() => setIsFolderLinkCopied(false), 2000)
+      })
+      .catch(() => {})
   }
 
   const notifyLogs: NotifyLog[] = (app.notification_log as NotifyLog[]) ?? []
@@ -610,10 +650,14 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           <div className="relative">
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as ApplicationStatus)}
+              onChange={(e) => setStatus(e.target.value)}
               className="w-full h-10 rounded-lg bg-surface border border-border text-sm text-text-primary px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 appearance-none"
             >
-              {ALL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {allStatuses.map((s) => <option key={s} value={s}>{s}</option>)}
+              {/* 현재 상태가 목록에 없으면 추가 (기존 데이터 호환) */}
+              {!allStatuses.includes(status) && (
+                <option key={status} value={status}>{status}</option>
+              )}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-3 text-text-tertiary pointer-events-none" />
           </div>
@@ -639,6 +683,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               <Users size={14} className="text-violet-500" />
               <span className="text-xs font-semibold text-violet-700">작업자 선택</span>
             </div>
+            <p className="text-xs text-violet-600/70 break-keep">작업자를 지정하면 출력, 급여 목록에 자동 반영되요</p>
             <select
               value=""
               onChange={(e) => {
@@ -699,17 +744,27 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             </div>
             {driveUrl ? (
               <>
-                <a
-                  href={driveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-teal-700 font-medium hover:underline"
-                >
-                  <FolderOpen size={15} />
-                  폴더 열기 (작업전 / 작업후)
-                  <ExternalLink size={13} className="opacity-60" />
-                </a>
-                <p className="text-xs text-teal-600/70">링크 아는 누구나 업로드 가능 · 작업자에게 링크를 공유하세요</p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-teal-700 font-medium hover:underline flex-1"
+                  >
+                    <FolderOpen size={15} />
+                    폴더 열기 (작업전 / 작업후)
+                    <ExternalLink size={13} className="opacity-60" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyFolderLink}
+                    className="p-1.5 rounded-lg bg-white hover:bg-teal-100 active:bg-teal-200 border border-teal-200 text-teal-600 transition-colors shrink-0"
+                    title="링크 복사"
+                  >
+                    {isFolderLinkCopied ? <Check size={14} className="text-state-success" /> : <Copy size={14} />}
+                  </button>
+                </div>
+                <p className="text-xs text-teal-600/70 break-keep">작업자, 고객에게 링크를 발송하고 편하게 관리하세요</p>
                 <Button size="sm" variant="ghost" onClick={handleCreateDriveFolder} isLoading={isDriveLoading} fullWidth>
                   폴더 재생성
                 </Button>
@@ -747,7 +802,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               onChange={(e) => setNotifyType(e.target.value)}
               className="w-full h-10 rounded-lg bg-white border border-amber-200 text-sm text-text-primary px-3 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
             >
-              {NOTIFY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {activeNotifyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <button
               type="button"
@@ -767,7 +822,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             {/* 폴더 링크 보내기 */}
             {driveUrl && (
               <div className="border-t border-amber-200 pt-2 flex flex-col gap-1.5">
-                <p className="text-xs text-amber-700/70 break-keep">폴더 링크 보내기 — 작업 사진 폴더 링크를 고객 연락처로 문자 발송합니다.</p>
+                <p className="text-xs text-amber-700/70 break-keep">고객 연락처로 링크가 발송되요. 발송문구 변경(설정 &gt; 서비스알림설정)</p>
                 <button
                   type="button"
                   onClick={handleSendFolderLink}

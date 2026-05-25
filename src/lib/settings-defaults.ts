@@ -8,21 +8,52 @@ export const NOTIFY_TYPES = [
 ] as const
 
 export const DEFAULT_MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
-  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n서비스일: ${p.date} ${p.time}`,
-  '예약1일전알림':        (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}`,
-  '예약당일알림':         (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.`,
-  '서비스완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 서비스가 완료되었습니다. 감사합니다.`,
-  '결제알림':             (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}`,
-  '결제완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.`,
-  '결제완료알림(잔금)':   (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.`,
-  '계산서발행완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 세금계산서가 발행되었습니다.`,
-  '예약금 입금완료 알림': (p) => `[일잇다] ${p.name} 담당자님, 예약금 입금이 확인되었습니다.`,
-  '예약금환급완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 예약금이 환급되었습니다.`,
-  '예약취소알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.`,
-  'A/S방문알림':          (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}`,
-  '방문견적알림':         (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}`,
-  '폴더링크알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업 사진 폴더를 공유드립니다.\n작업전/후 사진 확인: ${p.folderUrl}\n문의: ${p.contact}`,
+  '예약확정알림':
+    (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n\n서비스 일시: ${p.date} ${p.time}\n\n당일 방문 전 연락드리겠습니다.\n문의: ${p.contact}`,
+
+  '예약1일전알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n내일(${p.date}) 서비스 방문 예정입니다.\n\n방문 시간: ${p.time}\n\n문의 또는 변경 사항은 미리 연락 부탁드립니다.\n문의: ${p.contact}`,
+
+  '예약당일알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n오늘(${p.date}) 서비스 방문 예정입니다.\n\n방문 예정 시간: ${p.time}\n현장 준비 부탁드립니다.\n문의: ${p.contact}`,
+
+  '서비스완료알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n서비스가 완료되었습니다.\n\n이용해 주셔서 감사합니다.\n불편하신 점이 있으시면 언제든 연락해 주세요.\n문의: ${p.contact}`,
+
+  '결제알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n결제 안내 드립니다.\n\n청구 금액: ${p.amount}원\n입금 계좌: ${p.account}\n\n입금 확인 후 영수증 발송 예정입니다.\n문의: ${p.contact}`,
+
+  '결제완료알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n입금이 확인되었습니다. 감사합니다!\n\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
+
+  '결제완료알림(잔금)':
+    (p) => `[일잇다] ${p.name} 담당자님,\n잔금 입금이 확인되었습니다. 감사합니다!\n\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
+
+  '계산서발행완료알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n세금계산서가 발행되었습니다.\n\n이메일로 전송된 계산서를 확인해 주세요.\n문의: ${p.contact}`,
+
+  '예약금 입금완료 알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n예약금 입금이 확인되었습니다.\n\n예약이 정상 접수되었습니다.\n서비스 일정은 별도 안내 드리겠습니다.\n문의: ${p.contact}`,
+
+  '예약금환급완료알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n예약금 환급이 완료되었습니다.\n\n영업일 기준 3~5일 내 입금됩니다.\n문의: ${p.contact}`,
+
+  '예약취소알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n예약이 취소되었습니다.\n\n취소 관련 문의 사항은 아래로 연락해 주세요.\n문의: ${p.contact}`,
+
+  'A/S방문알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\nA/S 방문 일정을 안내 드립니다.\n\n방문 예정일: ${p.date} ${p.time}\n\n문의: ${p.contact}`,
+
+  '방문견적알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n방문 견적 일정을 안내 드립니다.\n\n방문 예정일: ${p.date} ${p.time}\n\n현장 확인 후 정확한 견적을 제공해 드리겠습니다.\n문의: ${p.contact}`,
+
+  '폴더링크알림':
+    (p) => `[일잇다] ${p.name} 담당자님,\n서비스 작업 사진을 공유드립니다.\n\n작업 전/후 사진: ${p.folderUrl}\n\n문의: ${p.contact}`,
 }
+
+// 새 커스텀 알림 추가 시 자동으로 채워지는 기본 문구 ({fieldKey} 형식)
+export const CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE =
+  `[일잇다] {business_name} 담당자님,\n안내 말씀 드립니다.\n\n서비스 일시: {construction_date} {construction_time}\n\n문의사항은 언제든 연락 부탁드립니다.`
 
 export const DEFAULT_FORM_CONFIG: FormConfig = {
   payment_options: ['현금(세금계산서)', '카드결제', '현금(비과세X)'],
@@ -41,6 +72,24 @@ export const DEFAULT_FORM_CONFIG: FormConfig = {
   custom_form_fields: [],
 }
 
+// 알림 타입 → 자동 변경될 상태값 매핑
+const NOTIFY_STATUS_MAP: Partial<Record<string, string>> = {
+  '예약확정알림':         '예약확정',
+  '예약1일전알림':        '예약1일전',
+  '예약당일알림':         '예약당일',
+  '서비스완료알림':       '서비스완료',
+  '결제알림':             '결제',
+  '결제완료알림':         '결제완료',
+  '결제완료알림(잔금)':   '결제완료(잔금)',
+  '계산서발행완료알림':   '계산서발행완료',
+  '예약금 입금완료 알림': '예약금 입금',
+  '예약금환급완료알림':   '예약금환급완료',
+  '예약취소알림':         '예약취소',
+  'A/S방문알림':          'A/S방문',
+  '방문견적알림':         '방문견적',
+  // '폴더링크알림': 상태 변경 없음 (링크 공유 전용)
+}
+
 export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
   rules: NOTIFY_TYPES.map((type) => ({
     type,
@@ -48,6 +97,7 @@ export const DEFAULT_NOTIFICATION_CONFIG: NotificationConfig = {
     mode: 'manual' as const,
     trigger: undefined,
     template: null,
+    status_value: NOTIFY_STATUS_MAP[type],
   })),
 }
 

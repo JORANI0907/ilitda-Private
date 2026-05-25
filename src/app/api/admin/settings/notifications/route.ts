@@ -23,10 +23,24 @@ export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig
     .maybeSingle()
 
   const saved = biz?.notification_config as NotificationConfig | null
-  const defaultRules = DEFAULT_NOTIFICATION_CONFIG.rules
-  const savedMap = new Map((saved?.rules ?? []).map((r) => [r.type, r]))
-  const rules = defaultRules.map((def) => ({ ...def, ...(savedMap.get(def.type) ?? {}) }))
   const plan_type = (biz?.plan_type as string | null) ?? 'free'
+
+  let rules
+  if (!saved?.rules?.length) {
+    // 최초 방문: 기본 알림 목록 반환
+    rules = DEFAULT_NOTIFICATION_CONFIG.rules
+  } else {
+    // 저장된 config 반환 (커스텀 알림 포함, 삭제된 기본 알림 제외)
+    // 단, 기존 저장 데이터에 status_value 없으면 기본값으로 채움 (마이그레이션)
+    const defaultMap = new Map(DEFAULT_NOTIFICATION_CONFIG.rules.map(r => [r.type, r]))
+    rules = saved.rules.map(r => {
+      const def = defaultMap.get(r.type)
+      if (def?.status_value && !r.status_value) {
+        return { ...r, status_value: def.status_value }
+      }
+      return r
+    })
+  }
 
   return NextResponse.json({ success: true, data: { rules, plan_type } })
 }

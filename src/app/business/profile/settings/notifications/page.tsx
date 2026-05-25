@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, RotateCcw } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -17,6 +17,7 @@ import {
   DEFAULT_PANEL_FIELDS,
   PANEL_SECTIONS,
   SMS_TOKEN_META,
+  CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE,
 } from '@/lib/settings-defaults'
 import { toPlanType, canUseFeature, PLAN_FEATURES } from '@/lib/plan-features'
 import type { NotificationConfig, NotificationRule, PanelConfig } from '@/types'
@@ -75,12 +76,14 @@ function previewTemplate(template: string, vars: SmsVar[]): string {
 function NotificationRuleCard({
   rule,
   onChange,
+  onDelete,
   smsVars,
   planType,
   features,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
+  onDelete?: () => void
   smsVars: SmsVar[]
   planType: PlanType
   features: Record<PlanType, PlanFeatureMap>
@@ -189,22 +192,48 @@ function NotificationRuleCard({
       />
     )}
     <Card padding="md">
-      {/* 헤더: 알림 타입 + ON/OFF */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-text-primary break-keep">{rule.type}</span>
-        <button
-          type="button"
-          onClick={handleToggleEnabled}
-          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
-            rule.enabled ? 'bg-brand-600' : 'bg-border'
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-              rule.enabled ? 'translate-x-6' : 'translate-x-1'
+      {/* 헤더: 알림 타입 + 상태값 배지 + ON/OFF + 삭제 */}
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="flex flex-col gap-1 flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-sm font-semibold text-text-primary break-keep">{rule.type}</span>
+            {rule.is_custom && (
+              <span className="text-[10px] bg-brand-50 text-brand-600 border border-brand-200 px-1.5 py-0.5 rounded-full shrink-0">
+                커스텀
+              </span>
+            )}
+          </div>
+          {rule.status_value && (
+            <span className="text-[11px] text-text-tertiary">
+              발송 시 상태 → <span className="font-medium text-text-secondary">{rule.status_value}</span>
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-1 text-text-tertiary hover:text-state-danger transition-colors"
+              title="이 알림 삭제"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleToggleEnabled}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${
+              rule.enabled ? 'bg-brand-600' : 'bg-border'
             }`}
-          />
-        </button>
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                rule.enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {rule.enabled && (
@@ -429,6 +458,10 @@ export default function NotificationsSettingsPage() {
   const [saveError, setSaveError]     = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess]  = useState(false)
   const [helpOpen, setHelpOpen]        = useState(false)
+  // 알림 추가 다이얼로그
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [newRuleName, setNewRuleName]     = useState('')
+  const [newRuleStatus, setNewRuleStatus] = useState('')
 
   const smsVars = buildVarsFromConfig(panelConfig)
 
@@ -473,6 +506,37 @@ export default function NotificationsSettingsPage() {
   const handleReset = () => {
     if (!confirm('모든 알림 설정을 기본값으로 초기화하시겠습니까?')) return
     setConfig({ rules: DEFAULT_NOTIFICATION_CONFIG.rules.map((r) => ({ ...r })) })
+  }
+
+  const handleAddRule = () => {
+    if (!config || !newRuleName.trim()) return
+    const duplicate = config.rules.some(r => r.type === newRuleName.trim())
+    if (duplicate) {
+      alert('동일한 이름의 알림이 이미 존재합니다.')
+      return
+    }
+    const newRule: NotificationRule = {
+      type:         newRuleName.trim(),
+      enabled:      true,
+      mode:         'manual',
+      template:     CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE,
+      status_value: newRuleStatus.trim() || undefined,
+      is_custom:    true,
+    }
+    setConfig({ ...config, rules: [...config.rules, newRule] })
+    setAddDialogOpen(false)
+    setNewRuleName('')
+    setNewRuleStatus('')
+  }
+
+  const handleDeleteRule = (index: number) => {
+    if (!config) return
+    const rule = config.rules[index]
+    const msg = rule.is_custom
+      ? `'${rule.type}' 알림을 삭제하시겠습니까?`
+      : `'${rule.type}'은 기본 알림입니다.\n삭제하시겠습니까?\n\n삭제 후 "기본값으로 초기화"로 복원할 수 있습니다.`
+    if (!confirm(msg)) return
+    setConfig({ ...config, rules: config.rules.filter((_, i) => i !== index) })
   }
 
   const handleSave = async () => {
@@ -543,6 +607,64 @@ export default function NotificationsSettingsPage() {
         </button>
       </div>
 
+      {/* 알림 추가 다이얼로그 */}
+      {addDialogOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center sm:items-center px-4">
+          <div className="bg-surface w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 flex flex-col gap-4 shadow-modal">
+            <h3 className="font-bold text-text-primary text-base">새 알림 추가</h3>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-text-tertiary font-medium">알림 이름 *</label>
+              <input
+                type="text"
+                value={newRuleName}
+                onChange={(e) => setNewRuleName(e.target.value)}
+                placeholder="예: 계약서발송알림, 리뷰요청알림"
+                className="w-full h-10 rounded-lg border border-border text-sm px-3 bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs text-text-tertiary font-medium">
+                연결할 상태값 <span className="text-text-tertiary font-normal">(선택 — 비워두면 상태 자동 변경 없음)</span>
+              </label>
+              <input
+                type="text"
+                value={newRuleStatus}
+                onChange={(e) => setNewRuleStatus(e.target.value)}
+                placeholder="예: 계약발송, 리뷰완료"
+                className="w-full h-10 rounded-lg border border-border text-sm px-3 bg-surface focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+              <p className="text-[11px] text-text-tertiary">
+                입력하면 이 알림 발송 시 서비스 상태가 자동으로 해당 값으로 변경됩니다.
+              </p>
+            </div>
+
+            <p className="text-xs text-text-tertiary bg-surface-sunken rounded-lg px-3 py-2.5">
+              알림 문구는 추가 후 카드에서 직접 수정할 수 있습니다.
+            </p>
+
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => { setAddDialogOpen(false); setNewRuleName(''); setNewRuleStatus('') }}
+              >
+                취소
+              </Button>
+              <Button
+                fullWidth
+                onClick={handleAddRule}
+                disabled={!newRuleName.trim()}
+              >
+                추가
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 페이지 도움말 배너 */}
       <HelpBanner onClick={() => setHelpOpen(true)} />
 
@@ -605,12 +727,19 @@ export default function NotificationsSettingsPage() {
           <NotificationRuleCard
             rule={rule}
             onChange={(updated) => handleRuleChange(i, updated)}
+            onDelete={() => handleDeleteRule(i)}
             smsVars={smsVars}
             planType={planType}
             features={features}
           />
         </div>
       ))}
+
+      {/* 알림 추가 버튼 */}
+      <Button variant="secondary" fullWidth onClick={() => setAddDialogOpen(true)}>
+        <Plus size={16} />
+        알림 추가
+      </Button>
 
       {saveError   && <p className="text-sm text-state-danger  text-center">{saveError}</p>}
       {saveSuccess && <p className="text-sm text-state-success text-center">저장되었습니다.</p>}

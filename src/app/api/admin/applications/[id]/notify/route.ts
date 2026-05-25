@@ -2,25 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
 import { sendSMS } from '@/lib/solapi/client'
-import { applyNotificationTemplate } from '@/lib/settings-defaults'
+import { applyNotificationTemplate, DEFAULT_MSG_TEMPLATE, CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE } from '@/lib/settings-defaults'
 import type { ApiResponse, NotifyLog, NotificationConfig } from '@/types'
-
-const MSG_TEMPLATE: Record<string, (p: Record<string, string>) => string> = {
-  '예약확정알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 확정되었습니다.\n서비스일: ${p.date} ${p.time}\n문의: ${p.contact}`,
-  '예약1일전알림':        (p) => `[일잇다] ${p.name} 담당자님, 내일(${p.date}) 방문 예정입니다.\n시간: ${p.time}\n문의: ${p.contact}`,
-  '예약당일알림':         (p) => `[일잇다] ${p.name} 담당자님, 오늘(${p.date}) 방문 예정입니다.\n문의: ${p.contact}`,
-  '서비스완료알림':       (p) => `[일잇다] ${p.name} 담당자님, 서비스가 완료되었습니다.\n이용해 주셔서 감사합니다.\n문의: ${p.contact}`,
-  '결제알림':             (p) => `[일잇다] ${p.name} 담당자님, 결제 안내 드립니다.\n금액: ${p.amount}원\n계좌: ${p.account}\n문의: ${p.contact}`,
-  '결제완료알림':         (p) => `[일잇다] ${p.name} 담당자님, 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,
-  '결제완료알림(잔금)':   (p) => `[일잇다] ${p.name} 담당자님, 잔금 결제가 확인되었습니다. 감사합니다.\n문의: ${p.contact}`,
-  '계산서발행완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 세금계산서가 발행되었습니다.\n문의: ${p.contact}`,
-  '예약금 입금완료 알림': (p) => `[일잇다] ${p.name} 담당자님, 예약금 입금이 확인되었습니다.\n문의: ${p.contact}`,
-  '예약금환급완료알림':   (p) => `[일잇다] ${p.name} 담당자님, 예약금이 환급되었습니다.\n문의: ${p.contact}`,
-  '예약취소알림':         (p) => `[일잇다] ${p.name} 담당자님, 예약이 취소되었습니다.\n문의: ${p.contact}`,
-  'A/S방문알림':          (p) => `[일잇다] ${p.name} 담당자님, A/S 방문 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
-  '방문견적알림':         (p) => `[일잇다] ${p.name} 담당자님, 방문견적 일정을 안내 드립니다.\n방문일: ${p.date}\n문의: ${p.contact}`,
-  '폴더링크알림':         (p) => `[일잇다] ${p.name} 담당자님, 작업 사진 폴더를 공유드립니다.\n작업전/후 사진 확인: ${p.folderUrl}\n문의: ${p.contact}`,
-}
 
 export async function POST(
   req: NextRequest,
@@ -73,25 +56,29 @@ export async function POST(
       ? biz.solapi_from_phone
       : (process.env.SOLAPI_FROM_PHONE ?? '')
 
-    // 커스텀 템플릿 우선, 없으면 기본 템플릿 사용
+    // 커스텀 템플릿 우선, 없으면 DEFAULT_MSG_TEMPLATE, 그 외엔 CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE
     const notifConfig = biz.notification_config as NotificationConfig | null
-    const customRule  = notifConfig?.rules?.find(r => r.type === notifyType)
+    const matchedRule = notifConfig?.rules?.find(r => r.type === notifyType)
     let msgText: string
 
-    if (customRule?.template) {
-      msgText = applyNotificationTemplate(customRule.template, app as Record<string, unknown>)
+    if (matchedRule?.template) {
+      msgText = applyNotificationTemplate(matchedRule.template, app as Record<string, unknown>)
     } else {
-      const templateFn = MSG_TEMPLATE[notifyType]
-      if (!templateFn) throw new Error('지원하지 않는 알림 유형입니다.')
-      msgText = templateFn({
-        name:      app.owner_name ?? '고객',
-        date:      app.construction_date ?? '',
-        time:      app.construction_time ?? '',
-        amount:    app.balance?.toLocaleString('ko-KR') ?? '',
-        account:   app.account_number ?? '',
-        contact:   contactPhone,
-        folderUrl: app.drive_folder_url ?? '',
-      })
+      const templateFn = DEFAULT_MSG_TEMPLATE[notifyType]
+      if (templateFn) {
+        msgText = templateFn({
+          name:      app.owner_name ?? '고객',
+          date:      app.construction_date ?? '',
+          time:      app.construction_time ?? '',
+          amount:    app.balance?.toLocaleString('ko-KR') ?? '',
+          account:   app.account_number ?? '',
+          contact:   contactPhone,
+          folderUrl: app.drive_folder_url ?? '',
+        })
+      } else {
+        // 커스텀 알림이지만 template 미설정 시 범용 기본 문구 사용
+        msgText = applyNotificationTemplate(CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE, app as Record<string, unknown>)
+      }
     }
 
     const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
@@ -107,13 +94,19 @@ export async function POST(
       .single()
 
     const prevLog: NotifyLog[] = (current?.notification_log as NotifyLog[]) ?? []
+
+    // 알림 규칙에 status_value가 있으면 상태 자동 변경
+    const newStatus = matchedRule?.status_value
+    const updatePayload: Record<string, unknown> = { notification_log: [...prevLog, newLog] }
+    if (newStatus) updatePayload.status = newStatus
+
     await service
       .schema('ilitda')
       .from('service_applications')
-      .update({ notification_log: [...prevLog, newLog] })
+      .update(updatePayload)
       .eq('id', id)
 
-    return NextResponse.json<ApiResponse>({ success: true })
+    return NextResponse.json<ApiResponse>({ success: true, data: newStatus ? { newStatus } : undefined })
   } catch (e) {
     const msg = e instanceof Error ? e.message : '발송 실패'
     return NextResponse.json<ApiResponse>({ success: false, error: msg }, { status: 500 })

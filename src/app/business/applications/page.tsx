@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
 import { ApplicationPanel } from '@/components/admin/ApplicationPanel'
 import { useRouter } from 'next/navigation'
-import type { ServiceApplication, ApplicationStatus, PanelConfig } from '@/types'
+import type { ServiceApplication, ApplicationStatus, PanelConfig, NotificationConfig } from '@/types'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
@@ -371,6 +371,7 @@ export default function ApplicationsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [panelConfig, setPanelConfig] = useState<PanelConfig | undefined>(undefined)
+  const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | undefined>(undefined)
   const [helpOpen, setHelpOpen] = useState(false)
 
   const now = new Date()
@@ -396,14 +397,20 @@ export default function ApplicationsPage() {
   }
 
   useEffect(() => {
-    const loadPanelConfig = async () => {
+    const loadConfigs = async () => {
       try {
-        const res = await fetch('/api/admin/settings/panel')
-        const json = await res.json()
-        if (json.success && json.data) setPanelConfig(json.data as PanelConfig)
+        const [panelRes, notifRes] = await Promise.all([
+          fetch('/api/admin/settings/panel'),
+          fetch('/api/admin/settings/notifications'),
+        ])
+        const [panelJson, notifJson] = await Promise.all([panelRes.json(), notifRes.json()])
+        if (panelJson.success && panelJson.data) setPanelConfig(panelJson.data as PanelConfig)
+        if (notifJson.success && notifJson.data?.rules) {
+          setNotificationConfig({ rules: notifJson.data.rules })
+        }
       } catch { /* 기본값으로 동작 */ }
     }
-    loadPanelConfig()
+    loadConfigs()
   }, [])
 
   const fetchApps = useCallback(async () => {
@@ -727,6 +734,7 @@ export default function ApplicationsPage() {
           onUpdate={handleUpdate}
           onDelete={handleDelete}
           panelConfig={panelConfig}
+          notificationConfig={notificationConfig}
         />
       )}
 
