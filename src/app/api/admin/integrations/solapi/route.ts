@@ -74,6 +74,35 @@ export async function PUT(req: NextRequest): Promise<NextResponse<ApiResponse>> 
   }
 }
 
+// PATCH: 가입 연락처로 발신번호 자동 설정 (OTP 없이 — 가입 시 이미 인증된 번호)
+export async function PATCH(): Promise<NextResponse<ApiResponse<{ phone: string }>>> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 })
+
+  const service = createServiceClient()
+  const [bizResult, profileResult] = await Promise.all([
+    service.schema('ilitda').from('businesses').select('id').eq('profile_id', user.id).maybeSingle(),
+    service.schema('ilitda').from('profiles').select('phone').eq('id', user.id).maybeSingle(),
+  ])
+
+  if (!bizResult.data) return NextResponse.json({ success: false, error: '사업체 정보 없음' }, { status: 400 })
+  if (!profileResult.data?.phone) return NextResponse.json({ success: false, error: '가입 연락처가 없습니다.' }, { status: 400 })
+
+  const phone = profileResult.data.phone.replace(/[^0-9]/g, '')
+  if (!/^01[016789]\d{7,8}$/.test(phone)) {
+    return NextResponse.json({ success: false, error: '가입 연락처 형식이 올바르지 않습니다.' }, { status: 400 })
+  }
+
+  await service
+    .schema('ilitda')
+    .from('businesses')
+    .update({ solapi_from_phone: phone, solapi_phone_verified: true, solapi_pending_id: null })
+    .eq('id', bizResult.data.id)
+
+  return NextResponse.json({ success: true, data: { phone } })
+}
+
 // DELETE: 발신번호 해제
 export async function DELETE(): Promise<NextResponse<ApiResponse>> {
   const auth = await getAuthBusiness()
