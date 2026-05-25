@@ -5,6 +5,8 @@ import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
 
 interface PlanFeatureConfigRow {
   feature_key: string
+  label: string
+  category: string
   feature_type: 'boolean' | 'numeric'
   free_enabled: boolean | null
   basic_enabled: boolean | null
@@ -16,7 +18,19 @@ interface PlanFeatureConfigRow {
   max_limit: number | null
 }
 
+export interface FeatureMeta {
+  feature_key: string
+  label: string
+  category: string
+  feature_type: 'boolean' | 'numeric'
+}
+
 type DynamicFeatures = Record<PlanType, PlanFeatureMap>
+
+interface PlanFeaturesResponse {
+  features: DynamicFeatures
+  meta: FeatureMeta[]
+}
 
 function buildDynamicFeatures(rows: PlanFeatureConfigRow[]): DynamicFeatures {
   const result: DynamicFeatures = {
@@ -52,15 +66,25 @@ export async function GET(): Promise<NextResponse> {
     const { data, error } = await supabase
       .schema('ilitda')
       .from('plan_feature_configs')
-      .select('feature_key, feature_type, free_enabled, basic_enabled, pro_enabled, max_enabled, free_limit, basic_limit, pro_limit, max_limit')
+      .select('feature_key, label, category, feature_type, free_enabled, basic_enabled, pro_enabled, max_enabled, free_limit, basic_limit, pro_limit, max_limit')
+      .order('category')
+      .order('feature_key')
 
     if (error) {
-      return NextResponse.json({ success: true, data: PLAN_FEATURES })
+      return NextResponse.json({ success: true, data: { features: PLAN_FEATURES, meta: [] } })
     }
 
-    const features = buildDynamicFeatures((data ?? []) as PlanFeatureConfigRow[])
-    return NextResponse.json({ success: true, data: features })
+    const rows = (data ?? []) as PlanFeatureConfigRow[]
+    const features = buildDynamicFeatures(rows)
+    const meta: FeatureMeta[] = rows.map(r => ({
+      feature_key:  r.feature_key,
+      label:        r.label,
+      category:     r.category,
+      feature_type: r.feature_type,
+    }))
+
+    return NextResponse.json({ success: true, data: { features, meta } })
   } catch {
-    return NextResponse.json({ success: true, data: PLAN_FEATURES })
+    return NextResponse.json({ success: true, data: { features: PLAN_FEATURES, meta: [] } })
   }
 }
