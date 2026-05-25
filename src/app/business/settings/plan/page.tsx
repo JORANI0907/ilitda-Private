@@ -14,7 +14,8 @@ import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpTip } from '@/components/ui/HelpTip'
 import { PLAN_NAMES, PLAN_PRICES, toPlanType } from '@/lib/plan-features'
-import type { PlanType } from '@/lib/plan-features'
+import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
+import { usePlanFeatures } from '@/contexts/PlanFeaturesContext'
 
 // ─── 플랜 정의 ────────────────────────────────────────────────
 const PLAN_KEYS: Exclude<PlanType, 'free'>[] = ['basic', 'pro', 'max']
@@ -96,6 +97,8 @@ type FeatureValue = boolean | string
 
 interface FeatureRow {
   label: string
+  featureKey?: keyof PlanFeatureMap
+  numericUnit?: string
   basic: FeatureValue
   pro: FeatureValue
   max: FeatureValue
