@@ -49,8 +49,25 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     const { months, schedules, y } = DEMO_REVENUE()
-    const urlYear  = Number(new URL(req.url).searchParams.get('year') ?? y)
-    const monthParam = new URL(req.url).searchParams.get('month')
+    const sp = new URL(req.url).searchParams
+    const urlYear    = Number(sp.get('year') ?? y)
+    const monthParam = sp.get('month')
+    const fromParam  = sp.get('from')
+    const toParam    = sp.get('to')
+
+    if (fromParam && toParam) {
+      const rangeSchedules = schedules.filter(s => s.service_date >= fromParam && s.service_date <= toParam)
+      const total = rangeSchedules.reduce((sum, s) => sum + (s.fee ?? 0), 0)
+      const methodMap: Record<string, number> = {}
+      for (const s of rangeSchedules) {
+        const method = s.client?.payment_method ?? '미지정'
+        methodMap[method] = (methodMap[method] ?? 0) + (s.fee ?? 0)
+      }
+      const byPaymentMethod = Object.entries(methodMap)
+        .map(([method, amount]) => ({ method, amount, percent: total > 0 ? Math.round((amount / total) * 100) : 0 }))
+        .sort((a, b) => b.amount - a.amount)
+      return NextResponse.json({ success: true, data: { total, byPaymentMethod, schedules: rangeSchedules }, isDemo: true })
+    }
 
     if (monthParam) {
       const monthNum = Number(monthParam)
@@ -87,8 +104,55 @@ export async function GET(req: NextRequest) {
   }
 
   const url = req.nextUrl
-  const year  = Number(url.searchParams.get('year') ?? new Date().getFullYear())
+  const year       = Number(url.searchParams.get('year') ?? new Date().getFullYear())
   const monthParam = url.searchParams.get('month')
+  const fromParam  = url.searchParams.get('from')
+  const toParam    = url.searchParams.get('to')
+
+  if (fromParam && toParam) {
+    // ─── 기간 직접 설정 ───────────────────────────────────────
+    const { data: rows } = await service
+      .from('service_applications')
+      .select('id, construction_date, status, care_scope, supply_amount, business_name, owner_name, business_number, payment_method')
+      .eq('business_id', business.id)
+      .gte('construction_date', fromParam)
+      .lte('construction_date', toParam)
+      .not('construction_date', 'is', null)
+      .neq('status', '예약취소')
+      .order('construction_date', { ascending: false })
+
+    const schedules = ((rows ?? []) as AppRow[]).map(s => ({
+      id:           s.id,
+      service_date: s.construction_date,
+      service_type: s.care_scope,
+      fee:          s.supply_amount !== null ? Number(s.supply_amount) : null,
+      status:       s.status,
+      client: {
+        name:           s.business_name ?? '-',
+        owner_name:     s.owner_name,
+        business_number:s.business_number,
+        payment_method: s.payment_method,
+      },
+    }))
+
+    const total = schedules.reduce((sum, s) => sum + (s.fee ?? 0), 0)
+
+    const methodMap: Record<string, number> = {}
+    for (const s of schedules) {
+      const method = s.client?.payment_method ?? '미지정'
+      methodMap[method] = (methodMap[method] ?? 0) + (s.fee ?? 0)
+    }
+
+    const byPaymentMethod = Object.entries(methodMap)
+      .map(([method, amount]) => ({
+        method,
+        amount,
+        percent: total > 0 ? Math.round((amount / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+
+    return NextResponse.json({ success: true, data: { total, byPaymentMethod, schedules } })
+  }
 
   if (monthParam) {
     // ─── 월간 데이터 ───────────────────────────────────────
