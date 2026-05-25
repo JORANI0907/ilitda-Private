@@ -357,7 +357,7 @@ export default function RevenuePage() {
                 }`}
               >
                 <Calendar size={12} />
-                직접설정
+                세부검색
               </button>
             </>
           )}

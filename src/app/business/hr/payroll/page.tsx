@@ -313,7 +313,7 @@ export default function PayrollPage() {
             }`}
           >
             <Calendar size={12} />
-            직접설정
+            세부검색
           </button>
         </div>
         {/* CSS 아코디언 */}
