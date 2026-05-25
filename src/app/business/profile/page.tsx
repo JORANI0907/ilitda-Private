@@ -318,9 +318,18 @@ export default function BusinessProfilePage() {
         const usedRatio = Math.min(used / limit, 1)
         return (
           <Card padding="md">
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart2 size={16} className="text-brand-600" />
-              <SectionHeader title="오늘 SMS 발송량 현황" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <BarChart2 size={16} className="text-brand-600" />
+                <SectionHeader title="오늘 SMS 발송량 현황" />
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push('/business/settings/plan')}
+                className="text-xs text-brand-500 hover:text-brand-700 font-medium transition-colors"
+              >
+                발송량 업그레이드
+              </button>
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
@@ -489,39 +498,42 @@ export default function BusinessProfilePage() {
       </Card>
 
       {/* 서비스 설정 */}
-      <Card padding="md">
-        <SectionHeader title="서비스 설정" className="mb-3" />
-        <div className="flex flex-col divide-y divide-border-subtle">
-          <button
-            type="button"
-            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
-            onClick={() => router.push('/business/profile/settings/fields')}
-          >
-            <div className="flex items-center gap-3">
-              <SlidersHorizontal size={16} className="text-text-tertiary" />
-              <div>
-                <span className="text-sm text-text-primary">서비스(폼) 화면 구성 설정</span>
-                <p className="text-xs text-text-tertiary mt-0.5">서비스관리(폼)에서 사용할 화면을 직접 커스텀</p>
+      <div className="rounded-2xl border border-brand-200 bg-brand-50/25 shadow-soft overflow-hidden">
+        <div className="h-1 bg-brand-500" />
+        <div className="px-4 pb-4 pt-3">
+          <SectionHeader title="서비스 설정" className="mb-3" />
+          <div className="flex flex-col divide-y divide-brand-100">
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-brand-50 active:bg-brand-100 transition-colors"
+              onClick={() => router.push('/business/profile/settings/fields')}
+            >
+              <div className="flex items-center gap-3">
+                <SlidersHorizontal size={16} className="text-brand-500" />
+                <div>
+                  <span className="text-sm text-text-primary">서비스(폼) 화면 구성 설정</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">서비스관리(폼)에서 사용할 화면을 직접 커스텀</p>
+                </div>
               </div>
-            </div>
-            <ChevronRight size={16} className="text-text-tertiary" />
-          </button>
-          <button
-            type="button"
-            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-surface-sunken active:bg-border transition-colors"
-            onClick={() => router.push('/business/profile/settings/notifications')}
-          >
-            <div className="flex items-center gap-3">
-              <Bell size={16} className="text-text-tertiary" />
-              <div>
-                <span className="text-sm text-text-primary">서비스 알림 설정</span>
-                <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
+              <ChevronRight size={16} className="text-brand-400" />
+            </button>
+            <button
+              type="button"
+              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-brand-50 active:bg-brand-100 transition-colors"
+              onClick={() => router.push('/business/profile/settings/notifications')}
+            >
+              <div className="flex items-center gap-3">
+                <Bell size={16} className="text-brand-500" />
+                <div>
+                  <span className="text-sm text-text-primary">서비스 알림 설정</span>
+                  <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
+                </div>
               </div>
-            </div>
-            <ChevronRight size={16} className="text-text-tertiary" />
-          </button>
+              <ChevronRight size={16} className="text-brand-400" />
+            </button>
+          </div>
         </div>
-      </Card>
+      </div>
 
       {/* 신청서 링크 */}
       <Card padding="md" id="request-link-section">
@@ -529,15 +541,15 @@ export default function BusinessProfilePage() {
         <div className="flex flex-col gap-2">
           <p className="text-xs text-text-tertiary">고객 신청서 작성 → 일정에 자동등록</p>
           {slug ? (
-            <div className="flex items-center gap-2 bg-surface-sunken rounded-lg px-3 py-2.5">
-              <Link2 size={14} className="text-text-tertiary shrink-0" />
-              <p className="text-xs text-text-secondary break-all flex-1 min-w-0">
+            <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-lg px-3 py-2.5">
+              <Link2 size={14} className="text-brand-500 shrink-0" />
+              <p className="text-xs text-brand-700 break-all flex-1 min-w-0">
                 {typeof window !== 'undefined' ? window.location.origin : 'https://ilitda.vercel.app'}/request/{slug}
               </p>
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="shrink-0 flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                className="shrink-0 flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-800 transition-colors"
               >
                 {isCopied ? <Check size={13} /> : <Copy size={13} />}
                 {isCopied ? '복사됨' : '복사'}
