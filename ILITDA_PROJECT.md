@@ -1,7 +1,7 @@
 # 일잇다 (ilitda) 프로젝트 레퍼런스
 
 > **이 파일을 먼저 읽어라.** 작업 전 반드시 전체 내용을 숙지할 것.
-> 마지막 업데이트: 2026-05-23
+> 마지막 업데이트: 2026-05-25
 
 ---
 
@@ -25,7 +25,30 @@
   ```
 - `isGuest` 조건 없이 플랜 게이트만 넣으면 게스트가 업그레이드 모달에 막힌다.
 
-### 3. isDemo 패턴
+### 3. 뒤로가기 버튼 — 모든 페이지 필수
+- 모든 `level="page"` SectionHeader는 반드시 뒤로가기 버튼과 함께 렌더링한다.
+- **패턴 (매출 관리 기준):**
+  ```tsx
+  import { useRouter } from 'next/navigation'
+  import { ChevronLeft } from 'lucide-react'
+
+  const router = useRouter()
+
+  // JSX
+  <div className="flex items-center gap-2">
+    <button
+      onClick={() => router.back()}
+      className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+    >
+      <ChevronLeft size={24} />
+    </button>
+    <SectionHeader title="페이지 제목" level="page" />
+  </div>
+  ```
+- 업그레이드 분기(플랜 게이트 조기 return)에도 동일하게 적용한다.
+- `action` prop이 있는 경우 SectionHeader에 그대로 유지한다.
+
+### 4. isDemo 패턴
 - 비로그인(게스트) 상태에서 API는 더미 데이터와 `isDemo: true`를 반환한다.
 - 페이지는 `isDemo === true`일 때 데모 배너를 표시한다.
 - 신규 API 작성 시 반드시 인증되지 않은 요청에 `isDemo: true` + 더미 데이터 반환 처리 추가.
