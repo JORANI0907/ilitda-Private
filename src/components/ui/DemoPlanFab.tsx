@@ -7,7 +7,7 @@ export function DemoPlanFab() {
   return (
     <Link
       href="/business/settings/plan"
-      className="fixed bottom-[84px] right-4 z-50 flex flex-col items-center gap-1 active:scale-95 transition-transform md:bottom-6"
+      className="fixed bottom-[84px] right-6 z-50 flex flex-col items-center gap-1 active:scale-95 transition-transform md:bottom-6"
       aria-label="플랜구독"
     >
       <div className="w-20 h-16 drop-shadow-lg">
