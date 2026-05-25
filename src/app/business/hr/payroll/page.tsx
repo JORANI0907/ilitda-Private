@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Download, Users, LogIn, ChevronLeft, ChevronRight, Calendar, Search } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -67,6 +68,7 @@ const HELP_SECTIONS = [
 ]
 
 export default function PayrollPage() {
+  const router = useRouter()
   const [helpOpen, setHelpOpen] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
   const [connections, setConnections] = useState<Connection[]>([])
@@ -245,10 +247,15 @@ export default function PayrollPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
-      <SectionHeader
-        title="급여 관리"
-        level="page"
-      />
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <SectionHeader title="급여 관리" level="page" />
+      </div>
 
       {/* 데모 배너 */}
       {isDemo && (
@@ -315,7 +322,7 @@ export default function PayrollPage() {
           isCustomRange ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         }`}>
           <div className="pt-0.5 flex flex-col gap-2">
-            <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={rangeStart}
@@ -382,23 +389,18 @@ export default function PayrollPage() {
 
       {/* 합계 카드 */}
       {!isLoading && searchedApps.length > 0 && (
-        <div className="rounded-2xl bg-brand-600 px-5 py-4 shadow-card">
-          <p className="text-xs text-brand-200">
+        <div className="rounded-2xl bg-surface border-2 border-brand-500 px-4 py-3 flex items-center justify-between gap-3">
+          <span className="text-sm font-medium text-text-secondary">
             {activeWorker === 'all'
-              ? '전체 급여 합계'
-              : `${connections.find((c) => c.id === activeWorker)?.display_name ?? ''} 급여 합계`}
-          </p>
-          <p className="text-3xl font-bold text-white mt-0.5 tracking-tight">
-            ₩ {totalForWorker > 0 ? totalForWorker.toLocaleString('ko-KR') : '0'}
-          </p>
-          <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-xs text-brand-200">{searchedApps.length}건</span>
+              ? `급여합계(${searchedApps.length}건)`
+              : `${connections.find((c) => c.id === activeWorker)?.display_name ?? ''} 급여합계(${searchedApps.length}건)`}
             {q && (
-              <span className="text-xs text-brand-300 bg-brand-700/50 px-2 py-0.5 rounded-full">
-                &ldquo;{searchQuery}&rdquo; 검색 중
-              </span>
+              <span className="ml-1.5 text-xs text-text-tertiary font-normal">&ldquo;{searchQuery}&rdquo;</span>
             )}
-          </div>
+          </span>
+          <span className="text-base font-bold text-brand-600 tracking-tight shrink-0">
+            {totalForWorker.toLocaleString('ko-KR')}원
+          </span>
         </div>
       )}
 
