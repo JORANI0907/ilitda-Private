@@ -115,7 +115,6 @@ export default function WorkersPage() {
   const { planType, features, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
-  const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -129,8 +128,7 @@ export default function WorkersPage() {
     })
   }
 
-  function exitSelectMode() {
-    setSelectMode(false)
+  function clearSelection() {
     setSelectedIds(new Set())
   }
 
@@ -150,7 +148,6 @@ export default function WorkersPage() {
       setConnections(prev => prev.filter(c => !selectedIds.has(c.id)))
       setSelectedIds(new Set())
       setShowDeleteModal(false)
-      setSelectMode(false)
     } catch {
       setDeleteError('삭제 중 오류가 발생했습니다.')
     } finally {
@@ -353,19 +350,19 @@ export default function WorkersPage() {
             })()}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
-              className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-            >
-              {selectMode ? '취소' : '선택'}
-            </button>
-            {!selectMode && (
-              <Button size="sm" onClick={handleOpenAdd}>
-                <UserPlus size={15} className="mr-1" />
-                작업자 추가
-              </Button>
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              >
+                취소
+              </button>
             )}
+            <Button size="sm" onClick={handleOpenAdd}>
+              <UserPlus size={15} className="mr-1" />
+              작업자 추가
+            </Button>
           </div>
         </div>
       </div>
@@ -466,58 +463,61 @@ export default function WorkersPage() {
         )}
 
         {!isLoading && !error && paginatedConnections.map((conn) => (
-          <button
-            key={conn.id}
-            type="button"
-            onClick={selectMode ? () => toggleSelect(conn.id) : () => router.push(`/business/hr/workers/${conn.id}`)}
-            className={`bg-surface rounded-2xl border shadow-soft p-4 flex items-center gap-3 text-left cursor-pointer transition-all w-full
-              ${selectMode && selectedIds.has(conn.id)
-                ? 'border-brand-500 ring-2 ring-brand-500 ring-inset bg-brand-50'
-                : 'border-border-subtle hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98]'}`}
-          >
-            {selectMode && (
+          <div key={conn.id} className="relative">
+            {/* 체크박스: 항상 표시 */}
+            <button
+              type="button"
+              className="absolute top-1/2 -translate-y-1/2 left-3 z-10 p-1"
+              onClick={() => toggleSelect(conn.id)}
+            >
               <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
                 ${selectedIds.has(conn.id) ? 'bg-brand-600 border-brand-600' : 'bg-surface border-border'}`}>
                 {selectedIds.has(conn.id) && <Check size={12} className="text-white" />}
               </div>
-            )}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/business/hr/workers/${conn.id}`)}
+              className={`bg-surface rounded-2xl border shadow-soft p-4 pl-10 flex items-center gap-3 text-left cursor-pointer transition-all w-full
+                ${selectedIds.has(conn.id)
+                  ? 'border-brand-500 ring-2 ring-brand-500 ring-inset bg-brand-50'
+                  : 'border-border-subtle hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98]'}`}
+            >
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-base font-bold ${getAvatarColor(conn.display_name)}`}>
+                {conn.display_name.charAt(0)}
+              </div>
 
-            <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-base font-bold ${getAvatarColor(conn.display_name)}`}>
-              {conn.display_name.charAt(0)}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-semibold text-text-primary text-sm">{conn.display_name}</span>
-                <ConnectionBadge connection={conn} />
-                {conn.manual_skill_level && (
-                  <span className="text-xs px-1.5 py-0.5 bg-brand-50 text-brand-600 rounded font-medium">
-                    능력 {conn.manual_skill_level}
-                  </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-text-primary text-sm">{conn.display_name}</span>
+                  <ConnectionBadge connection={conn} />
+                  {conn.manual_skill_level && (
+                    <span className="text-xs px-1.5 py-0.5 bg-brand-50 text-brand-600 rounded font-medium">
+                      능력 {conn.manual_skill_level}
+                    </span>
+                  )}
+                </div>
+                {(conn.manual_phone ?? conn.profiles?.phone) && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Phone size={11} className="text-text-tertiary shrink-0" />
+                    <span className="text-xs text-text-secondary">
+                      {conn.manual_phone ?? conn.profiles?.phone}
+                    </span>
+                  </div>
+                )}
+                {conn.manual_address && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <MapPin size={11} className="text-text-tertiary shrink-0" />
+                    <span className="text-xs text-text-secondary truncate">{conn.manual_address}</span>
+                  </div>
+                )}
+                {conn.manual_specialty && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-xs text-text-tertiary truncate">특기: {conn.manual_specialty}</span>
+                  </div>
                 )}
               </div>
-              {(conn.manual_phone ?? conn.profiles?.phone) && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Phone size={11} className="text-text-tertiary shrink-0" />
-                  <span className="text-xs text-text-secondary">
-                    {conn.manual_phone ?? conn.profiles?.phone}
-                  </span>
-                </div>
-              )}
-              {conn.manual_address && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <MapPin size={11} className="text-text-tertiary shrink-0" />
-                  <span className="text-xs text-text-secondary truncate">{conn.manual_address}</span>
-                </div>
-              )}
-              {conn.manual_specialty && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-xs text-text-tertiary truncate">특기: {conn.manual_specialty}</span>
-                </div>
-              )}
-            </div>
 
-            {!selectMode && (
               <div className="flex items-center gap-1 shrink-0">
                 {!conn.is_manual && conn.status === 'pending' && (
                   <button
@@ -536,8 +536,8 @@ export default function WorkersPage() {
                 )}
                 <ChevronRight size={16} className="text-text-tertiary" />
               </div>
-            )}
-          </button>
+            </button>
+          </div>
         ))}
       </div>
 
@@ -704,7 +704,7 @@ export default function WorkersPage() {
       </Modal>
 
       {/* 선택 삭제 플로팅 바 */}
-      {selectMode && selectedIds.size > 0 && (
+      {selectedIds.size > 0 && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-surface border border-border shadow-pop rounded-2xl px-4 py-3 whitespace-nowrap">
           <span className="text-sm font-medium text-text-secondary">{selectedIds.size}명 선택됨</span>
           <button

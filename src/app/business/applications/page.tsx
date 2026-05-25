@@ -299,7 +299,7 @@ function AppCard({
       {/* 체크박스: 항상 표시, 클릭 시 카드 열기 동작과 분리 */}
       <button
         type="button"
-        className="absolute top-3.5 left-3 z-10 p-0.5"
+        className="absolute top-1/2 -translate-y-1/2 left-3 z-10 p-1"
         onClick={(e) => { e.stopPropagation(); onSelect?.(app.id) }}
       >
         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
@@ -308,65 +308,54 @@ function AppCard({
         </div>
       </button>
       <Card
-        padding="md"
+        padding="sm"
         className={`cursor-pointer active:scale-[0.98] transition-transform hover:shadow-card
-          ${isToday ? 'border-l-4 border-l-brand-600 bg-brand-light/30' : ''}
+          ${isToday ? 'border-l-4 border-l-brand-600' : ''}
           ${isSelected ? 'ring-2 ring-brand-500 ring-inset bg-brand-50' : ''}`}
         onClick={onClick}
       >
-        <div className="flex flex-col gap-2 pl-7">
-          <div className="flex items-center justify-between gap-2">
+        <div className="pl-7 flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            {/* 뱃지 + 업체명 */}
             <div className="flex items-center gap-1.5 flex-wrap">
               {isToday && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
-                  오늘
-                </span>
+                <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-brand-600 text-white">오늘</span>
               )}
               {badge && (
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.bg}`}>
-                  {badge.label}
+                <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${badge.bg}`}>{badge.label}</span>
+              )}
+              <span className="font-semibold text-text-primary text-sm truncate">
+                {app.business_name || '(업체명 미입력)'}
+              </span>
+            </div>
+            {/* 담당자 · 연락처 · 시공일 */}
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {app.owner_name && (
+                <span className="text-xs text-text-secondary">
+                  {app.owner_name}{app.phone ? ` · ${app.phone}` : ''}
+                </span>
+              )}
+              {app.construction_date && (
+                <span className="flex items-center gap-0.5 text-xs text-text-tertiary">
+                  <CalendarDays size={10} className="shrink-0" />
+                  {app.construction_date}{app.construction_time ? ` ${app.construction_time}` : ''}
                 </span>
               )}
             </div>
+          </div>
+          {/* 금액 + 즐겨찾기 */}
+          <div className="shrink-0 flex flex-col items-end gap-0.5">
+            {totalAmt > 0 && (
+              <span className="text-xs font-semibold text-brand-600">{totalAmt.toLocaleString('ko-KR')}원</span>
+            )}
             <button
               type="button"
               onClick={toggleFav}
-              className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
+              className="p-0.5 text-text-tertiary hover:text-amber-400 transition-colors"
             >
-              <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
+              <Star size={14} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
             </button>
           </div>
-
-          <p className="font-semibold text-text-primary leading-tight">
-            {app.business_name || '(업체명 미입력)'}
-          </p>
-
-          <div className="flex flex-col gap-1 text-sm text-text-secondary">
-            {app.owner_name && (
-              <span className="flex items-center gap-1.5">
-                <Phone size={12} className="shrink-0 text-text-tertiary" />
-                {app.owner_name}{app.phone ? ` · ${app.phone}` : ''}
-              </span>
-            )}
-            {app.address && (
-              <span className="flex items-start gap-1.5">
-                <MapPin size={12} className="shrink-0 text-text-tertiary mt-0.5" />
-                <span className="line-clamp-1 break-keep">{app.address}</span>
-              </span>
-            )}
-            {app.construction_date && (
-              <span className="flex items-center gap-1.5">
-                <CalendarDays size={12} className="shrink-0 text-text-tertiary" />
-                시공일: {app.construction_date}{app.construction_time ? ` ${app.construction_time}` : ''}
-              </span>
-            )}
-          </div>
-
-          {totalAmt > 0 && (
-            <p className="text-sm font-medium text-brand-600">
-              {totalAmt.toLocaleString('ko-KR')}원
-            </p>
-          )}
         </div>
       </Card>
     </div>
