@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -133,12 +133,26 @@ export default function RevenuePage() {
   const [isDemo, setIsDemo]         = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isExporting, setIsExporting] = useState(false)
+  const [isCustomRange, setIsCustomRange] = useState(false)
+  const [rangeStart, setRangeStart] = useState('')
+  const [rangeEnd, setRangeEnd]     = useState('')
 
   const fetchMonthly = useCallback(async (y: number, m: number) => {
     setIsLoading(true)
     setSelectedIds(new Set())
     try {
       const res = await fetch(`/api/business/revenue?year=${y}&month=${m}`)
+      const json = await res.json()
+      if (json.success) { setMonthlyData(json.data); setIsDemo(json.isDemo === true) }
+    } catch { /* ignore */ }
+    finally { setIsLoading(false) }
+  }, [])
+
+  const fetchRange = useCallback(async (from: string, to: string) => {
+    setIsLoading(true)
+    setSelectedIds(new Set())
+    try {
+      const res = await fetch(`/api/business/revenue?from=${from}&to=${to}`)
       const json = await res.json()
       if (json.success) { setMonthlyData(json.data); setIsDemo(json.isDemo === true) }
     } catch { /* ignore */ }
@@ -156,11 +170,16 @@ export default function RevenuePage() {
   }, [])
 
   useEffect(() => {
-    if (view === 'monthly') fetchMonthly(year, month)
-    else fetchAnnual(year)
-  }, [view, year, month, fetchMonthly, fetchAnnual])
+    if (view === 'monthly') {
+      if (isCustomRange && rangeStart && rangeEnd) fetchRange(rangeStart, rangeEnd)
+      else fetchMonthly(year, month)
+    } else {
+      fetchAnnual(year)
+    }
+  }, [view, year, month, isCustomRange, rangeStart, rangeEnd, fetchMonthly, fetchRange, fetchAnnual])
 
   function prevPeriod() {
+    setIsCustomRange(false)
     if (view === 'monthly') {
       if (month === 1) { setYear(y => y - 1); setMonth(12) }
       else setMonth(m => m - 1)
@@ -170,6 +189,7 @@ export default function RevenuePage() {
   }
 
   function nextPeriod() {
+    setIsCustomRange(false)
     if (view === 'monthly') {
       if (month === 12) { setYear(y => y + 1); setMonth(1) }
       else setMonth(m => m + 1)
@@ -209,7 +229,10 @@ export default function RevenuePage() {
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
       a.href     = url
-      a.download = `세금계산서_${year}${String(month).padStart(2, '0')}.xlsx`
+      const suffix = isCustomRange && rangeStart && rangeEnd
+        ? `${rangeStart}_${rangeEnd}`
+        : `${year}${String(month).padStart(2, '0')}`
+      a.download = `세금계산서_${suffix}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
     } catch {
@@ -219,8 +242,12 @@ export default function RevenuePage() {
     }
   }
 
-  const periodLabel = view === 'monthly' ? `${year}년 ${month}월` : `${year}년`
-  const dayLabel    = view === 'monthly' ? `${month}월` : `${year}년`
+  const periodLabel = isCustomRange && rangeStart && rangeEnd
+    ? `${rangeStart} ~ ${rangeEnd}`
+    : view === 'monthly' ? `${year}년 ${month}월` : `${year}년`
+  const dayLabel = isCustomRange && rangeStart && rangeEnd
+    ? `${rangeStart}~${rangeEnd}`
+    : view === 'monthly' ? `${month}월` : `${year}년`
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-8">
@@ -267,20 +294,60 @@ export default function RevenuePage() {
       </div>
 
       {/* 기간 네비게이션 */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={prevPeriod}
-          className="p-2 rounded-lg hover:bg-surface-sunken transition-colors"
-        >
-          <ChevronLeft size={20} className="text-text-secondary" />
-        </button>
-        <p className="text-base font-bold text-text-primary">{periodLabel}</p>
-        <button
-          onClick={nextPeriod}
-          className="p-2 rounded-lg hover:bg-surface-sunken transition-colors"
-        >
-          <ChevronRight size={20} className="text-text-secondary" />
-        </button>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center bg-surface-sunken rounded-2xl px-2 py-1.5 gap-1">
+          <button
+            onClick={prevPeriod}
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors shrink-0"
+            aria-label="이전"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="flex-1 text-center text-sm font-semibold text-text-primary">
+            {periodLabel}
+          </span>
+          <button
+            onClick={nextPeriod}
+            className="h-9 w-9 flex items-center justify-center rounded-xl text-text-secondary hover:bg-surface hover:text-text-primary transition-colors shrink-0"
+            aria-label="다음"
+          >
+            <ChevronRight size={18} />
+          </button>
+          {view === 'monthly' && (
+            <>
+              <div className="w-px h-4 bg-border shrink-0" />
+              <button
+                type="button"
+                onClick={() => setIsCustomRange((v) => !v)}
+                className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-lg transition-colors shrink-0 ${
+                  isCustomRange
+                    ? 'bg-brand-100 text-brand-700'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                }`}
+              >
+                <Calendar size={12} />
+                직접설정
+              </button>
+            </>
+          )}
+        </div>
+        {isCustomRange && view === 'monthly' && (
+          <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
+            <input
+              type="date"
+              value={rangeStart}
+              onChange={(e) => setRangeStart(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+            <span className="text-text-tertiary text-sm shrink-0">~</span>
+            <input
+              type="date"
+              value={rangeEnd}
+              onChange={(e) => setRangeEnd(e.target.value)}
+              className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+            />
+          </div>
+        )}
       </div>
 
       {/* 로딩 스켈레톤 */}
