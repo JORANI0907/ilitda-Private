@@ -320,7 +320,7 @@ export default function PayrollPage() {
         <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
           isCustomRange ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         }`}>
-          <div className="pt-0.5 flex flex-col gap-2">
+          <div className="pt-0.5 pb-1 px-0.5 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -343,7 +343,7 @@ export default function PayrollPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="업체명, 작업자 검색"
-                className="w-full h-9 rounded-2xl border border-border bg-surface-sunken pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                className="w-full h-9 rounded-xl border border-border bg-surface pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
           </div>
