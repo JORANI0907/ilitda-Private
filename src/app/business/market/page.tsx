@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useContext } from 'react'
-import { ShoppingBag, Megaphone, BarChart2, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ShoppingBag, Megaphone, BarChart2, Users, ChevronLeft } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -51,6 +52,7 @@ const HELP_SECTIONS = [
 ]
 
 export default function MarketPage() {
+  const router = useRouter()
   const { planType, features, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
@@ -60,7 +62,15 @@ export default function MarketPage() {
   if (!planLoading && !isGuest && !canUseFeature(planType, 'marketplace', features)) {
     return (
       <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
-        <SectionHeader title="마켓" level="page" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.back()}
+            className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="마켓" level="page" />
+        </div>
         <UpgradeModal
           open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
@@ -78,7 +88,15 @@ export default function MarketPage() {
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-6">
-      <SectionHeader title="마켓" level="page" />
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <SectionHeader title="마켓" level="page" />
+      </div>
 
       <HelpBanner label="마켓플레이스 안내" onClick={() => setHelpOpen(true)} />
       <HelpDrawer

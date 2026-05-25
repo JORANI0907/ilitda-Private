@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Plus, X, FileText, ExternalLink, RefreshCw,
-  ChevronLeft, ChevronRight, Save, RotateCcw, Upload, Trash2, Eye, LogIn,
+  ChevronLeft, ChevronRight, Save, RotateCcw, Upload, Trash2, Eye, LogIn, Settings,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -14,7 +14,6 @@ import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
-import { HelpTip } from '@/components/ui/HelpTip'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 
 // ─── 타입 ────────────────────────────────────────────────────────
@@ -224,12 +223,15 @@ export default function QuotationsPage() {
   const [isDemo, setIsDemo]     = useState(false)
 
   // 목록
+  const [filterYM, setFilterYM] = useState(() => {
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() + 1 }
+  })
   const [applications, setApplications] = useState<ApplicationRow[]>([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [page, setPage]         = useState(1)
   const [total, setTotal]       = useState(0)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
 
   // 에디터 모달
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -238,20 +240,24 @@ export default function QuotationsPage() {
   // 미리보기 모달
   const [showPreview, setShowPreview] = useState(false)
 
-  // 공급자 설정
-  const [companyInfo, setCompanyInfo]       = useState<CompanyInfo>(EMPTY_COMPANY)
-  const [savingSettings, setSavingSettings] = useState(false)
-  const [sealImageUrl, setSealImageUrl]     = useState<string | null>(null)
-  const [sealUploading, setSealUploading]   = useState(false)
-  const [validDays, setValidDays]           = useState(5)
+  // 공급자 정보 — 저장된 버전 (페이지 모달용)
+  const [companyInfo, setCompanyInfo]         = useState<CompanyInfo>(EMPTY_COMPANY)
+  const [savingSettings, setSavingSettings]   = useState(false)
+  const [sealImageUrl, setSealImageUrl]       = useState<string | null>(null)
+  const [sealUploading, setSealUploading]     = useState(false)
+  const [validDays, setValidDays]             = useState(5)
+  const [showCompanyModal, setShowCompanyModal] = useState(false)
   const sealInputRef = useRef<HTMLInputElement>(null)
 
+  // 공급자 정보 — 에디터 모달 1회용 버전
+  const [localCompanyInfo, setLocalCompanyInfo] = useState<CompanyInfo>(EMPTY_COMPANY)
+
   // 고객 정보
-  const [ownerName, setOwnerName]           = useState('')
-  const [businessName, setBusinessName]     = useState('')
-  const [phone, setPhone]                   = useState('')
-  const [email, setEmail]                   = useState('')
-  const [address, setAddress]               = useState('')
+  const [ownerName, setOwnerName]             = useState('')
+  const [businessName, setBusinessName]       = useState('')
+  const [phone, setPhone]                     = useState('')
+  const [email, setEmail]                     = useState('')
+  const [address, setAddress]                 = useState('')
   const [constructionDate, setConstructionDate] = useState('')
 
   // 견적 항목
@@ -265,9 +271,12 @@ export default function QuotationsPage() {
   const [savingDraft, setSavingDraft] = useState(false)
   const [toast, setToast]             = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
-  const searchTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const selected     = applications.find(a => a.id === selectedId) ?? null
-  const totalPages   = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const selected    = applications.find(a => a.id === selectedId) ?? null
+  const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  // ymStr 헬퍼
+  const ymStr = `${filterYM.year}-${String(filterYM.month).padStart(2, '0')}`
 
   // ── 토스트 ────────────────────────────────────────────────────
   const showToast = useCallback((msg: string, type: 'success' | 'error' = 'success') => {
@@ -291,23 +300,46 @@ export default function QuotationsPage() {
     return { supplyAmount: directAmount, vatAmount: vat, totalAmount: directAmount + vat }
   })()
 
-  // ── 공급자 정보 로딩 ─────────────────────────────────────────
+  // ── 공급자 정보 로딩 (회원가입 정보 기본값 fallback) ──────────
   useEffect(() => {
-    fetch('/api/admin/quote-settings')
-      .then(r => r.json())
-      .then(d => {
-        if (d.error) return
-        setCompanyInfo({
-          company_name:    d.company_name    ?? '',
-          company_ceo:     d.company_ceo     ?? '',
-          company_biz_no:  d.company_biz_no  ?? '',
-          company_phone:   d.company_phone   ?? '',
-          company_address: d.company_address ?? '',
-        })
-        setValidDays(d.valid_days ?? 5)
-        setSealImageUrl(d.seal_image_url ?? null)
-      })
-      .catch(() => {})
+    const load = async () => {
+      try {
+        const [settingsRes, profileRes] = await Promise.all([
+          fetch('/api/admin/quote-settings'),
+          fetch('/api/auth/profile'),
+        ])
+        const [settingsData, profileData] = await Promise.all([
+          settingsRes.json(),
+          profileRes.json(),
+        ])
+
+        setValidDays(settingsData.valid_days ?? 5)
+        setSealImageUrl(settingsData.seal_image_url ?? null)
+
+        if (settingsData.company_name?.trim()) {
+          setCompanyInfo({
+            company_name:    settingsData.company_name    ?? '',
+            company_ceo:     settingsData.company_ceo     ?? '',
+            company_biz_no:  settingsData.company_biz_no  ?? '',
+            company_phone:   settingsData.company_phone   ?? '',
+            company_address: settingsData.company_address ?? '',
+          })
+        } else if (profileData.success && profileData.data?.business) {
+          // 저장된 공급자 정보가 없으면 회원가입 정보로 초기값 설정
+          const biz = profileData.data.business
+          setCompanyInfo({
+            company_name:    biz.business_name         ?? '',
+            company_ceo:     biz.representative_name   ?? '',
+            company_biz_no:  biz.registration_number   ?? '',
+            company_phone:   '',
+            company_address: biz.address               ?? '',
+          })
+        }
+      } catch {
+        // 로딩 실패 시 빈 값 유지
+      }
+    }
+    load()
   }, [])
 
   // ── 공급자 정보 저장 ─────────────────────────────────────────
@@ -321,7 +353,8 @@ export default function QuotationsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '저장 실패')
-      showToast('기본값으로 저장되었습니다.')
+      showToast('공급자 정보가 저장되었습니다.')
+      setShowCompanyModal(false)
     } catch (e) {
       showToast(e instanceof Error ? e.message : '저장 실패', 'error')
     } finally {
@@ -366,10 +399,15 @@ export default function QuotationsPage() {
   }
 
   // ── 목록 로딩 ─────────────────────────────────────────────────
-  const loadApplications = useCallback(async (p: number, q: string) => {
+  const loadApplications = useCallback(async (p: number, q: string, ym?: string) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page: String(p), limit: String(PAGE_SIZE), ...(q ? { search: q } : {}) })
+      const params = new URLSearchParams({
+        page: String(p),
+        limit: String(PAGE_SIZE),
+        ...(q  ? { search: q  } : {}),
+        ...(ym ? { month:  ym } : {}),
+      })
       const res  = await fetch(`/api/admin/quotes?${params}`)
       if (!res.ok) throw new Error()
       const json = await res.json()
@@ -377,7 +415,6 @@ export default function QuotationsPage() {
       setApplications((data as ApplicationRow[]) || [])
       setTotal(t ?? 0)
       setIsDemo(json.isDemo === true)
-      setLoadedAt(new Date())
     } catch {
       showToast('목록 로딩 실패', 'error')
     } finally {
@@ -385,18 +422,55 @@ export default function QuotationsPage() {
     }
   }, [showToast])
 
-  useEffect(() => { loadApplications(1, '') }, [loadApplications])
+  useEffect(() => { loadApplications(1, '', ymStr) }, [loadApplications]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── 월 이동 ───────────────────────────────────────────────────
+  const prevMonth = () => {
+    const next = filterYM.month === 1
+      ? { year: filterYM.year - 1, month: 12 }
+      : { ...filterYM, month: filterYM.month - 1 }
+    const ym = `${next.year}-${String(next.month).padStart(2, '0')}`
+    setFilterYM(next)
+    setPage(1)
+    setSearch('')
+    loadApplications(1, '', ym)
+  }
+
+  const nextMonth = () => {
+    const next = filterYM.month === 12
+      ? { year: filterYM.year + 1, month: 1 }
+      : { ...filterYM, month: filterYM.month + 1 }
+    const ym = `${next.year}-${String(next.month).padStart(2, '0')}`
+    setFilterYM(next)
+    setPage(1)
+    setSearch('')
+    loadApplications(1, '', ym)
+  }
+
+  const handleMonthInputChange = (value: string) => {
+    const [y, m] = value.split('-').map(Number)
+    if (!y || !m) return
+    const next = { year: y, month: m }
+    setFilterYM(next)
+    setPage(1)
+    setSearch('')
+    loadApplications(1, '', value)
+  }
 
   const handleSearchChange = (value: string) => {
     setSearch(value)
     if (searchTimer.current) clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => { setPage(1); loadApplications(1, value) }, 500)
+    searchTimer.current = setTimeout(() => {
+      setPage(1)
+      loadApplications(1, value, ymStr)
+    }, 500)
   }
-  const handlePageChange = (p: number) => { setPage(p); loadApplications(p, search) }
-  const handleRefresh    = () => loadApplications(page, search)
+
+  const handlePageChange = (p: number) => { setPage(p); loadApplications(p, search, ymStr) }
+  const handleRefresh    = () => loadApplications(page, search, ymStr)
 
   // ── 항목 선택 → 에디터 열기 ──────────────────────────────────
-  const handleSelect = useCallback((app: ApplicationRow) => {
+  const handleSelect = useCallback((app: ApplicationRow, savedCompanyInfo: CompanyInfo) => {
     setSelectedId(app.id)
     setOwnerName(app.owner_name || '')
     setBusinessName(app.business_name || '')
@@ -408,6 +482,7 @@ export default function QuotationsPage() {
     setPricingMode('itemized')
     setDirectAmount(0)
     setNotes(app.quote_notes ?? '')
+    setLocalCompanyInfo({ ...savedCompanyInfo })
     setShowEditor(true)
   }, [])
 
@@ -461,7 +536,7 @@ export default function QuotationsPage() {
     } else {
       if (directAmount <= 0) return '금액을 입력해 주세요.'
     }
-    if (!companyInfo.company_name?.trim()) return '공급자 상호가 없습니다. 공급자 정보를 먼저 입력해 주세요.'
+    if (!localCompanyInfo.company_name?.trim()) return '공급자 상호가 없습니다. 공급자 정보를 먼저 입력해 주세요.'
     return null
   }
 
@@ -475,7 +550,7 @@ export default function QuotationsPage() {
       quoteNo:          `ILT-XXXX-${todayStr.replace(/-/g, '')}`,
       createdAt:        todayStr,
       validUntil,
-      company:          companyInfo,
+      company:          localCompanyInfo,
       ownerName,
       businessName,
       phone,
@@ -503,7 +578,7 @@ export default function QuotationsPage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...companyInfo,
+          ...localCompanyInfo,
           owner_name:        ownerName,
           business_name:     businessName,
           phone,
@@ -524,13 +599,13 @@ export default function QuotationsPage() {
       if (result.success) {
         showToast(`견적서 발송 완료 (${result.quote_no})`)
         setShowEditor(false)
-        await loadApplications(page, search)
+        await loadApplications(page, search, ymStr)
       } else {
         const msg = result.errors
           ? Object.values(result.errors as Record<string, string>).join(', ')
           : '발송 실패'
         showToast(`발송 오류: ${msg}`, 'error')
-        await loadApplications(page, search)
+        await loadApplications(page, search, ymStr)
       }
     } catch (e) {
       showToast(e instanceof Error ? e.message : '오류가 발생했습니다.', 'error')
@@ -562,11 +637,48 @@ export default function QuotationsPage() {
         <SectionHeader title="견적서 관리" level="page" className="flex-1" />
         <button
           type="button"
+          onClick={() => setShowCompanyModal(true)}
+          className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors px-2 py-1.5 rounded-lg hover:bg-surface-sunken"
+        >
+          <Settings size={13} />
+          공급자 정보
+        </button>
+        <button
+          type="button"
           onClick={handleRefresh}
           disabled={loading}
           className="p-2 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-sunken transition-colors disabled:opacity-40"
         >
           <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {/* 월 필터 */}
+      <div className="flex items-center justify-center gap-2 bg-surface-sunken rounded-2xl py-2.5">
+        <button
+          type="button"
+          onClick={prevMonth}
+          className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <label className="relative cursor-pointer select-none">
+          <span className="text-sm font-semibold text-text-primary px-3">
+            {filterYM.year}년 {filterYM.month}월
+          </span>
+          <input
+            type="month"
+            value={ymStr}
+            onChange={e => handleMonthInputChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={nextMonth}
+          className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors"
+        >
+          <ChevronRight size={16} />
         </button>
       </div>
 
@@ -583,7 +695,6 @@ export default function QuotationsPage() {
       )}
 
       <HelpBanner label="견적서 발행 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip>견적서를 발행하려면 먼저 서비스 신청서가 등록되어 있어야 합니다. 아래 목록에서 신청서를 탭하면 견적서 작성 화면이 열립니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
@@ -598,7 +709,6 @@ export default function QuotationsPage() {
         size="sm"
         onChange={e => handleSearchChange(e.target.value)}
       />
-      <HelpTip>발송완료(초록): 이미 견적서를 발송한 신청서 · 미발송(주황): 아직 견적서를 발송하지 않은 신청서</HelpTip>
 
       {/* 목록 */}
       {loading ? (
@@ -609,7 +719,7 @@ export default function QuotationsPage() {
             <FileText size={28} className="text-violet-400" />
           </div>
           <p className="text-sm font-medium text-text-primary">
-            {search ? '검색 결과가 없습니다' : '작성된 견적서가 없습니다'}
+            {search ? '검색 결과가 없습니다' : `${filterYM.month}월 견적서가 없습니다`}
           </p>
           <p className="text-xs text-text-tertiary break-keep">
             {search ? '다른 검색어로 시도해 보세요' : '신청서를 선택하여 견적서를 작성해 보세요'}
@@ -617,10 +727,10 @@ export default function QuotationsPage() {
         </div>
       ) : (
         <>
-          <p className="text-xs text-text-tertiary">
-            {loadedAt && `${loadedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 기준`}
-            {total > 0 && ` · 총 ${total}건`}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs font-medium text-text-primary">총 {total}건</p>
+            <p className="text-xs text-text-tertiary break-keep">아래 목록에서 신청서를 탭하면 견적서 작성 화면이 열립니다</p>
+          </div>
           <ul className="flex flex-col gap-2">
             {applications.map(app => {
               const isSent = !!app.last_quote_no
@@ -628,7 +738,7 @@ export default function QuotationsPage() {
                 <li key={app.id}>
                   <button
                     type="button"
-                    onClick={() => handleSelect(app)}
+                    onClick={() => handleSelect(app, companyInfo)}
                     className="w-full text-left p-4 rounded-2xl bg-surface border border-border-subtle shadow-flat hover:border-border active:scale-[0.98] transition-all"
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
@@ -675,66 +785,28 @@ export default function QuotationsPage() {
         {selected && (
           <div className="space-y-5">
 
-            {/* 공급자 정보 */}
+            {/* 공급자 정보 (1회성 편집 — 저장 없음) */}
             <EditorSection title="공급자 정보">
-              <HelpTip className="mb-3">회사 정보와 도장은 한 번 입력하고 "기본값 저장"을 누르면 이후 견적서에 자동으로 들어갑니다.</HelpTip>
               <div className="flex items-center justify-between mb-3">
-                <span />
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setCompanyInfo(EMPTY_COMPANY)} title="초기화"
-                    className="p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-sunken transition-colors">
-                    <RotateCcw size={13} />
-                  </button>
-                  <Button size="sm" variant="secondary" onClick={handleSaveSettings} disabled={savingSettings}
-                    className="flex items-center gap-1.5 text-xs">
-                    <Save size={12} />{savingSettings ? '저장 중…' : '기본값 저장'}
-                  </Button>
-                </div>
+                <p className="text-[11px] text-text-tertiary">이번 발송에만 적용됩니다. 영구 저장은 페이지의 공급자 정보 버튼을 이용하세요.</p>
+                <button type="button" onClick={() => setLocalCompanyInfo({ ...companyInfo })} title="저장된 정보로 초기화"
+                  className="p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-sunken transition-colors flex-shrink-0">
+                  <RotateCcw size={13} />
+                </button>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Input label="상호" size="sm" value={companyInfo.company_name}
-                  onChange={e => setCompanyInfo(p => ({ ...p, company_name: e.target.value }))} />
-                <Input label="대표자" size="sm" value={companyInfo.company_ceo}
-                  onChange={e => setCompanyInfo(p => ({ ...p, company_ceo: e.target.value }))} />
-                <Input label="사업자번호" size="sm" value={companyInfo.company_biz_no}
-                  onChange={e => setCompanyInfo(p => ({ ...p, company_biz_no: e.target.value }))} />
-                <Input label="연락처" size="sm" value={companyInfo.company_phone}
-                  onChange={e => setCompanyInfo(p => ({ ...p, company_phone: e.target.value }))} />
+                <Input label="상호" size="sm" value={localCompanyInfo.company_name}
+                  onChange={e => setLocalCompanyInfo(p => ({ ...p, company_name: e.target.value }))} />
+                <Input label="대표자" size="sm" value={localCompanyInfo.company_ceo}
+                  onChange={e => setLocalCompanyInfo(p => ({ ...p, company_ceo: e.target.value }))} />
+                <Input label="사업자번호" size="sm" value={localCompanyInfo.company_biz_no}
+                  onChange={e => setLocalCompanyInfo(p => ({ ...p, company_biz_no: e.target.value }))} />
+                <Input label="연락처" size="sm" value={localCompanyInfo.company_phone}
+                  onChange={e => setLocalCompanyInfo(p => ({ ...p, company_phone: e.target.value }))} />
                 <div className="col-span-2">
-                  <Input label="주소" size="sm" value={companyInfo.company_address}
-                    onChange={e => setCompanyInfo(p => ({ ...p, company_address: e.target.value }))} />
+                  <Input label="주소" size="sm" value={localCompanyInfo.company_address}
+                    onChange={e => setLocalCompanyInfo(p => ({ ...p, company_address: e.target.value }))} />
                 </div>
-              </div>
-
-              {/* 인감 */}
-              <div className="mt-4 pt-4 border-t border-border-subtle">
-                <label className="block text-xs font-medium text-text-secondary mb-2">인감 이미지 (PDF에 포함)</label>
-                <div className="flex items-center gap-3">
-                  {sealImageUrl ? (
-                    <>
-                      <div className="w-14 h-14 rounded-xl border border-border-subtle overflow-hidden flex-shrink-0 bg-surface-sunken flex items-center justify-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`${sealImageUrl}?v=${Date.now()}`} alt="인감" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="flex gap-3">
-                        <button type="button" onClick={() => sealInputRef.current?.click()} disabled={sealUploading}
-                          className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-40">변경</button>
-                        <button type="button" onClick={handleSealDelete} disabled={sealUploading}
-                          className="text-xs text-state-danger hover:opacity-80 font-medium disabled:opacity-40 flex items-center gap-1">
-                          <Trash2 size={11} />삭제
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button type="button" onClick={() => sealInputRef.current?.click()} disabled={sealUploading}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-xs text-text-secondary hover:border-violet-400 hover:text-violet-600 transition-colors disabled:opacity-40">
-                      <Upload size={13} />{sealUploading ? '업로드 중…' : 'PNG / JPG 업로드'}
-                    </button>
-                  )}
-                  <input ref={sealInputRef} type="file" accept="image/png,image/jpeg,image/webp"
-                    onChange={handleSealUpload} className="hidden" />
-                </div>
-                <p className="text-[10px] text-text-tertiary mt-1.5">투명 배경 PNG 권장 · 최대 2MB</p>
               </div>
             </EditorSection>
 
@@ -978,6 +1050,71 @@ export default function QuotationsPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* ── 공급자 정보 관리 모달 ────────────────────────────────── */}
+      <Modal
+        open={showCompanyModal}
+        onClose={() => setShowCompanyModal(false)}
+        title="공급자 정보 설정"
+        className="max-w-lg"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-text-tertiary">저장하면 이후 모든 견적서 작성 시 자동으로 불러옵니다.</p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="상호" size="sm" value={companyInfo.company_name}
+              onChange={e => setCompanyInfo(p => ({ ...p, company_name: e.target.value }))} />
+            <Input label="대표자" size="sm" value={companyInfo.company_ceo}
+              onChange={e => setCompanyInfo(p => ({ ...p, company_ceo: e.target.value }))} />
+            <Input label="사업자번호" size="sm" value={companyInfo.company_biz_no}
+              onChange={e => setCompanyInfo(p => ({ ...p, company_biz_no: e.target.value }))} />
+            <Input label="연락처" size="sm" value={companyInfo.company_phone}
+              onChange={e => setCompanyInfo(p => ({ ...p, company_phone: e.target.value }))} />
+            <div className="col-span-2">
+              <Input label="주소" size="sm" value={companyInfo.company_address}
+                onChange={e => setCompanyInfo(p => ({ ...p, company_address: e.target.value }))} />
+            </div>
+          </div>
+
+          {/* 인감 */}
+          <div className="pt-3 border-t border-border-subtle">
+            <label className="block text-xs font-medium text-text-secondary mb-2">인감 이미지 (PDF에 포함)</label>
+            <div className="flex items-center gap-3">
+              {sealImageUrl ? (
+                <>
+                  <div className="w-14 h-14 rounded-xl border border-border-subtle overflow-hidden flex-shrink-0 bg-surface-sunken flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`${sealImageUrl}?v=${Date.now()}`} alt="인감" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => sealInputRef.current?.click()} disabled={sealUploading}
+                      className="text-xs text-brand-600 hover:text-brand-700 font-medium disabled:opacity-40">변경</button>
+                    <button type="button" onClick={handleSealDelete} disabled={sealUploading}
+                      className="text-xs text-state-danger hover:opacity-80 font-medium disabled:opacity-40 flex items-center gap-1">
+                      <Trash2 size={11} />삭제
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <button type="button" onClick={() => sealInputRef.current?.click()} disabled={sealUploading}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border text-xs text-text-secondary hover:border-violet-400 hover:text-violet-600 transition-colors disabled:opacity-40">
+                  <Upload size={13} />{sealUploading ? '업로드 중…' : 'PNG / JPG 업로드'}
+                </button>
+              )}
+              <input ref={sealInputRef} type="file" accept="image/png,image/jpeg,image/webp"
+                onChange={handleSealUpload} className="hidden" />
+            </div>
+            <p className="text-[10px] text-text-tertiary mt-1.5">투명 배경 PNG 권장 · 최대 2MB</p>
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button variant="secondary" fullWidth onClick={() => setShowCompanyModal(false)}>닫기</Button>
+            <Button fullWidth onClick={handleSaveSettings} isLoading={savingSettings}>
+              저장
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* ── 미리보기 모달 ─────────────────────────────────────── */}

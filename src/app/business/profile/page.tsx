@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2, Sparkles,
-  Bell, LogOut, ArrowLeftRight, ChevronRight,
+  Bell, LogOut, ArrowLeftRight, ChevronRight, ChevronLeft,
   CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck, BookOpen,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
@@ -173,7 +173,15 @@ export default function BusinessProfilePage() {
   if (isUnauthorized || !data) {
     return (
       <div className="px-4 pt-6">
-        <SectionHeader title="프로필" level="page" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.back()}
+            className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="프로필" level="page" />
+        </div>
         <div className="mt-10">
           <p className="text-center text-text-secondary text-sm mb-4">
             로그인 후 프로필을 확인할 수 있습니다.
@@ -198,6 +206,16 @@ export default function BusinessProfilePage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <SectionHeader title="프로필" level="page" />
+      </div>
+
       {/* 도움말 배너 */}
       <HelpBanner
         label="프로필 페이지 사용 방법 보기"

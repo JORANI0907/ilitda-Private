@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useContext } from 'react'
-import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn, Download } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn, Download, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -83,6 +84,7 @@ const HELP_SECTIONS = [
 ]
 
 export default function InventoryPage() {
+  const router = useRouter()
   const { planType, features, isLoading: planLoading } = usePlanType()
   const auth = useContext(AuthContext)
   const isGuest = !auth?.isLoading && !auth?.user
@@ -334,7 +336,15 @@ const filteredItems = useMemo(() => items.filter((item) => {
   if (!planLoading && !isGuest && !canUseFeature(planType, 'inventory', features)) {
     return (
       <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
-        <SectionHeader title="재고 관리" level="page" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => router.back()}
+            className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <SectionHeader title="재고 관리" level="page" />
+        </div>
         <UpgradeModal
           open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
@@ -352,16 +362,24 @@ const filteredItems = useMemo(() => items.filter((item) => {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
-      <SectionHeader
-        title="재고 관리"
-        level="page"
-        action={
-          <Button size="sm" onClick={() => { setShowAdd(true); setAddForm({ ...EMPTY_ITEM, category: defaultCat }); setAddError(null) }}>
-            <Plus size={16} />
-            항목 추가
-          </Button>
-        }
-      />
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <SectionHeader
+          title="재고 관리"
+          level="page"
+          action={
+            <Button size="sm" onClick={() => { setShowAdd(true); setAddForm({ ...EMPTY_ITEM, category: defaultCat }); setAddError(null) }}>
+              <Plus size={16} />
+              항목 추가
+            </Button>
+          }
+        />
+      </div>
 
       {/* 데모 배너 */}
       {isDemo && (

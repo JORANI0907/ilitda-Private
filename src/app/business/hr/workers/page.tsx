@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ArrowLeft } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -242,48 +242,44 @@ export default function WorkersPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-brand-600 active:opacity-60 cursor-pointer -ml-1 self-start transition-colors"
-      >
-        <ArrowLeft size={16} />
-        HR 관리
-      </button>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <SectionHeader
-            title="작업자 관리"
-            level="page"
-            description="함께 일하는 작업자를 관리합니다"
-          />
-          {!planLoading && (() => {
-            const limit = getFeatureLimit(planType, 'worker_limit', features)
-            const isOver = connections.length >= limit
-            const isNear = !isOver && limit !== Infinity && connections.length >= limit * 0.8
-            if (limit === Infinity) {
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <div className="flex-1 flex items-center justify-between">
+          <div>
+            <SectionHeader title="작업자 관리" level="page" />
+            {!planLoading && (() => {
+              const limit = getFeatureLimit(planType, 'worker_limit', features)
+              const isOver = connections.length >= limit
+              const isNear = !isOver && limit !== Infinity && connections.length >= limit * 0.8
+              if (limit === Infinity) {
+                return (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block bg-state-success/10 text-state-success font-medium">
+                    무제한
+                  </span>
+                )
+              }
               return (
-                <span className="text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block bg-state-success/10 text-state-success font-medium">
-                  무제한
+                <span className={`text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block font-medium ${
+                  isOver ? 'bg-state-danger/10 text-state-danger' :
+                  isNear ? 'bg-state-warning/10 text-state-warning' :
+                  'bg-surface-sunken text-text-secondary'
+                }`}>
+                  {connections.length} / {limit}명
                 </span>
               )
-            }
-            return (
-              <span className={`text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block font-medium ${
-                isOver ? 'bg-state-danger/10 text-state-danger' :
-                isNear ? 'bg-state-warning/10 text-state-warning' :
-                'bg-surface-sunken text-text-secondary'
-              }`}>
-                {connections.length} / {limit}명
-              </span>
-            )
-          })()}
+            })()}
+          </div>
+          <Button size="sm" onClick={handleOpenAdd} className="shrink-0">
+            <UserPlus size={15} className="mr-1" />
+            작업자 추가
+          </Button>
         </div>
-        <Button size="sm" onClick={handleOpenAdd} className="shrink-0">
-          <UserPlus size={15} className="mr-1" />
-          작업자 추가
-        </Button>
       </div>
 
       {/* 데모 배너 */}
@@ -300,13 +296,31 @@ export default function WorkersPage() {
       )}
 
       <HelpBanner label="직원 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip>초대 방식은 직원이 앱에서 수락해야 연결됩니다. 직접 등록은 즉시 추가됩니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
         title="직원 관리 사용법"
         sections={HELP_SECTIONS}
       />
+
+      {/* 탭 */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {FILTER_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={`
+              shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
+              ${activeTab === tab.key
+                ? 'bg-brand-600 text-white'
+                : 'bg-surface-sunken text-text-secondary hover:bg-border'}
+            `}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* 검색창 */}
       <div className="relative">
@@ -328,25 +342,6 @@ export default function WorkersPage() {
             <X size={15} />
           </button>
         )}
-      </div>
-
-      {/* 탭 */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`
-              shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
-              ${activeTab === tab.key
-                ? 'bg-brand-600 text-white'
-                : 'bg-surface-sunken text-text-secondary hover:bg-border'}
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
       </div>
 
       {/* 목록 */}

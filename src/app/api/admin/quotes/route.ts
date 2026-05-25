@@ -31,11 +31,19 @@ const DEMO_QUOTES = () => {
   ]
 }
 
+function nextMonthStr(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return m === 12
+    ? `${y + 1}-01-01`
+    : `${y}-${String(m + 1).padStart(2, '0')}-01`
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const page   = Math.max(1, parseInt(searchParams.get('page')  || '1'))
   const limit  = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20')))
   const search = searchParams.get('search')?.trim() || ''
+  const month  = searchParams.get('month')?.trim() || ''
   const offset = (page - 1) * limit
 
   const supabase = await createClient()
@@ -67,6 +75,12 @@ export async function GET(request: NextRequest) {
     query = query.or(
       `owner_name.ilike.%${search}%,business_name.ilike.%${search}%,phone.ilike.%${search}%`
     )
+  }
+
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    query = query
+      .gte('created_at', `${month}-01`)
+      .lt('created_at', nextMonthStr(month))
   }
 
   const { data, error, count } = await query
