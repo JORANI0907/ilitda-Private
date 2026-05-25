@@ -33,6 +33,7 @@ export interface PlanFeatureMap {
   revenue:             boolean
   fields_settings:     boolean
   public_form:         boolean
+  workers:             boolean
 }
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
@@ -51,6 +52,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     revenue:             false,
     fields_settings:     false,
     public_form:         false,
+    workers:             false,
   },
   basic: {
     sms_daily_limit:     20,
@@ -67,6 +69,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     revenue:             true,
     fields_settings:     true,
     public_form:         true,
+    workers:             true,
   },
   pro: {
     sms_daily_limit:     50,
@@ -83,6 +86,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     revenue:             true,
     fields_settings:     true,
     public_form:         true,
+    workers:             true,
   },
   max: {
     sms_daily_limit:     100,
@@ -99,6 +103,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     revenue:             true,
     fields_settings:     true,
     public_form:         true,
+    workers:             true,
   },
 }
 
