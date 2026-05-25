@@ -7,6 +7,7 @@ import {
   CreditCard, ClipboardList, Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Modal } from '@/components/ui/Modal'
 import { DEFAULT_PANEL_FIELDS, DEFAULT_FORM_CONFIG, SECTION_BORDER_COLOR, SECTION_TITLE_COLOR } from '@/lib/settings-defaults'
 import type { PanelConfig, FormConfig } from '@/types'
 import { HelpBanner } from '@/components/ui/HelpBanner'
@@ -55,10 +56,10 @@ function FL({ children, required }: { children: React.ReactNode; required?: bool
 
 const inputCls = 'block w-full h-10 rounded-lg bg-surface-sunken border border-border text-text-primary text-sm px-3 placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500'
 
-function SI({ value, onChange, placeholder, type = 'text' }: {
-  value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; placeholder?: string; type?: string
+function SI({ value, onChange, placeholder, type = 'text', cls }: {
+  value: string; onChange: React.ChangeEventHandler<HTMLInputElement>; placeholder?: string; type?: string; cls?: string
 }) {
-  return <input type={type} value={value} placeholder={placeholder} onChange={onChange} className={inputCls} />
+  return <input type={type} value={value} placeholder={placeholder} onChange={onChange} className={cls ?? inputCls} />
 }
 
 function SS({ value, onChange, options, placeholder }: {
@@ -120,6 +121,8 @@ export default function NewApplicationPage() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [customFieldDefs, setCustomFieldDefs] = useState<Array<{key: string; label: string; placeholder: string}>>([])
   const [spareValues, setSpareValues] = useState<Record<string, string>>({})
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [showIncompleteModal, setShowIncompleteModal] = useState(false)
 
   useEffect(() => {
     fetch('/api/admin/settings/fields')
@@ -145,6 +148,11 @@ export default function NewApplicationPage() {
   const shown = (key: string): boolean =>
     formConfig.show_fields[key as keyof typeof formConfig.show_fields] !== false
 
+  const fieldCls = (key: string) =>
+    fieldErrors[key]
+      ? 'block w-full h-10 rounded-lg bg-red-50/40 border-2 border-state-danger text-text-primary text-sm px-3 placeholder:text-text-tertiary focus:outline-none'
+      : inputCls
+
   const setF = (key: keyof Form) => (v: string) => setForm(p => ({ ...p, [key]: v }))
   const setFE = (key: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [key]: e.target.value }))
@@ -166,10 +174,23 @@ export default function NewApplicationPage() {
     return DEFAULT_PANEL_FIELDS.find(f => f.key === key)?.options ?? []
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(force = false) {
     setError(null)
-    if (!form.business_name.trim()) { setError('업체명을 입력해 주세요.'); return }
-    if (!form.phone.trim()) { setError('연락처를 입력해 주세요.'); return }
+    const errors: Record<string, string> = {}
+    if (!form.business_name.trim()) errors.business_name = '업체명을 입력해 주세요'
+    if (shown('owner_name') && !form.owner_name.trim()) errors.owner_name = '담당자명을 입력해 주세요'
+    if (!form.phone.trim()) errors.phone = '연락처를 입력해 주세요'
+    if (!form.construction_date.trim()) errors.construction_date = '서비스일을 입력해 주세요'
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      document.getElementById(`field-${Object.keys(errors)[0]}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setFieldErrors({})
+    if (!force) {
+      const hasMissing = !form.address.trim() || !form.payment_method.trim() || !form.care_scope.trim()
+      if (hasMissing) { setShowIncompleteModal(true); return }
+    }
     setIsSubmitting(true)
     try {
       const payload: Record<string, unknown> = {}
@@ -212,7 +233,6 @@ export default function NewApplicationPage() {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-lg font-bold text-text-primary flex-1">서비스 추가</h1>
-          <Button size="sm" onClick={handleSubmit} isLoading={isSubmitting}>저장</Button>
         </div>
       </div>
 
@@ -249,20 +269,24 @@ export default function NewApplicationPage() {
         {/* 기본 정보 */}
         <HelpTip>업체명과 연락처는 필수 항목입니다. 나머지는 나중에 추가해도 됩니다.</HelpTip>
         <FormSection color="blue" icon={<Building2 size={14} />} title="기본 정보">
-          <div>
+          <div id="field-business_name">
             <FL required>{lbl('business_name')}</FL>
-            <SI value={form.business_name} onChange={setFE('business_name')} placeholder="예: 스타벅스 강남점" />
+            <SI value={form.business_name} onChange={setFE('business_name')} placeholder="예: 스타벅스 강남점" cls={fieldCls('business_name')} />
+            {fieldErrors.business_name && <p className="mt-1 text-xs text-state-danger">{fieldErrors.business_name}</p>}
           </div>
           {shown('owner_name') && (
-            <div className="grid grid-cols-2 gap-2">
+            <div id="field-owner_name" className="grid grid-cols-2 gap-2">
               <div>
-                <FL>{lbl('owner_name')}</FL>
-                <SI value={form.owner_name} onChange={setFE('owner_name')} placeholder="홍길동" />
+                <FL required>{lbl('owner_name')}</FL>
+                <SI value={form.owner_name} onChange={setFE('owner_name')} placeholder="홍길동" cls={fieldCls('owner_name')} />
               </div>
               <div>
                 <FL>{lbl('platform_nickname')}</FL>
                 <SI value={form.platform_nickname} onChange={setFE('platform_nickname')} placeholder="닉네임" />
               </div>
+              {fieldErrors.owner_name && (
+                <p className="col-span-2 -mt-1 text-xs text-state-danger">{fieldErrors.owner_name}</p>
+              )}
             </div>
           )}
           {!shown('owner_name') && (
@@ -271,9 +295,10 @@ export default function NewApplicationPage() {
               <SI value={form.platform_nickname} onChange={setFE('platform_nickname')} placeholder="닉네임" />
             </div>
           )}
-          <div>
+          <div id="field-phone">
             <FL required>{lbl('phone')}</FL>
-            <SI type="tel" value={form.phone} onChange={setFE('phone')} placeholder="010-0000-0000" />
+            <SI type="tel" value={form.phone} onChange={setFE('phone')} placeholder="010-0000-0000" cls={fieldCls('phone')} />
+            {fieldErrors.phone && <p className="mt-1 text-xs text-state-danger">{fieldErrors.phone}</p>}
           </div>
           {shown('email') && (
             <div>
@@ -296,15 +321,18 @@ export default function NewApplicationPage() {
         {/* 일정 */}
         <HelpTip>방문 예정 날짜와 시간을 입력하세요. 미정이면 비워두어도 됩니다.</HelpTip>
         <FormSection color="violet" icon={<Calendar size={14} />} title="일정">
-          <div className="grid grid-cols-2 gap-2">
+          <div id="field-construction_date" className="grid grid-cols-2 gap-2">
             <div>
-              <FL>{lbl('construction_date')}</FL>
-              <SI type="date" value={form.construction_date} onChange={setFE('construction_date')} />
+              <FL required>{lbl('construction_date')}</FL>
+              <SI type="date" value={form.construction_date} onChange={setFE('construction_date')} cls={fieldCls('construction_date')} />
             </div>
             <div>
               <FL>{lbl('construction_time')}</FL>
               <SI type="time" value={form.construction_time} onChange={setFE('construction_time')} />
             </div>
+            {fieldErrors.construction_date && (
+              <p className="col-span-2 -mt-1 text-xs text-state-danger">{fieldErrors.construction_date}</p>
+            )}
           </div>
         </FormSection>
 
@@ -466,8 +494,30 @@ export default function NewApplicationPage() {
           </div>
         )}
 
+        <Button fullWidth onClick={() => handleSubmit()} isLoading={isSubmitting}>일정 만들기</Button>
         <Button variant="ghost" fullWidth onClick={() => router.back()}>취소</Button>
       </div>
+
+      <Modal
+        open={showIncompleteModal}
+        onClose={() => setShowIncompleteModal(false)}
+        title="일부 항목이 비어 있어요"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-text-secondary">
+            주소, 결제 방법, 서비스 범위 중 입력되지 않은 항목이 있어요.
+            나중에 수정할 수 있지만, 지금 바로 입력하면 관리가 더 편해요.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button fullWidth onClick={() => { setShowIncompleteModal(false); handleSubmit(true) }} isLoading={isSubmitting}>
+              그래도 저장할게요
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => setShowIncompleteModal(false)}>
+              돌아가서 입력할게요
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
