@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, Loader2, FolderOpen } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, Loader2, FolderOpen, Plus, Trash2, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
-import type { Business } from '@/types'
+import type { Business, Profile } from '@/types'
 
 // ─── 상태 배지 ───────────────────────────────────────────────
 function StatusBadge({ verified, label }: { verified: boolean; label: string }) {
@@ -65,6 +65,12 @@ export default function IntegrationsPage() {
   const [driveError, setDriveError] = useState<string | null>(null)
   const [driveSuccess, setDriveSuccess] = useState(false)
 
+  // 하위 폴더 편집 상태
+  const [subfolderEditing, setSubfolderEditing] = useState(false)
+  const [subfolderList, setSubfolderList] = useState<string[]>(['작업전', '작업후'])
+  const [subfolderLoading, setSubfolderLoading] = useState(false)
+  const [subfolderError, setSubfolderError] = useState<string | null>(null)
+
   useEffect(() => {
     ;(async () => {
       setIsLoading(true)
@@ -73,9 +79,26 @@ export default function IntegrationsPage() {
         const json = await res.json()
         if (json.success && json.data?.business) {
           const b = json.data.business as Business
+          const p = json.data.profile as Profile | undefined
           setBiz(b)
           setPhoneInput(b.solapi_from_phone ?? '')
           setGmailInput(b.gmail_for_drive ?? '')
+          if (Array.isArray(b.drive_subfolders) && b.drive_subfolders.length > 0) {
+            setSubfolderList(b.drive_subfolders)
+          }
+          // 미인증 상태에서 가입 연락처로 자동 설정
+          if (!b.solapi_phone_verified && p?.phone) {
+            try {
+              const autoRes = await fetch('/api/admin/integrations/solapi', { method: 'PATCH' })
+              const autoJson = await autoRes.json()
+              if (autoJson.success && autoJson.data?.phone) {
+                setBiz(prev => prev ? { ...prev, solapi_from_phone: autoJson.data.phone, solapi_phone_verified: true } : prev)
+                setPhoneInput(autoJson.data.phone)
+              }
+            } catch {
+              // 자동 설정 실패 시 수동 입력으로 fallback
+            }
+          }
         }
       } finally {
         setIsLoading(false)
@@ -165,6 +188,30 @@ export default function IntegrationsPage() {
     }
   }
 
+  // ── 하위 폴더 저장 ────────────────────────────────────────────
+  async function handleSaveSubfolders() {
+    const names = subfolderList.map(s => s.trim()).filter(Boolean)
+    if (names.length === 0) { setSubfolderError('폴더는 최소 1개 이상이어야 합니다.'); return }
+    setSubfolderLoading(true)
+    setSubfolderError(null)
+    try {
+      const res = await fetch('/api/admin/integrations/drive/subfolders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subfolders: names }),
+      })
+      const json = await res.json()
+      if (!json.success) { setSubfolderError(json.error ?? '저장 실패'); return }
+      setSubfolderList(names)
+      setBiz(prev => prev ? { ...prev, drive_subfolders: names } : prev)
+      setSubfolderEditing(false)
+    } catch {
+      setSubfolderError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setSubfolderLoading(false)
+    }
+  }
+
   async function handleRemoveDrive() {
     if (!confirm('드라이브 연동을 해제하시겠습니까?')) return
     setDriveLoading(true)
@@ -231,7 +278,7 @@ export default function IntegrationsPage() {
       {/* ── 알림 발신번호 ─────────────────────────── */}
       <Section
         icon={<Phone size={16} />}
-        title="알림 발신번호 (Solapi)"
+        title="서비스 알림 발신 번호 설정"
         badge={<StatusBadge verified={!!biz?.solapi_phone_verified} label={biz?.solapi_from_phone ?? ''} />}
       >
         <p className="text-xs text-text-tertiary leading-relaxed">
@@ -300,8 +347,80 @@ export default function IntegrationsPage() {
         </p>
         <div className="text-xs text-text-tertiary bg-surface-sunken rounded-xl px-3 py-2 leading-relaxed">
           <p className="font-medium text-text-secondary mb-1">📁 폴더 구조</p>
-          <p>일잇다 → <span className="text-text-primary">업체명</span> → <span className="text-text-primary">고객명_날짜</span> → 작업전 / 작업후</p>
+          <p>일잇다 → <span className="text-text-primary">업체명</span> → <span className="text-text-primary">고객명_날짜</span> → 하위 폴더</p>
           <p className="mt-1">신청서 상세 화면 → <span className="font-medium text-text-primary">작업 폴더 생성</span> 버튼을 누르면 생성됩니다.</p>
+        </div>
+
+        {/* 하위 폴더 구성 편집기 */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-text-secondary">하위 폴더 구성</p>
+            {!subfolderEditing ? (
+              <button
+                type="button"
+                onClick={() => setSubfolderEditing(true)}
+                className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
+              >
+                <Pencil size={11} /> 편집
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const saved = biz?.drive_subfolders
+                    setSubfolderList(Array.isArray(saved) && saved.length > 0 ? saved : ['작업전', '작업후'])
+                    setSubfolderEditing(false)
+                    setSubfolderError(null)
+                  }}
+                  className="text-xs text-text-tertiary hover:underline"
+                >
+                  취소
+                </button>
+                <Button size="sm" onClick={handleSaveSubfolders} isLoading={subfolderLoading}>
+                  저장
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {!subfolderEditing ? (
+            <div className="flex flex-wrap gap-1.5">
+              {subfolderList.map((name, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-xs bg-surface-sunken border border-border-subtle rounded-full px-2.5 py-1 text-text-secondary">
+                  <FolderOpen size={11} className="text-text-tertiary" /> {name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {subfolderList.map((name, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    value={name}
+                    onChange={e => setSubfolderList(prev => prev.map((v, idx) => idx === i ? e.target.value : v))}
+                    className="flex-1 text-xs border border-border rounded-md px-2.5 py-1.5 bg-surface text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-600"
+                    placeholder="폴더 이름"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSubfolderList(prev => prev.filter((_, idx) => idx !== i))}
+                    className="p-1 text-text-tertiary hover:text-state-danger transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSubfolderList(prev => [...prev, ''])}
+                className="flex items-center gap-1 text-xs text-brand-600 hover:underline self-start mt-0.5"
+              >
+                <Plus size={12} /> 폴더 추가
+              </button>
+              {subfolderError && <p className="text-xs text-state-danger">{subfolderError}</p>}
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
