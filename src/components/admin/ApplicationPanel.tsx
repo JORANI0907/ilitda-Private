@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users, Copy, Check } from 'lucide-react'
 import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
+import { HelpIcon } from '@/components/ui/HelpIcon'
 import {
   DEFAULT_PANEL_FIELDS,
   PANEL_SECTIONS,
@@ -741,6 +742,10 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             <div className="flex items-center gap-1.5 mb-0.5">
               <FolderOpen size={14} className="text-teal-500" />
               <span className="text-xs font-semibold text-teal-700">Google Drive</span>
+              <HelpIcon
+                title="작업 폴더란?"
+                description={`고객별 작업 사진을 Google Drive에 자동으로 보관하는 기능입니다.\n\n📁 폴더 구조\n폴더 생성 시 아래 구조로 자동 생성됩니다.\n일잇다 > 업체명 > 고객명_날짜\n  ├ 작업전\n  └ 작업후\n\n📸 활용 방법\n① "작업 폴더 생성" 버튼으로 폴더를 만듭니다.\n② 현장에서 작업 전·후 사진을 폴더에 업로드합니다.\n③ "폴더 링크 발송" 버튼으로 고객에게 링크를 SMS로 보냅니다.\n④ 고객이 링크를 열어 작업 결과를 확인할 수 있습니다.\n\n⚙️ 사전 설정 필요\n프로필 > 설정 > 연동 메뉴에서 Google Drive 서비스 계정을 먼저 연결해야 합니다.\n\n💡 팁\n폴더 재생성 버튼을 누르면 같은 구조로 새 폴더가 만들어집니다.\n기존 폴더는 Drive에 그대로 남으니 사진이 사라지지 않습니다.`}
+              />
             </div>
             {driveUrl ? (
               <>
