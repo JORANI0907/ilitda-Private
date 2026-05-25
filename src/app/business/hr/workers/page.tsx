@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft, Download } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -109,6 +109,8 @@ export default function WorkersPage() {
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const { planType, features, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -163,6 +165,14 @@ export default function WorkersPage() {
     if (activeTab === 'pending') return !c.is_manual && c.status === 'pending'
     return true
   })
+
+  const totalPages = Math.ceil(filteredConnections.length / pageSize)
+  const paginatedConnections = filteredConnections.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
+
+  useEffect(() => { setCurrentPage(1) }, [activeTab, searchQuery, pageSize])
 
   const handleAdd = async () => {
     if (!form.name.trim()) {
@@ -240,6 +250,30 @@ export default function WorkersPage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  async function handleExcelDownload() {
+    if (filteredConnections.length === 0) return
+    const XLSX = (await import('xlsx')).default
+    const rows = filteredConnections.map((c) => ({
+      '이름': c.display_name,
+      '연결유형': c.is_manual ? '수동등록' : '앱연결',
+      '상태': c.is_manual ? '수동등록' : c.status === 'accepted' ? '연결됨' : '초대중',
+      '전화번호': c.manual_phone ?? c.profiles?.phone ?? '',
+      '주소': c.manual_address ?? '',
+      '특기/전문분야': c.manual_specialty ?? '',
+      '숙련도': c.manual_skill_level ?? '',
+      '은행': c.manual_account_bank ?? '',
+      '계좌번호': c.manual_account_number ?? '',
+      '사업자등록번호': c.manual_registration_number ?? '',
+      '주민등록번호': c.manual_resident_number ?? '',
+      '상호명': c.manual_company_name ?? '',
+      '등록일': c.created_at.slice(0, 10),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '작업자목록')
+    XLSX.writeFile(wb, `작업자목록_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
       <div className="flex items-center gap-2">
@@ -303,23 +337,34 @@ export default function WorkersPage() {
         sections={HELP_SECTIONS}
       />
 
-      {/* 탭 */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {FILTER_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={`
-              shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
-              ${activeTab === tab.key
-                ? 'bg-brand-600 text-white'
-                : 'bg-surface-sunken text-text-secondary hover:bg-border'}
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* 탭 + 엑셀 다운로드 */}
+      <div className="flex items-center gap-2 pb-1">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none flex-1 min-w-0">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`
+                shrink-0 h-8 px-4 rounded-full text-sm font-medium transition-colors
+                ${activeTab === tab.key
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-surface-sunken text-text-secondary hover:bg-border'}
+              `}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleExcelDownload}
+          disabled={filteredConnections.length === 0}
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-brand-600 hover:bg-brand-50 disabled:opacity-30 transition-colors"
+          title="엑셀 다운로드"
+        >
+          <Download size={16} />
+        </button>
       </div>
 
       {/* 검색창 */}
@@ -366,7 +411,7 @@ export default function WorkersPage() {
           />
         )}
 
-        {!isLoading && !error && filteredConnections.map((conn) => (
+        {!isLoading && !error && paginatedConnections.map((conn) => (
           <button
             key={conn.id}
             type="button"
@@ -429,6 +474,51 @@ export default function WorkersPage() {
           </button>
         ))}
       </div>
+
+      {/* 페이지네이션 */}
+      {!isLoading && !error && filteredConnections.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            {[10, 20, 30].map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => setPageSize(size)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  pageSize === size
+                    ? 'bg-brand-600 text-white border-brand-600'
+                    : 'bg-surface text-text-secondary border-border hover:border-brand-300 hover:text-brand-600'
+                }`}
+              >
+                {size}명
+              </button>
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary disabled:opacity-30 hover:bg-surface-sunken transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <span className="text-xs text-text-secondary px-1 min-w-[3rem] text-center">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary disabled:opacity-30 hover:bg-surface-sunken transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <UpgradeModal
         open={upgradeOpen}
