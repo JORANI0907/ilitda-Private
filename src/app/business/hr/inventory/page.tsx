@@ -377,16 +377,12 @@ const filteredItems = useMemo(() => items.filter((item) => {
       )}
 
       <HelpBanner label="재고 관리 사용법 보기" onClick={() => setHelpOpen(true)} />
-      <HelpTip>처음 사용 시 카테고리를 먼저 만든 후 품목을 추가하세요. 각 품목 카드의 입고·출고·조정 버튼으로 수량 변동을 기록할 수 있습니다.</HelpTip>
       <HelpDrawer
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
         title="재고 관리 사용법"
         sections={HELP_SECTIONS}
       />
-
-      <Input placeholder="재고명 검색…" value={search} onChange={(e) => setSearch(e.target.value)} />
-      <HelpTip>품목명으로 검색하거나 위 카테고리 탭을 눌러 분류별로 필터링할 수 있습니다. "부족" 버튼을 누르면 재고가 기준치 이하인 품목만 표시됩니다.</HelpTip>
 
       {/* 카테고리 필터 탭 */}
       <div className="flex items-start gap-2">
@@ -438,6 +434,8 @@ const filteredItems = useMemo(() => items.filter((item) => {
           </button>
         </div>
       </div>
+
+      <Input placeholder="재고명 검색…" value={search} onChange={(e) => setSearch(e.target.value)} />
 
       {/* 아이템 목록 */}
       {isLoading && Array.from({ length: 4 }).map((_, i) => (
