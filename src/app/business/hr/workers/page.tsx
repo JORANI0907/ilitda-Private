@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -108,6 +108,7 @@ export default function WorkersPage() {
   const [inviteSent, setInviteSent] = useState(false)
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const { planType, features, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -135,7 +136,27 @@ export default function WorkersPage() {
     fetchConnections()
   }, [fetchConnections])
 
-  const filteredConnections = connections.filter((c) => {
+  const q = searchQuery.trim().toLowerCase()
+  const searchFiltered = q
+    ? connections.filter((c) =>
+        [
+          c.display_name,
+          c.manual_name,
+          c.manual_phone,
+          c.profiles?.phone,
+          c.profiles?.name,
+          c.manual_address,
+          c.manual_specialty,
+          c.manual_skill_level,
+          c.manual_company_name,
+          c.manual_registration_number,
+          c.manual_account_bank,
+          c.manual_account_number,
+        ].some((val) => val?.toLowerCase().includes(q))
+      )
+    : connections
+
+  const filteredConnections = searchFiltered.filter((c) => {
     if (activeTab === 'all') return true
     if (activeTab === 'manual') return c.is_manual
     if (activeTab === 'accepted') return !c.is_manual && c.status === 'accepted'
@@ -221,6 +242,15 @@ export default function WorkersPage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-brand-600 active:opacity-60 cursor-pointer -ml-1 self-start transition-colors"
+      >
+        <ArrowLeft size={16} />
+        HR 관리
+      </button>
+
       <div className="flex items-center justify-between">
         <div>
           <SectionHeader
@@ -278,6 +308,28 @@ export default function WorkersPage() {
         sections={HELP_SECTIONS}
       />
 
+      {/* 검색창 */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="이름, 전화번호, 주소, 특기, 상호명 등 검색"
+          className="w-full h-10 pl-9 pr-9 rounded-xl border border-border bg-surface text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-400 transition-colors"
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary transition-colors"
+            aria-label="검색 초기화"
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
+
       {/* 탭 */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {FILTER_TABS.map((tab) => (
@@ -313,8 +365,8 @@ export default function WorkersPage() {
         {!isLoading && !error && filteredConnections.length === 0 && (
           <EmptyState
             icon={<Users size={40} />}
-            title="작업자가 없어요"
-            description="작업자를 수동으로 추가하거나 초대 SMS를 발송하세요."
+            title={q ? '검색 결과가 없어요' : '작업자가 없어요'}
+            description={q ? `"${searchQuery}"에 해당하는 작업자를 찾을 수 없습니다.` : '작업자를 수동으로 추가하거나 초대 SMS를 발송하세요.'}
             bordered
           />
         )}
