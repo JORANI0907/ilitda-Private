@@ -28,6 +28,11 @@ export interface PlanFeatureMap {
   contracts:           boolean
   app_name_custom:     boolean
   application_limit:   number
+  payroll:             boolean
+  quotations:          boolean
+  revenue:             boolean
+  fields_settings:     boolean
+  public_form:         boolean
 }
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
@@ -41,6 +46,11 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     contracts:           false,
     app_name_custom:     false,
     application_limit:   100,
+    payroll:             false,
+    quotations:          false,
+    revenue:             false,
+    fields_settings:     false,
+    public_form:         false,
   },
   basic: {
     sms_daily_limit:     20,
@@ -52,6 +62,11 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     contracts:           false,
     app_name_custom:     true,
     application_limit:   500,
+    payroll:             true,
+    quotations:          false,
+    revenue:             true,
+    fields_settings:     true,
+    public_form:         true,
   },
   pro: {
     sms_daily_limit:     50,
@@ -63,6 +78,11 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     contracts:           false,
     app_name_custom:     true,
     application_limit:   Infinity,
+    payroll:             true,
+    quotations:          true,
+    revenue:             true,
+    fields_settings:     true,
+    public_form:         true,
   },
   max: {
     sms_daily_limit:     100,
@@ -74,6 +94,11 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     contracts:           false,
     app_name_custom:     true,
     application_limit:   Infinity,
+    payroll:             true,
+    quotations:          true,
+    revenue:             true,
+    fields_settings:     true,
+    public_form:         true,
   },
 }
 
