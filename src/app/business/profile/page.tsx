@@ -498,42 +498,39 @@ export default function BusinessProfilePage() {
       </Card>
 
       {/* 서비스 설정 */}
-      <div className="rounded-2xl border border-brand-200 bg-brand-50/25 shadow-soft overflow-hidden">
-        <div className="h-1 bg-brand-500" />
-        <div className="px-4 pb-4 pt-3">
-          <SectionHeader title="서비스 설정" className="mb-3" />
-          <div className="flex flex-col divide-y divide-brand-100">
-            <button
-              type="button"
-              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-brand-50 active:bg-brand-100 transition-colors"
-              onClick={() => router.push('/business/profile/settings/fields')}
-            >
-              <div className="flex items-center gap-3">
-                <SlidersHorizontal size={16} className="text-brand-500" />
-                <div>
-                  <span className="text-sm text-text-primary">서비스(폼) 화면 구성 설정</span>
-                  <p className="text-xs text-text-tertiary mt-0.5">서비스관리(폼)에서 사용할 화면을 직접 커스텀</p>
-                </div>
+      <Card padding="md" className="bg-amber-50">
+        <SectionHeader title="서비스 설정" className="mb-3" />
+        <div className="flex flex-col divide-y divide-border-subtle">
+          <button
+            type="button"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-amber-100/60 active:bg-amber-100 transition-colors"
+            onClick={() => router.push('/business/profile/settings/fields')}
+          >
+            <div className="flex items-center gap-3">
+              <SlidersHorizontal size={16} className="text-text-tertiary" />
+              <div>
+                <span className="text-sm text-text-primary">서비스(폼) 화면 구성 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">서비스관리(폼)에서 사용할 화면을 직접 커스텀</p>
               </div>
-              <ChevronRight size={16} className="text-brand-400" />
-            </button>
-            <button
-              type="button"
-              className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-brand-50 active:bg-brand-100 transition-colors"
-              onClick={() => router.push('/business/profile/settings/notifications')}
-            >
-              <div className="flex items-center gap-3">
-                <Bell size={16} className="text-brand-500" />
-                <div>
-                  <span className="text-sm text-text-primary">서비스 알림 설정</span>
-                  <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
-                </div>
+            </div>
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-between py-3 text-left cursor-pointer hover:bg-amber-100/60 active:bg-amber-100 transition-colors"
+            onClick={() => router.push('/business/profile/settings/notifications')}
+          >
+            <div className="flex items-center gap-3">
+              <Bell size={16} className="text-text-tertiary" />
+              <div>
+                <span className="text-sm text-text-primary">서비스 알림 설정</span>
+                <p className="text-xs text-text-tertiary mt-0.5">발송 규칙, 자동/수동, 문구 커스텀</p>
               </div>
-              <ChevronRight size={16} className="text-brand-400" />
-            </button>
-          </div>
+            </div>
+            <ChevronRight size={16} className="text-text-tertiary" />
+          </button>
         </div>
-      </div>
+      </Card>
 
       {/* 신청서 링크 */}
       <Card padding="md" id="request-link-section">
