@@ -787,7 +787,17 @@ export default function NotificationsSettingsPage() {
       ))}
 
       {/* 알림 추가 버튼 */}
-      <Button variant="secondary" fullWidth onClick={() => setAddDialogOpen(true)}>
+      <Button
+        variant="secondary"
+        fullWidth
+        onClick={() => {
+          if (!canUseFeature(planType, 'sms_custom_template', features)) {
+            setPageUpgradeModal({ featureName: '알림 추가', requiredPlan: 'pro' })
+            return
+          }
+          setAddDialogOpen(true)
+        }}
+      >
         <Plus size={16} />
         알림 추가
       </Button>
