@@ -32,6 +32,25 @@ const CATEGORY_LABELS: Record<string, string> = {
   hr:      'HR 기능',
 }
 
+// feature_key → 연결된 페이지 경로 + 게이트 종류
+const FEATURE_PAGE_MAP: Record<string, { path: string; type: '페이지차단' | '기능제한' | '수제한' }> = {
+  inventory:           { path: '/hr/재고관리',        type: '페이지차단' },
+  contracts:           { path: '/hr/계약서관리',       type: '페이지차단' },
+  marketplace:         { path: '/마켓',               type: '페이지차단' },
+  application_limit:   { path: '/서비스관리 목록',     type: '수제한'    },
+  worker_limit:        { path: '/hr/작업자관리',       type: '수제한'    },
+  app_name_custom:     { path: '/프로필 › 앱이름 설정', type: '기능제한'  },
+  sms_auto_dispatch:   { path: '/설정 › SMS알림',      type: '기능제한'  },
+  sms_custom_template: { path: '/설정 › SMS알림',      type: '기능제한'  },
+  sms_daily_limit:     { path: '/서비스관리 › SMS발송', type: '수제한'    },
+}
+
+const PAGE_TYPE_STYLE: Record<string, string> = {
+  페이지차단: 'bg-red-50 text-red-600 border border-red-200',
+  기능제한:   'bg-blue-50 text-blue-600 border border-blue-200',
+  수제한:     'bg-amber-50 text-amber-600 border border-amber-200',
+}
+
 type LocalConfig = PlanFeatureConfig & {
   _booleanValues: Record<PlanKey, boolean>
   _numericValues: Record<PlanKey, string>
@@ -55,6 +74,35 @@ function toLocalConfig(c: PlanFeatureConfig): LocalConfig {
   return { ...c, _booleanValues: booleanValues, _numericValues: numericValues }
 }
 
+function FeatureLabel({ config, onDelete }: { config: LocalConfig; onDelete: (key: string, label: string) => void }) {
+  const pageInfo = FEATURE_PAGE_MAP[config.feature_key]
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm text-text-primary leading-tight">{config.label}</span>
+        <button
+          type="button"
+          onClick={() => onDelete(config.feature_key, config.label)}
+          className="text-text-tertiary hover:text-state-danger transition-colors flex-shrink-0"
+          title="삭제"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+      {pageInfo ? (
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${PAGE_TYPE_STYLE[pageInfo.type]}`}>
+            {pageInfo.type}
+          </span>
+          <span className="text-[10px] text-text-tertiary truncate">{pageInfo.path}</span>
+        </div>
+      ) : (
+        <span className="text-[10px] text-text-tertiary/50">연결된 페이지 없음</span>
+      )}
+    </div>
+  )
+}
+
 function BooleanRow({
   config,
   onChange,
@@ -66,18 +114,8 @@ function BooleanRow({
 }) {
   return (
     <tr className="border-t border-border-subtle">
-      <td className="py-3 pr-4 text-sm text-text-primary whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <span>{config.label}</span>
-          <button
-            type="button"
-            onClick={() => onDelete(config.feature_key, config.label)}
-            className="text-text-tertiary hover:text-state-danger transition-colors flex-shrink-0"
-            title="삭제"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+      <td className="py-3 pr-4">
+        <FeatureLabel config={config} onDelete={onDelete} />
       </td>
       {PLAN_KEYS.map((plan) => (
         <td key={plan} className="py-3 text-center">
@@ -104,18 +142,8 @@ function NumericRow({
 }) {
   return (
     <tr className="border-t border-border-subtle">
-      <td className="py-3 pr-4 text-sm text-text-primary whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          <span>{config.label}</span>
-          <button
-            type="button"
-            onClick={() => onDelete(config.feature_key, config.label)}
-            className="text-text-tertiary hover:text-state-danger transition-colors flex-shrink-0"
-            title="삭제"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
+      <td className="py-3 pr-4">
+        <FeatureLabel config={config} onDelete={onDelete} />
       </td>
       {PLAN_KEYS.map((plan) => (
         <td key={plan} className="py-3 text-center">
@@ -354,7 +382,7 @@ export default function AdminPlansPage() {
             <table className="w-full min-w-[360px]">
               <thead>
                 <tr>
-                  <th className="text-left text-xs text-text-tertiary font-medium pb-2 pr-4 w-40">기능</th>
+                  <th className="text-left text-xs text-text-tertiary font-medium pb-2 pr-4 w-48">기능 / 연결 페이지</th>
                   {PLAN_KEYS.map(plan => (
                     <th key={plan} className={`text-xs font-semibold pb-2 text-center min-w-[60px] ${PLAN_COLORS[plan]}`}>
                       {PLAN_LABELS[plan]}
@@ -386,7 +414,7 @@ export default function AdminPlansPage() {
             <table className="w-full min-w-[360px]">
               <thead>
                 <tr>
-                  <th className="text-left text-xs text-text-tertiary font-medium pb-2 pr-4 w-40">기능</th>
+                  <th className="text-left text-xs text-text-tertiary font-medium pb-2 pr-4 w-48">기능 / 연결 페이지</th>
                   {PLAN_KEYS.map(plan => (
                     <th key={plan} className={`text-xs font-semibold pb-2 text-center min-w-[60px] ${PLAN_COLORS[plan]}`}>
                       {PLAN_LABELS[plan]}
