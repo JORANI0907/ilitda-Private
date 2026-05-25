@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn, Calendar, Search } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, LogIn, Calendar, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -421,15 +421,17 @@ export default function RevenuePage() {
               )}
             </div>
             {/* 검색 */}
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="업체명, 담당자, 서비스 유형 검색"
-                className="w-full h-9 rounded-2xl border border-border bg-surface-sunken pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-              />
+            <div className="bg-surface-sunken rounded-2xl px-4 py-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="업체명, 담당자, 서비스 유형 검색"
+                  className="w-full h-9 rounded-xl border border-border bg-surface pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -450,20 +452,15 @@ export default function RevenuePage() {
       {!isLoading && view === 'monthly' && monthlyData && (
         <>
           {/* 총액 카드 */}
-          <div className="rounded-2xl bg-brand-600 px-5 py-4 flex items-center gap-4">
-            <TrendingUp size={32} className="text-brand-300 shrink-0" />
-            <div>
-              <p className="text-xs text-brand-200">{periodLabel} 총 매출액</p>
-              <p className="text-2xl font-bold text-white mt-0.5">
-                ₩ {fmtKr(monthlyData.total)}
-              </p>
-              <p className="text-xs text-brand-300 mt-0.5">
-                {searchedSchedules.length}건
-                {(selectedMethods.size > 0 || rq) && searchedSchedules.length !== schedules.length
-                  ? ` (전체 ${schedules.length}건)`
-                  : ''}
-              </p>
-            </div>
+          <div className="rounded-2xl bg-surface border-2 border-brand-500 px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-text-secondary">
+              {periodLabel} 총 매출액({searchedSchedules.length}건)
+              {(selectedMethods.size > 0 || rq) && searchedSchedules.length !== schedules.length
+                ? ` · 전체 ${schedules.length}건` : ''}
+            </span>
+            <span className="text-base font-bold text-brand-600 tracking-tight shrink-0">
+              ₩{fmtKr(monthlyData.total)}
+            </span>
           </div>
 
           {/* 결제방법 도넛 차트 */}
@@ -578,14 +575,13 @@ export default function RevenuePage() {
       {!isLoading && view === 'annual' && annualData && (
         <>
           {/* 연간 총액 */}
-          <div className="rounded-2xl bg-brand-600 px-5 py-4 flex items-center gap-4">
-            <TrendingUp size={32} className="text-brand-300 shrink-0" />
-            <div>
-              <p className="text-xs text-brand-200">{year}년 연간 총 매출액</p>
-              <p className="text-2xl font-bold text-white mt-0.5">
-                ₩ {fmtKr(annualData.total)}
-              </p>
-            </div>
+          <div className="rounded-2xl bg-surface border-2 border-brand-500 px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm font-medium text-text-secondary">
+              {year}년 연간 총 매출액
+            </span>
+            <span className="text-base font-bold text-brand-600 tracking-tight shrink-0">
+              ₩{fmtKr(annualData.total)}
+            </span>
           </div>
 
           {/* 월별 바 차트 */}
