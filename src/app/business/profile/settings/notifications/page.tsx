@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, RotateCcw, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Plus, Trash2, Lock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -88,8 +88,12 @@ function NotificationRuleCard({
   planType: PlanType
   features: Record<PlanType, PlanFeatureMap>
 }) {
+  // 플랜 권한을 useState 이전에 계산 (초기값에 사용)
+  const canAutoDispatch   = canUseFeature(planType, 'sms_auto_dispatch', features)
+  const canCustomTemplate = canUseFeature(planType, 'sms_custom_template', features)
+
   const [useCustomTemplate, setUseCustomTemplate] = useState(
-    rule.template !== null && rule.template !== undefined,
+    rule.template !== null && rule.template !== undefined && canCustomTemplate,
   )
   const [activeSection, setActiveSection] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -98,9 +102,6 @@ function NotificationRuleCard({
     featureName: string
     requiredPlan: PlanType
   } | null>(null)
-
-  const canAutoDispatch  = canUseFeature(planType, 'sms_auto_dispatch', features)
-  const canCustomTemplate = canUseFeature(planType, 'sms_custom_template', features)
 
   const sections = PANEL_SECTIONS
     .map(s => ({
@@ -322,17 +323,31 @@ function NotificationRuleCard({
 
           {/* 문구 설정 */}
           <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!useCustomTemplate}
-                onChange={(e) => handleCustomTemplateToggle(!e.target.checked)}
-                className="w-4 h-4 accent-brand-600"
-              />
-              <span className="text-xs text-text-secondary">기본 문구 사용</span>
-            </label>
+            {/* 토글: pro 이상은 커스텀 문구 체크박스, 미만은 잠금 버튼 */}
+            {canCustomTemplate ? (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!useCustomTemplate}
+                  onChange={(e) => handleCustomTemplateToggle(!e.target.checked)}
+                  className="w-4 h-4 accent-brand-600"
+                />
+                <span className="text-xs text-text-secondary">기본 문구 사용</span>
+              </label>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setUpgradeModal({ featureName: '커스텀 문구', requiredPlan: 'pro' })}
+                className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-brand-600 transition-colors w-fit"
+              >
+                <Lock size={11} />
+                커스텀 문구 설정
+                <span className="text-brand-600 underline">Pro 이상 플랜 필요</span>
+              </button>
+            )}
 
-            {!useCustomTemplate && defaultPreview && (
+            {/* 기본 문구 미리보기 — 기본모드이거나 pro 미만 플랜 */}
+            {(!useCustomTemplate || !canCustomTemplate) && defaultPreview && (
               <div className="bg-surface-sunken rounded-lg p-2.5">
                 <p className="text-xs text-text-tertiary whitespace-pre-line leading-relaxed">
                   {defaultPreview}
@@ -340,7 +355,21 @@ function NotificationRuleCard({
               </div>
             )}
 
-            {useCustomTemplate && (
+            {/* 커스텀 알림 + pro 미만: 저장된 문구 잠금 표시 */}
+            {!canCustomTemplate && !defaultPreview && rule.template && (
+              <div className="bg-surface-sunken rounded-lg p-2.5 border border-border-subtle">
+                <p className="text-[10px] text-text-tertiary mb-1.5 flex items-center gap-1">
+                  <Lock size={10} />
+                  저장된 문구 — Pro 이상 플랜에서 수정 가능
+                </p>
+                <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed opacity-70">
+                  {rule.template}
+                </p>
+              </div>
+            )}
+
+            {/* 커스텀 문구 편집기 — pro 이상 + 커스텀모드 */}
+            {useCustomTemplate && canCustomTemplate && (
               <div className="flex flex-col gap-2">
                 {/* 변수 삽입 영역 */}
                 <div className="flex flex-col gap-1.5">
