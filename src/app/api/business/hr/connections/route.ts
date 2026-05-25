@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     registration_number,
     resident_number,
     company_name,
+    address,
   } = body as Record<string, unknown>
 
   if (!name || typeof name !== 'string' || !name.trim()) {
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
     if (registration_number && typeof registration_number === 'string') insertData.manual_registration_number = registration_number.trim()
     if (resident_number && typeof resident_number === 'string') insertData.manual_resident_number = resident_number.trim()
     if (company_name && typeof company_name === 'string') insertData.manual_company_name = company_name.trim()
+    if (address && typeof address === 'string') insertData.manual_address = address.trim()
   }
 
   const { data, error } = await service
