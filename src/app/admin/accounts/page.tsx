@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Users, Trash2, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Users, Trash2, UserPlus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
@@ -30,19 +30,18 @@ const PLAN_BADGE: Record<string, { label: string; className: string }> = {
   free:  { label: 'Free',  className: 'bg-surface-sunken text-text-secondary border border-border' },
   basic: { label: 'Basic', className: 'bg-blue-100 text-blue-700' },
   pro:   { label: 'Pro',   className: 'bg-violet-100 text-violet-700' },
+  max:   { label: 'Max',   className: 'bg-amber-100 text-amber-700' },
 }
+
+const PAGE_SIZE = 30
 
 function PlanBadge({ plan }: { plan: string }) {
   const badge = PLAN_BADGE[plan] ?? PLAN_BADGE.free
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.className}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${badge.className}`}>
       {badge.label}
     </span>
   )
-}
-
-function formatDate(dateStr: string) {
-  return dateStr.slice(0, 10)
 }
 
 function AccountCard({
@@ -54,72 +53,40 @@ function AccountCard({
   onClick: () => void
   onDeleteClick: (e: React.MouseEvent) => void
 }) {
+  const meta = [
+    account.profile?.name,
+    account.profile?.phone,
+    account.plan !== 'free' && account.plan_expires_at
+      ? `~${account.plan_expires_at.slice(0, 10)}`
+      : null,
+  ].filter(Boolean).join(' · ')
+
   return (
     <Card
-      padding="md"
+      padding="sm"
       className="cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all"
       onClick={onClick}
     >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <p className="font-semibold text-text-primary leading-tight break-keep">
-            {account.business_name}
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="font-semibold text-sm text-text-primary leading-tight truncate">
+              {account.business_name}
+            </p>
             <PlanBadge plan={account.plan} />
-            <button
-              type="button"
-              onClick={onDeleteClick}
-              aria-label="계정 삭제"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-state-danger hover:bg-red-50 transition-colors"
-            >
-              <Trash2 size={15} />
-            </button>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1 text-sm text-text-secondary">
-          {account.profile && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">대표자</span>
-              <span>{account.profile.name}</span>
-            </div>
-          )}
-          {account.profile?.email && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">이메일</span>
-              <span className="truncate">{account.profile.email}</span>
-            </div>
-          )}
-          {account.profile?.phone && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">전화번호</span>
-              <span>{account.profile.phone}</span>
-            </div>
-          )}
-          {account.registration_number && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">사업자번호</span>
-              <span>{account.registration_number}</span>
-            </div>
-          )}
-          {account.address && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">주소</span>
-              <span className="truncate">{account.address}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <span className="text-text-tertiary text-xs w-14 shrink-0">가입일</span>
-            <span>{formatDate(account.created_at)}</span>
-          </div>
-          {account.plan !== 'free' && account.plan_expires_at && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-text-tertiary text-xs w-14 shrink-0">만료일</span>
-              <span>{account.plan_expires_at}</span>
-            </div>
+          {meta && (
+            <p className="text-xs text-text-tertiary truncate">{meta}</p>
           )}
         </div>
+        <button
+          type="button"
+          onClick={onDeleteClick}
+          aria-label="계정 삭제"
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-text-tertiary hover:text-state-danger hover:bg-red-50 transition-colors shrink-0"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </Card>
   )
@@ -154,6 +121,8 @@ export default function AdminAccountsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
   const [deleteTarget, setDeleteTarget] = useState<BusinessAccount | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -161,7 +130,7 @@ export default function AdminAccountsPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/accounts')
+      const res = await fetch('/api/admin/accounts', { cache: 'no-store' })
       const json = await res.json()
       if (!json.success) {
         setError(json.error ?? '불러오기 실패')
@@ -181,6 +150,22 @@ export default function AdminAccountsPage() {
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [load])
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return accounts
+    const q = search.toLowerCase()
+    return accounts.filter(a =>
+      a.business_name.toLowerCase().includes(q) ||
+      (a.profile?.name ?? '').toLowerCase().includes(q) ||
+      (a.profile?.phone ?? '').includes(q) ||
+      (a.profile?.email ?? '').toLowerCase().includes(q)
+    )
+  }, [accounts, search])
+
+  useEffect(() => { setPage(1) }, [search])
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return
@@ -203,7 +188,7 @@ export default function AdminAccountsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-6 pb-24">
+    <div className="flex flex-col gap-4 px-4 pt-6 pb-24">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -238,14 +223,34 @@ export default function AdminAccountsPage() {
         sections={ACCOUNTS_HELP_SECTIONS}
       />
 
+      {/* 검색 */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="상호명, 대표자, 전화번호, 이메일 검색"
+          className="w-full h-10 pl-9 pr-4 rounded-md bg-surface border border-border text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-colors"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary text-base leading-none"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
       {isLoading && (
-        <div className="flex flex-col gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} padding="md">
-              <div className="flex flex-col gap-2">
-                <div className="h-5 w-40 bg-surface-sunken rounded animate-pulse" />
-                <div className="h-4 w-28 bg-surface-sunken rounded animate-pulse" />
-                <div className="h-4 w-32 bg-surface-sunken rounded animate-pulse" />
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i} padding="sm">
+              <div className="flex flex-col gap-1.5">
+                <div className="h-4 w-40 bg-surface-sunken rounded animate-pulse" />
+                <div className="h-3 w-28 bg-surface-sunken rounded animate-pulse" />
               </div>
             </Card>
           ))}
@@ -261,18 +266,21 @@ export default function AdminAccountsPage() {
         </div>
       )}
 
-      {!isLoading && !error && accounts.length === 0 && (
+      {!isLoading && !error && filtered.length === 0 && (
         <EmptyState
           icon={<Users size={40} />}
-          title="등록된 계정이 없습니다"
-          description="아직 가입한 계정이 없습니다."
+          title={search ? '검색 결과가 없습니다' : '등록된 계정이 없습니다'}
+          description={search ? '다른 검색어를 입력해 보세요.' : '아직 가입한 계정이 없습니다.'}
           bordered
         />
       )}
 
-      {!isLoading && !error && accounts.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {accounts.map(account => (
+      {!isLoading && !error && filtered.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {search && (
+            <p className="text-xs text-text-tertiary px-0.5">{filtered.length}개 결과</p>
+          )}
+          {paged.map(account => (
             <AccountCard
               key={account.id}
               account={account}
@@ -284,6 +292,28 @@ export default function AdminAccountsPage() {
               }}
             />
           ))}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface border border-border text-text-secondary hover:bg-surface-sunken disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <span className="text-sm text-text-secondary">{page} / {totalPages}</span>
+              <button
+                type="button"
+                disabled={page === totalPages}
+                onClick={() => setPage(p => p + 1)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface border border-border text-text-secondary hover:bg-surface-sunken disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
+          )}
         </div>
       )}
 

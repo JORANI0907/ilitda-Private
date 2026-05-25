@@ -481,7 +481,10 @@ export default function BusinessProfilePage() {
           >
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
-              <span className="text-sm text-text-primary">발신번호 · 드라이브 연동</span>
+              <div>
+                <span className="text-sm text-text-primary">발신번호 · 드라이브 연동</span>
+                <p className="text-xs text-text-tertiary mt-0.5">고객 수신용 연락처, 서비스폴더를 설정 하세요</p>
+              </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
           </button>

@@ -232,11 +232,25 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [isFolderLinkCopied, setIsFolderLinkCopied] = useState(false)
   const [vatEnabled, setVatEnabled] = useState(true)
   const [notifyLogs, setNotifyLogs] = useState<NotifyLog[]>((app.notification_log as NotifyLog[]) ?? [])
+  const [driveConnected, setDriveConnected] = useState(false)
+  const [solapiConnected, setSolapiConnected] = useState(false)
 
   useEffect(() => {
     fetch('/api/business/hr/connections?status=accepted')
       .then(r => r.json())
       .then(d => { if (d.success) setConnections(d.data ?? []) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data?.business) {
+          setDriveConnected(!!d.data.business.gmail_for_drive)
+          setSolapiConnected(!!d.data.business.solapi_phone_verified)
+        }
+      })
       .catch(() => {})
   }, [])
 
@@ -778,19 +792,26 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             ) : (
               <>
                 <p className="text-xs text-teal-600/70">각 고객 폴더(작업전/후)가 생성되며, 알림으로 링크를 쉽게 발송할 수 있습니다.</p>
-                <button
-                  type="button"
-                  onClick={handleCreateDriveFolder}
-                  disabled={isDriveLoading}
-                  className="w-full h-9 rounded-lg bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                >
-                  {isDriveLoading ? (
-                    <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <FolderOpen size={14} />
-                  )}
-                  작업 폴더 생성
-                </button>
+                {driveConnected ? (
+                  <button
+                    type="button"
+                    onClick={handleCreateDriveFolder}
+                    disabled={isDriveLoading}
+                    className="w-full h-9 rounded-lg bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {isDriveLoading ? (
+                      <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <FolderOpen size={14} />
+                    )}
+                    작업 폴더 생성
+                  </button>
+                ) : (
+                  <p className="text-xs text-teal-600/70 break-keep">
+                    Google Drive 연동이 필요해요.{' '}
+                    <a href="/business/profile/settings/integrations" className="underline font-medium">연동 설정하기 →</a>
+                  </p>
+                )}
               </>
             )}
             {driveError && <p className="text-xs text-state-danger">{driveError}</p>}
@@ -810,19 +831,29 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             >
               {activeNotifyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-            <button
-              type="button"
-              onClick={handleNotify}
-              disabled={isSendingNotify}
-              className="w-full h-9 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-            >
-              {isSendingNotify ? (
-                <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Megaphone size={14} />
-              )}
-              {form.phone || '연락처 없음'}으로 발송
-            </button>
+            <p className="text-xs text-amber-700/70 break-keep">
+              <a href="/business/profile/settings/notifications" className="underline font-medium">알림 목록 수정 →</a>
+            </p>
+            {solapiConnected ? (
+              <button
+                type="button"
+                onClick={handleNotify}
+                disabled={isSendingNotify}
+                className="w-full h-9 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                {isSendingNotify ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Megaphone size={14} />
+                )}
+                {form.phone || '연락처 없음'}으로 발송
+              </button>
+            ) : (
+              <p className="text-xs text-amber-700/70 break-keep">
+                발신번호 등록이 필요해요.{' '}
+                <a href="/business/profile/settings/integrations" className="underline font-medium">연동 설정하기 →</a>
+              </p>
+            )}
             {notifyError && <p className="text-xs text-state-danger">{notifyError}</p>}
 
             {/* 폴더 링크 보내기 */}

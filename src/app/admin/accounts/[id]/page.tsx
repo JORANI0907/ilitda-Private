@@ -177,6 +177,7 @@ export default function AdminAccountDetailPage({ params }: PageProps) {
         return
       }
       setSaveStatus('saved')
+      router.refresh()
       await fetchDetail()
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch {

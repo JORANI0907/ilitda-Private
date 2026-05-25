@@ -163,6 +163,11 @@ export async function PUT(
   }
 
   if (Object.keys(businessUpdates).length > 0) {
+    // plan 변경 시 plan_type도 동기화
+    if ('plan' in businessUpdates) {
+      businessUpdates['plan_type'] = businessUpdates['plan']
+    }
+
     const { error } = await service
       .from('businesses')
       .update(businessUpdates)
