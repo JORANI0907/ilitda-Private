@@ -55,7 +55,6 @@ export default function IntegrationsPage() {
   // Solapi 상태
   const [phoneInput, setPhoneInput] = useState('')
   const [otpInput, setOtpInput] = useState('')
-  const [pendingUniqueId, setPendingUniqueId] = useState<string | null>(null)
   const [pendingPhone, setPendingPhone] = useState('')
   const [solapiLoading, setSolapiLoading] = useState(false)
   const [solapiError, setSolapiError] = useState<string | null>(null)
@@ -98,7 +97,6 @@ export default function IntegrationsPage() {
       })
       const json = await res.json()
       if (!json.success) { setSolapiError(json.error ?? '요청 실패'); return }
-      setPendingUniqueId(json.data.uniqueId)
       setPendingPhone(phone)
       setOtpInput('')
     } catch {
@@ -109,19 +107,19 @@ export default function IntegrationsPage() {
   }
 
   async function handleVerifyOtp() {
-    if (!pendingUniqueId || otpInput.length < 5) { setSolapiError('인증번호를 입력해주세요.'); return }
+    if (!pendingPhone || otpInput.length < 5) { setSolapiError('인증번호를 입력해주세요.'); return }
     setSolapiLoading(true)
     setSolapiError(null)
     try {
       const res = await fetch('/api/admin/integrations/solapi', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uniqueId: pendingUniqueId, otp: otpInput, phoneNumber: pendingPhone }),
+        body: JSON.stringify({ otp: otpInput, phoneNumber: pendingPhone }),
       })
       const json = await res.json()
       if (!json.success) { setSolapiError(json.error ?? '인증 실패'); return }
       setBiz(prev => prev ? { ...prev, solapi_from_phone: pendingPhone, solapi_phone_verified: true } : prev)
-      setPendingUniqueId(null)
+      setPendingPhone('')
       setOtpInput('')
     } catch {
       setSolapiError('네트워크 오류가 발생했습니다.')
@@ -137,7 +135,7 @@ export default function IntegrationsPage() {
       await fetch('/api/admin/integrations/solapi', { method: 'DELETE' })
       setBiz(prev => prev ? { ...prev, solapi_from_phone: null, solapi_phone_verified: false } : prev)
       setPhoneInput('')
-      setPendingUniqueId(null)
+      setPendingPhone('')
     } finally {
       setSolapiLoading(false)
     }
@@ -245,7 +243,7 @@ export default function IntegrationsPage() {
           인증된 번호로 고객에게 알림이 발송됩니다. 번호 인증 시 해당 번호로 인증번호가 발송됩니다.
         </p>
 
-        {!pendingUniqueId ? (
+        {!pendingPhone ? (
           // 1단계: 번호 입력
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
@@ -286,7 +284,7 @@ export default function IntegrationsPage() {
             <button
               type="button"
               className="text-xs text-text-tertiary text-left underline underline-offset-2"
-              onClick={() => { setPendingUniqueId(null); setOtpInput('') }}
+              onClick={() => { setPendingPhone(''); setOtpInput('') }}
             >
               번호 다시 입력
             </button>

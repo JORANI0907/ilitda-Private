@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { requestSenderVerification, verifySenderRegistration } from '@/lib/solapi/sender'
+import { sendSMS } from '@/lib/solapi/client'
+import { generateOtp, storeOtp, verifyOtp } from '@/lib/otp/store'
 import type { ApiResponse } from '@/types'
 
 async function getAuthBusiness() {
@@ -19,17 +20,21 @@ async function getAuthBusiness() {
   return biz ? { supabase: service, biz } : null
 }
 
-// POST: 발신번호 OTP 요청 (1단계)
-export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<{ uniqueId: string }>>> {
+// POST: 발신번호 인증 OTP 발송 (1단계)
+export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse>> {
   const auth = await getAuthBusiness()
   if (!auth) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 })
 
   const { phoneNumber } = await req.json() as { phoneNumber: string }
-  if (!phoneNumber) return NextResponse.json({ success: false, error: '전화번호를 입력해주세요.' }, { status: 400 })
+  if (!phoneNumber || !/^01[016789]\d{7,8}$/.test(phoneNumber)) {
+    return NextResponse.json({ success: false, error: '올바른 휴대폰 번호를 입력해주세요.' }, { status: 400 })
+  }
 
   try {
-    const uniqueId = await requestSenderVerification(phoneNumber)
-    return NextResponse.json({ success: true, data: { uniqueId } })
+    const otp = generateOtp()
+    await storeOtp(phoneNumber, otp)
+    await sendSMS(phoneNumber, `[일잇다] 발신번호 인증번호: ${otp} (5분 이내 입력)`)
+    return NextResponse.json({ success: true })
   } catch (e) {
     const msg = e instanceof Error ? e.message : '요청 실패'
     return NextResponse.json({ success: false, error: msg }, { status: 500 })
@@ -41,10 +46,17 @@ export async function PUT(req: NextRequest): Promise<NextResponse<ApiResponse>> 
   const auth = await getAuthBusiness()
   if (!auth) return NextResponse.json({ success: false, error: '인증 필요' }, { status: 401 })
 
-  const { uniqueId, otp, phoneNumber } = await req.json() as { uniqueId: string; otp: string; phoneNumber: string }
+  const { otp, phoneNumber } = await req.json() as { otp: string; phoneNumber: string }
+  if (!phoneNumber || !otp) {
+    return NextResponse.json({ success: false, error: '전화번호와 인증번호를 모두 입력해주세요.' }, { status: 400 })
+  }
 
   try {
-    await verifySenderRegistration(uniqueId, otp)
+    const valid = await verifyOtp(phoneNumber, otp)
+    if (!valid) {
+      return NextResponse.json({ success: false, error: '인증번호가 올바르지 않거나 만료되었습니다.' }, { status: 400 })
+    }
+
     await auth.supabase
       .schema('ilitda')
       .from('businesses')
