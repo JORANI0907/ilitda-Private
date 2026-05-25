@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Building2, Sparkles,
-  Bell, LogOut, ArrowLeftRight, ChevronRight, ChevronLeft,
+  Bell, LogOut, ArrowLeftRight, ChevronRight, ChevronLeft, ChevronDown,
   CreditCard, Users, Link2, Copy, Check, SlidersHorizontal, ShieldCheck, BookOpen, BarChart2,
 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
@@ -58,6 +58,7 @@ export default function BusinessProfilePage() {
   const [isSavingDisplayName, setIsSavingDisplayName] = useState(false)
   const [displayNameError, setDisplayNameError] = useState<string | null>(null)
   const [appNameUpgradeOpen, setAppNameUpgradeOpen] = useState(false)
+  const [showMemberInfo, setShowMemberInfo] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -270,85 +271,167 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
+      {/* 앱 이름 설정 */}
+      <Card padding="md">
+        <div className="flex items-center gap-2 mb-3">
+          <SectionHeader title="앱 이름 설정" />
+          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures) && (
+            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+              맥스 플랜
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-3">
+          <p className="text-xs text-text-secondary break-keep">
+            앱이름을 변경하고 고객에게 신뢰를 높이세요(신청서, 앱 이름 변경)
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                placeholder="일잇다 (기본값)"
+                value={appDisplayNameInput}
+                onChange={(e) => setAppDisplayNameInput(e.target.value)}
+                maxLength={20}
+                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures)}
+              />
+            </div>
+            <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>
+              저장
+            </Button>
+          </div>
+          {displayNameError && (
+            <p className="text-sm text-state-danger">{displayNameError}</p>
+          )}
+          {appDisplayName && (
+            <p className="text-xs text-text-tertiary">
+              현재 표시 이름: <span className="text-brand-600 font-medium">{appDisplayName}</span>
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* 오늘 SMS 발송량 현황 */}
+      {business && (() => {
+        const plan = business.plan_type ?? 'free'
+        const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
+        const used = business.daily_sms_count ?? 0
+        const usedRatio = Math.min(used / limit, 1)
+        return (
+          <Card padding="md">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart2 size={16} className="text-brand-600" />
+              <SectionHeader title="오늘 SMS 발송량 현황" />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-tertiary">오늘 발송</span>
+                <span className="text-sm font-medium text-text-primary">{used} / {limit === Number.MAX_SAFE_INTEGER ? '무제한' : `${limit}건`}</span>
+              </div>
+              <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${usedRatio >= 0.9 ? 'bg-state-danger' : usedRatio >= 0.7 ? 'bg-state-warning' : 'bg-brand-600'}`}
+                  style={{ width: `${limit === Number.MAX_SAFE_INTEGER ? 0 : usedRatio * 100}%` }}
+                />
+              </div>
+              {usedRatio >= 1 && (
+                <p className="text-xs text-state-danger">오늘 발송 한도에 도달했습니다. 내일 초기화됩니다.</p>
+              )}
+            </div>
+          </Card>
+        )
+      })()}
+
       {/* 가입 정보 */}
       <Card padding="md">
-        <SectionHeader title="가입 정보" className="mb-3" />
-        <div className="flex flex-col gap-0">
-          {/* 내 정보 */}
-          <div className="flex flex-col gap-2 pb-3 border-b border-border-subtle">
-            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">내 정보</p>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-tertiary w-16 shrink-0">이름</span>
-                <span className="text-sm text-text-primary">{profile.name || '미입력'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-tertiary w-16 shrink-0">전화번호</span>
-                <span className="text-sm text-text-primary">{profile.phone || '미입력'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-tertiary w-16 shrink-0">가입일</span>
-                <span className="text-sm text-text-primary">{profile.created_at.slice(0, 10)}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-text-tertiary w-16 shrink-0">역할</span>
-                <div className="flex gap-1.5">
-                  {profile.is_business && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-light text-brand-700">
-                      사업자
-                    </span>
-                  )}
-                  {profile.is_worker && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-state-success-bg text-state-success">
-                      용역자
-                    </span>
-                  )}
+        <button
+          type="button"
+          onClick={() => setShowMemberInfo(v => !v)}
+          className="flex items-center justify-between w-full"
+        >
+          <SectionHeader title="가입 정보" />
+          <ChevronDown
+            size={16}
+            className={`text-text-tertiary transition-transform duration-200 ${showMemberInfo ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <div className={`overflow-hidden transition-all duration-200 ${showMemberInfo ? 'max-h-[500px] opacity-100 mt-3' : 'max-h-0 opacity-0'}`}>
+          <div className="flex flex-col gap-0">
+            {/* 내 정보 */}
+            <div className="flex flex-col gap-2 pb-3 border-b border-border-subtle">
+              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">내 정보</p>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">이름</span>
+                  <span className="text-sm text-text-primary">{profile.name || '미입력'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">전화번호</span>
+                  <span className="text-sm text-text-primary">{profile.phone || '미입력'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">가입일</span>
+                  <span className="text-sm text-text-primary">{profile.created_at.slice(0, 10)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-text-tertiary w-16 shrink-0">역할</span>
+                  <div className="flex gap-1.5">
+                    {profile.is_business && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-light text-brand-700">
+                        사업자
+                      </span>
+                    )}
+                    {profile.is_worker && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-state-success-bg text-state-success">
+                        용역자
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* 사업체 정보 */}
+            {profile.is_business && business && (
+              <div className="flex flex-col gap-2 py-3 border-b border-border-subtle">
+                <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">사업체 정보</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0">상호명</span>
+                    <span className="text-sm text-text-primary">{business.business_name || '미입력'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0">사업자번호</span>
+                    <span className="text-sm text-text-primary">{business.registration_number || '미입력'}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0 mt-0.5">주소</span>
+                    <span className="text-sm text-text-primary break-keep">{business.address || '미입력'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 용역자 정보 */}
+            {profile.is_worker && worker && (
+              <div className="flex flex-col gap-2 pt-3">
+                <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">용역자 정보</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0">생년월일</span>
+                    <span className="text-sm text-text-primary">{worker.birthdate || '미입력'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0">은행명</span>
+                    <span className="text-sm text-text-primary">{worker.account_bank || '미입력'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-tertiary w-16 shrink-0">계좌번호</span>
+                    <span className="text-sm text-text-primary">{worker.account_number || '미입력'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* 사업체 정보 */}
-          {profile.is_business && business && (
-            <div className="flex flex-col gap-2 py-3 border-b border-border-subtle">
-              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">사업체 정보</p>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0">상호명</span>
-                  <span className="text-sm text-text-primary">{business.business_name || '미입력'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0">사업자번호</span>
-                  <span className="text-sm text-text-primary">{business.registration_number || '미입력'}</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0 mt-0.5">주소</span>
-                  <span className="text-sm text-text-primary break-keep">{business.address || '미입력'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 용역자 정보 */}
-          {profile.is_worker && worker && (
-            <div className="flex flex-col gap-2 pt-3">
-              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wide">용역자 정보</p>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0">생년월일</span>
-                  <span className="text-sm text-text-primary">{worker.birthdate || '미입력'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0">은행명</span>
-                  <span className="text-sm text-text-primary">{worker.account_bank || '미입력'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-text-tertiary w-16 shrink-0">계좌번호</span>
-                  <span className="text-sm text-text-primary">{worker.account_number || '미입력'}</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </Card>
 
@@ -439,76 +522,6 @@ export default function BusinessProfilePage() {
           </button>
         </div>
       </Card>
-
-      {/* 앱 이름 설정 */}
-      <Card padding="md">
-        <div className="flex items-center gap-2 mb-3">
-          <SectionHeader title="앱 이름 설정" />
-          {!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures) && (
-            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-              맥스 플랜
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col gap-3">
-          <p className="text-xs text-text-secondary break-keep">
-            상단 네비게이션에 표시될 이름을 설정하세요. 비워두면 기본값 &quot;일잇다&quot;가 표시됩니다.
-          </p>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                placeholder="일잇다 (기본값)"
-                value={appDisplayNameInput}
-                onChange={(e) => setAppDisplayNameInput(e.target.value)}
-                maxLength={20}
-                disabled={!canUseFeature(toPlanType(business?.plan_type), 'app_name_custom', planFeatures)}
-              />
-            </div>
-            <Button size="md" onClick={handleSaveDisplayName} isLoading={isSavingDisplayName}>
-              저장
-            </Button>
-          </div>
-          {displayNameError && (
-            <p className="text-sm text-state-danger">{displayNameError}</p>
-          )}
-          {appDisplayName && (
-            <p className="text-xs text-text-tertiary">
-              현재 표시 이름: <span className="text-brand-600 font-medium">{appDisplayName}</span>
-            </p>
-          )}
-        </div>
-      </Card>
-
-      {/* 오늘 SMS 발송량 현황 */}
-      {business && (() => {
-        const plan = business.plan_type ?? 'free'
-        const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
-        const used = business.daily_sms_count ?? 0
-        const usedRatio = Math.min(used / limit, 1)
-        return (
-          <Card padding="md">
-            <div className="flex items-center gap-2 mb-3">
-              <BarChart2 size={16} className="text-brand-600" />
-              <SectionHeader title="오늘 SMS 발송량 현황" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-tertiary">오늘 발송</span>
-                <span className="text-sm font-medium text-text-primary">{used} / {limit === Number.MAX_SAFE_INTEGER ? '무제한' : `${limit}건`}</span>
-              </div>
-              <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${usedRatio >= 0.9 ? 'bg-state-danger' : usedRatio >= 0.7 ? 'bg-state-warning' : 'bg-brand-600'}`}
-                  style={{ width: `${limit === Number.MAX_SAFE_INTEGER ? 0 : usedRatio * 100}%` }}
-                />
-              </div>
-              {usedRatio >= 1 && (
-                <p className="text-xs text-state-danger">오늘 발송 한도에 도달했습니다. 내일 초기화됩니다.</p>
-              )}
-            </div>
-          </Card>
-        )
-      })()}
 
       {/* 신청서 링크 */}
       <Card padding="md" id="request-link-section">
