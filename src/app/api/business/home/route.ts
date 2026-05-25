@@ -59,11 +59,13 @@ export async function GET() {
     return NextResponse.json({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-  const today      = now.toISOString().slice(0, 10)
-  const tomorrow   = new Date(now.getTime() + 86400000).toISOString().slice(0, 10)
+  // KST(UTC+9) 기준 날짜 — Vercel 서버는 UTC이므로 오프셋 필요
+  const kstNow   = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  const today    = kstNow.toISOString().slice(0, 10)
+  const tomorrow = new Date(kstNow.getTime() + 86400000).toISOString().slice(0, 10)
+  const monthStart = `${kstNow.getUTCFullYear()}-${String(kstNow.getUTCMonth() + 1).padStart(2, '0')}-01`
+  const lastDay    = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth() + 1, 0))
+  const monthEnd   = lastDay.toISOString().slice(0, 10)
 
   const [monthApps, inventoryItems, todayRows, tomorrowRows, newApps] = await Promise.all([
     service
