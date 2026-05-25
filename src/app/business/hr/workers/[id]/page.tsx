@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, use } from 'react'
-import { ArrowLeft, Phone, Building2, CalendarClock, LogIn } from 'lucide-react'
+import { ArrowLeft, Phone, Building2, CalendarClock, LogIn, MapPin, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -35,10 +35,13 @@ function getAvatarColor(name: string): string {
 interface EditForm {
   display_name: string
   manual_phone: string
+  manual_address: string
   manual_account_bank: string
   manual_account_number: string
   manual_registration_number: string
   manual_company_name: string
+  manual_specialty: string
+  manual_skill_level: string
 }
 
 type ApplicationItem = {
@@ -78,10 +81,13 @@ export default function WorkerDetailPage({ params }: PageProps) {
   const [form, setForm] = useState<EditForm>({
     display_name: '',
     manual_phone: '',
+    manual_address: '',
     manual_account_bank: '',
     manual_account_number: '',
     manual_registration_number: '',
     manual_company_name: '',
+    manual_specialty: '',
+    manual_skill_level: '',
   })
 
   const fetchConnection = useCallback(async () => {
@@ -100,10 +106,13 @@ export default function WorkerDetailPage({ params }: PageProps) {
       setForm({
         display_name: conn.display_name ?? '',
         manual_phone: conn.manual_phone ?? '',
+        manual_address: conn.manual_address ?? '',
         manual_account_bank: conn.manual_account_bank ?? '',
         manual_account_number: conn.manual_account_number ?? '',
         manual_registration_number: conn.manual_registration_number ?? '',
         manual_company_name: conn.manual_company_name ?? '',
+        manual_specialty: conn.manual_specialty ?? '',
+        manual_skill_level: conn.manual_skill_level ?? '',
       })
     } catch {
       setPageError('네트워크 오류가 발생했습니다.')
@@ -147,10 +156,13 @@ export default function WorkerDetailPage({ params }: PageProps) {
           display_name: form.display_name,
           manual_name: form.display_name,
           manual_phone: form.manual_phone || null,
+          manual_address: form.manual_address || null,
           manual_account_bank: form.manual_account_bank || null,
           manual_account_number: form.manual_account_number || null,
           manual_registration_number: form.manual_registration_number || null,
           manual_company_name: form.manual_company_name || null,
+          manual_specialty: form.manual_specialty || null,
+          manual_skill_level: form.manual_skill_level || null,
         }),
       })
       const json = await res.json()
@@ -288,6 +300,20 @@ export default function WorkerDetailPage({ params }: PageProps) {
           disabled={isAppConnected}
           placeholder="010-0000-0000"
         />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-text-secondary flex items-center gap-1">
+            <MapPin size={12} />
+            주소
+          </label>
+          <input
+            type="text"
+            value={form.manual_address}
+            onChange={(e) => setField('manual_address', e.target.value)}
+            disabled={isAppConnected}
+            placeholder="예: 서울시 강남구 테헤란로 123"
+            className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+        </div>
       </div>
 
       {/* 섹션 2: 세부정보 */}
@@ -322,15 +348,36 @@ export default function WorkerDetailPage({ params }: PageProps) {
           value={form.manual_registration_number}
           onChange={(e) => setField('manual_registration_number', e.target.value)}
         />
+        <Input
+          label="특기"
+          placeholder="예: 고층 작업, 에어컨 세척"
+          value={form.manual_specialty}
+          onChange={(e) => setField('manual_specialty', e.target.value)}
+        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-text-secondary">능력</label>
+          <select
+            value={form.manual_skill_level}
+            onChange={(e) => setField('manual_skill_level', e.target.value)}
+            className="w-full h-10 px-3 rounded-md border border-border bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">선택 안 함</option>
+            <option value="상">상</option>
+            <option value="중">중</option>
+            <option value="하">하</option>
+          </select>
+        </div>
       </div>
 
       {/* 섹션 3: 작업 이력 */}
-      {applications.length > 0 && (
-        <div className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-5 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarClock size={18} className="text-text-secondary" />
-            <SectionHeader title="작업 이력" level="section" />
-          </div>
+      <div className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-5 flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <CalendarClock size={18} className="text-text-secondary" />
+          <SectionHeader title="작업 이력" level="section" />
+        </div>
+        {applications.length === 0 ? (
+          <p className="text-sm text-text-tertiary py-1">아직 배정된 현장이 없습니다.</p>
+        ) : (
           <div className="flex flex-col gap-2">
             {applications.slice(0, 10).map((app) => (
               <div key={app.id} className="flex items-center justify-between text-sm py-2 border-b border-border-subtle last:border-0">
@@ -348,8 +395,15 @@ export default function WorkerDetailPage({ params }: PageProps) {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        )}
+        <Link
+          href="/business/hr/payroll"
+          className="flex items-center gap-2 mt-1 px-3 py-2.5 rounded-xl bg-surface-sunken hover:bg-border text-sm text-text-secondary hover:text-text-primary transition-colors"
+        >
+          <DollarSign size={15} className="text-brand-500 shrink-0" />
+          <span className="break-keep">급여 종합 관리는 <span className="font-medium text-brand-600">운영 &gt; 급여관리</span>에서 하세요</span>
+        </Link>
+      </div>
 
       {/* 저장/삭제 */}
       <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border-subtle px-4 py-4 flex gap-3 max-w-lg mx-auto">

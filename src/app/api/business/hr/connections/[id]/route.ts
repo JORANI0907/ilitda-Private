@@ -82,6 +82,9 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     'manual_registration_number',
     'manual_resident_number',
     'manual_company_name',
+    'manual_address',
+    'manual_specialty',
+    'manual_skill_level',
   ]
 
   const updates: Record<string, unknown> = {}

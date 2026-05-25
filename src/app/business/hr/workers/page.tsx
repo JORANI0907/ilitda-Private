@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -228,15 +228,27 @@ export default function WorkersPage() {
             level="page"
             description="함께 일하는 작업자를 관리합니다"
           />
-          {!planLoading && getFeatureLimit(planType, 'worker_limit', features) !== Infinity && (
-            <span className={`text-xs px-2 py-0.5 rounded-full mt-1 inline-block ${
-              connections.length >= getFeatureLimit(planType, 'worker_limit', features)
-                ? 'bg-state-danger/10 text-state-danger font-medium'
-                : 'bg-surface-sunken text-text-tertiary'
-            }`}>
-              {connections.length}/{getFeatureLimit(planType, 'worker_limit', features)}명
-            </span>
-          )}
+          {!planLoading && (() => {
+            const limit = getFeatureLimit(planType, 'worker_limit', features)
+            const isOver = connections.length >= limit
+            const isNear = !isOver && limit !== Infinity && connections.length >= limit * 0.8
+            if (limit === Infinity) {
+              return (
+                <span className="text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block bg-state-success/10 text-state-success font-medium">
+                  무제한
+                </span>
+              )
+            }
+            return (
+              <span className={`text-xs px-2.5 py-0.5 rounded-full mt-1 inline-block font-medium ${
+                isOver ? 'bg-state-danger/10 text-state-danger' :
+                isNear ? 'bg-state-warning/10 text-state-warning' :
+                'bg-surface-sunken text-text-secondary'
+              }`}>
+                {connections.length} / {limit}명
+              </span>
+            )
+          })()}
         </div>
         <Button size="sm" onClick={handleOpenAdd} className="shrink-0">
           <UserPlus size={15} className="mr-1" />
@@ -322,6 +334,11 @@ export default function WorkersPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-text-primary text-sm">{conn.display_name}</span>
                 <ConnectionBadge connection={conn} />
+                {conn.manual_skill_level && (
+                  <span className="text-xs px-1.5 py-0.5 bg-brand-50 text-brand-600 rounded font-medium">
+                    능력 {conn.manual_skill_level}
+                  </span>
+                )}
               </div>
               {(conn.manual_phone ?? conn.profiles?.phone) && (
                 <div className="flex items-center gap-1 mt-0.5">
@@ -329,6 +346,17 @@ export default function WorkersPage() {
                   <span className="text-xs text-text-secondary">
                     {conn.manual_phone ?? conn.profiles?.phone}
                   </span>
+                </div>
+              )}
+              {conn.manual_address && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <MapPin size={11} className="text-text-tertiary shrink-0" />
+                  <span className="text-xs text-text-secondary truncate">{conn.manual_address}</span>
+                </div>
+              )}
+              {conn.manual_specialty && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-xs text-text-tertiary truncate">특기: {conn.manual_specialty}</span>
                 </div>
               )}
             </div>

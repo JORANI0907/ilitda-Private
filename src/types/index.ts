@@ -215,6 +215,9 @@ export interface Connection {
   manual_registration_number: string | null
   manual_resident_number: string | null
   manual_company_name: string | null
+  manual_address: string | null
+  manual_specialty: string | null
+  manual_skill_level: string | null
   display_name: string
   status: ConnectionStatus
   invite_token: string
