@@ -320,8 +320,8 @@ export default function PayrollPage() {
         <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
           isCustomRange ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         }`}>
-          <div className="pt-0.5 pb-1 px-0.5 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+          <div className="pt-0.5 flex flex-col gap-2">
+            <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
               <input
                 type="date"
                 value={rangeStart}
@@ -336,15 +336,17 @@ export default function PayrollPage() {
                 className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="업체명, 작업자 검색"
-                className="w-full h-9 rounded-xl border border-border bg-surface pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
-              />
+            <div className="bg-surface-sunken rounded-2xl px-4 py-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="업체명, 작업자 검색"
+                  className="w-full h-9 rounded-xl border border-border bg-surface pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+                />
+              </div>
             </div>
           </div>
         </div>
