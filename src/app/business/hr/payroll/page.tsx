@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Download, Users, LogIn, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Download, Users, LogIn, ChevronLeft, ChevronRight, Calendar, Search } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -83,6 +83,7 @@ export default function PayrollPage() {
   const [isCustomRange, setIsCustomRange] = useState(false)
   const [rangeStart, setRangeStart] = useState('')
   const [rangeEnd, setRangeEnd] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   function prevMonth() {
     setIsCustomRange(false)
@@ -187,7 +188,15 @@ export default function PayrollPage() {
     return matchesFilter && (app.assigned_connection_ids ?? []).includes(activeWorker)
   })
 
-  const totalForWorker = filteredApps.reduce((sum, app) => {
+  const q = searchQuery.trim().toLowerCase()
+  const searchedApps = q
+    ? filteredApps.filter(app =>
+        app.business_name.toLowerCase().includes(q) ||
+        (app.workers ?? []).some(w => w.display_name.toLowerCase().includes(q))
+      )
+    : filteredApps
+
+  const totalForWorker = searchedApps.reduce((sum, app) => {
     if (activeWorker === 'all') {
       return sum + Object.values(app.worker_pay ?? {}).reduce((s, v) => s + v, 0)
     }
@@ -199,7 +208,7 @@ export default function PayrollPage() {
 
     // Build rows: one row per (application, worker) pair — current month only
     const rows: Record<string, string | number>[] = []
-    for (const app of filteredApps) {
+    for (const app of searchedApps) {
       for (const w of app.workers ?? []) {
         const conn = connections.find((c) => c.id === w.connection_id)
         rows.push({
@@ -301,11 +310,11 @@ export default function PayrollPage() {
             직접설정
           </button>
         </div>
-        {/* CSS 아코디언 - DOM 유지하여 레이아웃 shift 방지 */}
+        {/* CSS 아코디언 */}
         <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
-          isCustomRange ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+          isCustomRange ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         }`}>
-          <div className="pt-0.5">
+          <div className="pt-0.5 flex flex-col gap-2">
             <div className="flex items-center gap-2 bg-surface-sunken rounded-2xl px-4 py-3">
               <input
                 type="date"
@@ -321,6 +330,16 @@ export default function PayrollPage() {
                 className="flex-1 h-9 rounded-md border border-border bg-surface px-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
               />
             </div>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="업체명, 작업자 검색"
+                className="w-full h-9 rounded-2xl border border-border bg-surface-sunken pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -334,10 +353,14 @@ export default function PayrollPage() {
             description={`직원별 탭을 선택해서 해당 직원의 이번 달 급여를 입력하고 저장하세요.\n\n'전체' 탭에서는 모든 직원의 급여를 한 화면에서 볼 수 있습니다.`}
           />
         </div>
-        <Button size="sm" variant="secondary" onClick={handleExport}>
-          <Download size={14} />
-          엑셀
-        </Button>
+        <button
+          type="button"
+          onClick={handleExport}
+          title="엑셀 다운로드"
+          className="h-8 w-8 flex items-center justify-center rounded-lg text-text-secondary hover:bg-surface-sunken hover:text-text-primary transition-colors"
+        >
+          <Download size={16} />
+        </button>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {workerTabs.map((tab) => (
@@ -357,21 +380,25 @@ export default function PayrollPage() {
         ))}
       </div>
 
-      {/* 합계 */}
-      {!isLoading && filteredApps.length > 0 && (
-        <div className="flex items-center justify-between text-sm bg-surface-sunken rounded-xl px-4 py-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-text-secondary">
-              {activeWorker === 'all' ? '전체 급여 합계' : `${connections.find((c) => c.id === activeWorker)?.display_name ?? ''} 합계`}
-            </span>
-            <HelpIcon
-              title="합계 금액 안내"
-              description={`이번 달 전체 직원 급여 합산 금액입니다.\n\n4대보험(국민연금·건강보험·고용보험·산재보험)과 소득세 공제는 별도로 처리해야 합니다.`}
-            />
+      {/* 합계 카드 */}
+      {!isLoading && searchedApps.length > 0 && (
+        <div className="rounded-2xl bg-brand-600 px-5 py-4 shadow-card">
+          <p className="text-xs text-brand-200">
+            {activeWorker === 'all'
+              ? '전체 급여 합계'
+              : `${connections.find((c) => c.id === activeWorker)?.display_name ?? ''} 급여 합계`}
+          </p>
+          <p className="text-3xl font-bold text-white mt-0.5 tracking-tight">
+            ₩ {totalForWorker > 0 ? totalForWorker.toLocaleString('ko-KR') : '0'}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-xs text-brand-200">{searchedApps.length}건</span>
+            {q && (
+              <span className="text-xs text-brand-300 bg-brand-700/50 px-2 py-0.5 rounded-full">
+                &ldquo;{searchQuery}&rdquo; 검색 중
+              </span>
+            )}
           </div>
-          <span className="font-bold text-text-primary">
-            {totalForWorker > 0 ? `${totalForWorker.toLocaleString('ko-KR')}원` : '—'}
-          </span>
         </div>
       )}
 
@@ -383,18 +410,22 @@ export default function PayrollPage() {
         <div key={i} className="h-24 bg-surface rounded-2xl animate-pulse border border-border-subtle" />
       ))}
 
-      {!isLoading && !error && filteredApps.length === 0 && (
+      {!isLoading && !error && searchedApps.length === 0 && (
         <EmptyState
           icon={<Users size={40} />}
-          title={isCustomRange && rangeStart && rangeEnd ? '선택한 기간에 급여 데이터가 없어요' : `${viewMonth}월 급여 데이터가 없어요`}
-          description="해당 월에 작업자가 배정된 신청서가 없습니다. 다른 달을 확인하거나 신청서에서 작업자를 배정해 주세요."
+          title={
+            q ? `"${searchQuery}"에 해당하는 결과가 없어요`
+              : isCustomRange && rangeStart && rangeEnd ? '선택한 기간에 급여 데이터가 없어요'
+              : `${viewMonth}월 급여 데이터가 없어요`
+          }
+          description="검색어를 바꾸거나 다른 기간을 확인해 보세요."
           bordered
         />
       )}
 
-      {!isLoading && !error && filteredApps.length > 0 && (
+      {!isLoading && !error && searchedApps.length > 0 && (
         <div className="flex flex-col gap-3">
-          {filteredApps.map((app) => {
+          {searchedApps.map((app) => {
             const workersToShow = activeWorker === 'all'
               ? (app.workers ?? [])
               : (app.workers ?? []).filter((w) => w.connection_id === activeWorker)
