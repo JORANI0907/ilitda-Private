@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, CheckSquare, Square, TrendingUp, LogIn, Calendar, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -137,11 +137,13 @@ export default function RevenuePage() {
   const [rangeStart, setRangeStart] = useState('')
   const [rangeEnd, setRangeEnd]     = useState('')
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set())
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchMonthly = useCallback(async (y: number, m: number) => {
     setIsLoading(true)
     setSelectedIds(new Set())
     setSelectedMethods(new Set())
+    setSearchQuery('')
     try {
       const res = await fetch(`/api/business/revenue?year=${y}&month=${m}`)
       const json = await res.json()
@@ -154,6 +156,7 @@ export default function RevenuePage() {
     setIsLoading(true)
     setSelectedIds(new Set())
     setSelectedMethods(new Set())
+    setSearchQuery('')
     try {
       const res = await fetch(`/api/business/revenue?from=${from}&to=${to}`)
       const json = await res.json()
@@ -216,11 +219,22 @@ export default function RevenuePage() {
       : schedules
   , [schedules, selectedMethods])
 
-  const allSelected = displaySchedules.length > 0 && displaySchedules.every(s => selectedIds.has(s.id))
+  const rq = searchQuery.trim().toLowerCase()
+  const searchedSchedules = useMemo(() =>
+    rq
+      ? displaySchedules.filter(s =>
+          (s.client?.name ?? '').toLowerCase().includes(rq) ||
+          (s.client?.owner_name ?? '').toLowerCase().includes(rq) ||
+          (s.service_type ?? '').toLowerCase().includes(rq)
+        )
+      : displaySchedules
+  , [displaySchedules, rq])
+
+  const allSelected = searchedSchedules.length > 0 && searchedSchedules.every(s => selectedIds.has(s.id))
 
   function toggleAll() {
     if (allSelected) setSelectedIds(new Set())
-    else setSelectedIds(new Set(displaySchedules.map(s => s.id)))
+    else setSelectedIds(new Set(searchedSchedules.map(s => s.id)))
   }
 
   function toggleOne(id: string) {
@@ -350,7 +364,7 @@ export default function RevenuePage() {
         </div>
         {/* CSS 아코디언 - DOM 유지하여 레이아웃 shift 방지 */}
         <div className={`overflow-hidden transition-all duration-200 ease-in-out ${
-          isCustomRange && view === 'monthly' ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+          isCustomRange && view === 'monthly' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         }`}>
           <div className="flex flex-col gap-2 pt-0.5">
             {/* 날짜 직접 설정 */}
@@ -406,6 +420,17 @@ export default function RevenuePage() {
                 <span className="text-xs text-text-tertiary">이 기간 데이터 조회 후 표시됩니다</span>
               )}
             </div>
+            {/* 검색 */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="업체명, 담당자, 서비스 유형 검색"
+                className="w-full h-9 rounded-2xl border border-border bg-surface-sunken pl-8 pr-3 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -433,9 +458,10 @@ export default function RevenuePage() {
                 ₩ {fmtKr(monthlyData.total)}
               </p>
               <p className="text-xs text-brand-300 mt-0.5">
-                {selectedMethods.size > 0
-                  ? `${displaySchedules.length}건 (전체 ${schedules.length}건)`
-                  : `${schedules.length}건`}
+                {searchedSchedules.length}건
+                {(selectedMethods.size > 0 || rq) && searchedSchedules.length !== schedules.length
+                  ? ` (전체 ${schedules.length}건)`
+                  : ''}
               </p>
             </div>
           </div>
@@ -496,11 +522,15 @@ export default function RevenuePage() {
           </div>
 
           {/* 일정 목록 */}
-          {displaySchedules.length === 0 ? (
-            <EmptyState title={selectedMethods.size > 0 ? '선택한 결제방법의 매출이 없어요.' : `${dayLabel} 매출 내역이 없어요.`} />
+          {searchedSchedules.length === 0 ? (
+            <EmptyState title={
+              rq ? `"${searchQuery}"에 해당하는 결과가 없어요.`
+                : selectedMethods.size > 0 ? '선택한 결제방법의 매출이 없어요.'
+                : `${dayLabel} 매출 내역이 없어요.`
+            } />
           ) : (
             <div className="flex flex-col gap-2">
-              {displaySchedules.map((s) => (
+              {searchedSchedules.map((s) => (
                 <div
                   key={s.id}
                   onClick={() => toggleOne(s.id)}
