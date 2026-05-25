@@ -34,15 +34,20 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 // feature_key → 연결된 페이지 경로 + 게이트 종류
 const FEATURE_PAGE_MAP: Record<string, { path: string; type: '페이지차단' | '기능제한' | '수제한' }> = {
-  inventory:           { path: '/hr/재고관리',        type: '페이지차단' },
-  contracts:           { path: '/hr/계약서관리',       type: '페이지차단' },
-  marketplace:         { path: '/마켓',               type: '페이지차단' },
-  application_limit:   { path: '/서비스관리 목록',     type: '수제한'    },
-  worker_limit:        { path: '/hr/작업자관리',       type: '수제한'    },
-  app_name_custom:     { path: '/프로필 › 앱이름 설정', type: '기능제한'  },
-  sms_auto_dispatch:   { path: '/설정 › SMS알림',      type: '기능제한'  },
-  sms_custom_template: { path: '/설정 › SMS알림',      type: '기능제한'  },
-  sms_daily_limit:     { path: '/서비스관리 › SMS발송', type: '수제한'    },
+  inventory:           { path: '/hr/재고관리',              type: '페이지차단' },
+  contracts:           { path: '/hr/계약서관리',             type: '페이지차단' },
+  marketplace:         { path: '/마켓',                    type: '페이지차단' },
+  payroll:             { path: '/hr/급여관리',              type: '페이지차단' },
+  quotations:          { path: '/hr/견적서관리',             type: '페이지차단' },
+  revenue:             { path: '/hr/매출관리',              type: '페이지차단' },
+  fields_settings:     { path: '/설정 › 서비스화면(폼)구성', type: '페이지차단' },
+  public_form:         { path: '/프로필 › 신청서링크',        type: '기능제한'  },
+  application_limit:   { path: '/서비스관리 목록',            type: '수제한'    },
+  worker_limit:        { path: '/hr/작업자관리',             type: '수제한'    },
+  app_name_custom:     { path: '/프로필 › 앱이름 설정',       type: '기능제한'  },
+  sms_auto_dispatch:   { path: '/설정 › SMS알림',            type: '기능제한'  },
+  sms_custom_template: { path: '/설정 › SMS알림',            type: '기능제한'  },
+  sms_daily_limit:     { path: '/서비스관리 › SMS발송',       type: '수제한'    },
 }
 
 const PAGE_TYPE_STYLE: Record<string, string> = {
