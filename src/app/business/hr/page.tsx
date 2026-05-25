@@ -22,7 +22,7 @@ const CARDS: Card[] = [
     color: 'text-blue-600',
     bg: 'bg-blue-50',
     border: 'border-blue-100',
-    title: '인사 관리',
+    title: '작업자 관리',
     desc: '작업자·출퇴근·급여',
   },
   {
