@@ -12,7 +12,7 @@ export function DemoPlanFab() {
     >
       <div className="w-14 h-10 overflow-hidden">
         <Image
-          src="/brand/logo-main.png"
+          src="/brand/logo-nukki.png"
           alt="일잇다"
           width={56}
           height={40}
