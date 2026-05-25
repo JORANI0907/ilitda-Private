@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Clock, CalendarDays, LogIn } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Clock, CalendarDays, LogIn, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -59,6 +60,7 @@ const HELP_SECTIONS = [
 ]
 
 export default function AttendancePage() {
+  const router = useRouter()
   const today = new Date().toISOString().slice(0, 10)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isDemo, setIsDemo] = useState(false)
@@ -95,7 +97,15 @@ export default function AttendancePage() {
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6">
-      <SectionHeader title="출퇴근 기록" level="page" />
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="p-1 -ml-1 text-text-secondary hover:text-text-primary cursor-pointer transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <SectionHeader title="출퇴근 기록" level="page" />
+      </div>
 
       {/* 데모 배너 */}
       {isDemo && (
