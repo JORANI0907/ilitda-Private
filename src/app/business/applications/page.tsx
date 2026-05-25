@@ -269,14 +269,12 @@ function AppCard({
   app,
   onClick,
   onFavoriteToggle,
-  selectMode,
   isSelected,
   onSelect,
 }: {
   app: ServiceApplication
   onClick: () => void
   onFavoriteToggle: (id: string, val: boolean) => void
-  selectMode?: boolean
   isSelected?: boolean
   onSelect?: (id: string) => void
 }) {
@@ -298,21 +296,26 @@ function AppCard({
 
   return (
     <div className="relative">
-      {selectMode && (
-        <div className={`absolute top-3.5 left-3.5 z-10 w-5 h-5 rounded border-2 flex items-center justify-center pointer-events-none transition-colors
+      {/* 체크박스: 항상 표시, 클릭 시 카드 열기 동작과 분리 */}
+      <button
+        type="button"
+        className="absolute top-3.5 left-3 z-10 p-0.5"
+        onClick={(e) => { e.stopPropagation(); onSelect?.(app.id) }}
+      >
+        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
           ${isSelected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-border'}`}>
           {isSelected && <Check size={12} className="text-white" />}
         </div>
-      )}
+      </button>
       <Card
         padding="md"
         className={`cursor-pointer active:scale-[0.98] transition-transform hover:shadow-card
           ${isToday ? 'border-l-4 border-l-brand-600 bg-brand-light/30' : ''}
-          ${selectMode && isSelected ? 'ring-2 ring-brand-500 ring-inset bg-brand-50' : ''}`}
-        onClick={selectMode ? () => onSelect?.(app.id) : onClick}
+          ${isSelected ? 'ring-2 ring-brand-500 ring-inset bg-brand-50' : ''}`}
+        onClick={onClick}
       >
-        <div className="flex flex-col gap-2">
-          <div className={`flex items-center justify-between gap-2 ${selectMode ? 'pl-7' : ''}`}>
+        <div className="flex flex-col gap-2 pl-7">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 flex-wrap">
               {isToday && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
@@ -325,22 +328,20 @@ function AppCard({
                 </span>
               )}
             </div>
-            {!selectMode && (
-              <button
-                type="button"
-                onClick={toggleFav}
-                className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
-              >
-                <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={toggleFav}
+              className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
+            >
+              <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
+            </button>
           </div>
 
-          <p className={`font-semibold text-text-primary leading-tight ${selectMode ? 'pl-7' : ''}`}>
+          <p className="font-semibold text-text-primary leading-tight">
             {app.business_name || '(업체명 미입력)'}
           </p>
 
-          <div className={`flex flex-col gap-1 text-sm text-text-secondary ${selectMode ? 'pl-7' : ''}`}>
+          <div className="flex flex-col gap-1 text-sm text-text-secondary">
             {app.owner_name && (
               <span className="flex items-center gap-1.5">
                 <Phone size={12} className="shrink-0 text-text-tertiary" />
@@ -362,7 +363,7 @@ function AppCard({
           </div>
 
           {totalAmt > 0 && (
-            <p className={`text-sm font-medium text-brand-600 ${selectMode ? 'pl-7' : ''}`}>
+            <p className="text-sm font-medium text-brand-600">
               {totalAmt.toLocaleString('ko-KR')}원
             </p>
           )}
@@ -496,7 +497,6 @@ export default function ApplicationsPage() {
 
   const selected = apps.find((a) => a.id === selectedId) ?? null
 
-  const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -510,8 +510,7 @@ export default function ApplicationsPage() {
     })
   }
 
-  function exitSelectMode() {
-    setSelectMode(false)
+  function clearSelection() {
     setSelectedIds(new Set())
   }
 
@@ -531,7 +530,6 @@ export default function ApplicationsPage() {
       setApps(prev => prev.filter(a => !selectedIds.has(a.id)))
       setSelectedIds(new Set())
       setShowDeleteModal(false)
-      setSelectMode(false)
     } catch {
       setDeleteError('삭제 중 오류가 발생했습니다.')
     } finally {
@@ -595,23 +593,23 @@ export default function ApplicationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">서비스관리</h1>
           <p className="text-sm text-text-tertiary mt-0.5">
-            {selectMode ? `${selectedIds.size}개 선택됨` : `${displayedApps.length}건`}
+            {selectedIds.size > 0 ? `${selectedIds.size}개 선택됨` : `${displayedApps.length}건`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={selectMode ? exitSelectMode : () => { setSelectMode(true); setSelectedId(null) }}
-            className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-          >
-            {selectMode ? '취소' : '선택'}
-          </button>
-          {!selectMode && (
-            <Button size="sm" onClick={() => router.push('/business/applications/new')}>
-              <Plus size={15} />
-              추가
-            </Button>
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              취소
+            </button>
           )}
+          <Button size="sm" onClick={() => router.push('/business/applications/new')}>
+            <Plus size={15} />
+            추가
+          </Button>
         </div>
       </div>
 
@@ -792,7 +790,6 @@ export default function ApplicationsPage() {
               onFavoriteToggle={(id, val) =>
                 setApps((prev) => prev.map((a) => a.id === id ? { ...a, is_favorite: val } : a))
               }
-              selectMode={selectMode}
               isSelected={selectedIds.has(app.id)}
               onSelect={toggleSelect}
             />
@@ -873,7 +870,7 @@ export default function ApplicationsPage() {
       )}
 
       {/* 선택 삭제 플로팅 바 */}
-      {selectMode && selectedIds.size > 0 && (
+      {selectedIds.size > 0 && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-surface border border-border shadow-pop rounded-2xl px-4 py-3 whitespace-nowrap">
           <span className="text-sm font-medium text-text-secondary">{selectedIds.size}개 선택됨</span>
           <button
