@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useContext } from 'react'
-import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn } from 'lucide-react'
+import { Plus, Package, ChevronDown, ChevronUp, Pencil, Trash2, Settings, Check, X, LogIn, Download } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -356,29 +356,10 @@ const filteredItems = useMemo(() => items.filter((item) => {
         title="재고 관리"
         level="page"
         action={
-          <div className="flex gap-2 items-center">
-            <Button size="sm" variant="secondary" onClick={handleExportCSV}>CSV</Button>
-            <HelpIcon
-              title="CSV 내보내기"
-              description="전체 재고 현황을 엑셀에서 열 수 있는 CSV 파일로 다운로드합니다. 이름, 카테고리, 현재 수량, 단위, 최소 수량이 포함됩니다."
-            />
-            <Button size="sm" variant="secondary" onClick={() => { setShowCatMgmt(true); setCatError(null); setEditingCat(null); setShowAddCat(false) }}>
-              <Settings size={15} />
-              카테고리
-            </Button>
-            <HelpIcon
-              title="카테고리란?"
-              description="카테고리는 청소용품, 장비, 소모품 등 재고를 분류하는 그룹입니다. 먼저 카테고리를 만들고 그 안에 품목을 추가하세요."
-            />
-            <Button size="sm" onClick={() => { setShowAdd(true); setAddForm({ ...EMPTY_ITEM, category: defaultCat }); setAddError(null) }}>
-              <Plus size={16} />
-              항목 추가
-            </Button>
-            <HelpIcon
-              title="품목 추가"
-              description="품목은 특정 청소 용품이나 장비를 의미합니다. 이름, 단위(개/L/kg 등), 최소 수량(부족 알림 기준)을 입력하세요."
-            />
-          </div>
+          <Button size="sm" onClick={() => { setShowAdd(true); setAddForm({ ...EMPTY_ITEM, category: defaultCat }); setAddError(null) }}>
+            <Plus size={16} />
+            항목 추가
+          </Button>
         }
       />
 
@@ -408,31 +389,54 @@ const filteredItems = useMemo(() => items.filter((item) => {
       <HelpTip>품목명으로 검색하거나 위 카테고리 탭을 눌러 분류별로 필터링할 수 있습니다. "부족" 버튼을 누르면 재고가 기준치 이하인 품목만 표시됩니다.</HelpTip>
 
       {/* 카테고리 필터 탭 */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <button
-          type="button"
-          onClick={() => setFilterCat('all')}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterCat === 'all' ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
-        >
-          전체
-        </button>
-        {categories.map((cat) => (
+      <div className="flex items-start gap-2">
+        {/* 왼쪽: 스크롤 가능한 필터 탭 */}
+        <div className="flex-1 flex flex-wrap gap-2 items-center">
           <button
-            key={cat.id}
             type="button"
-            onClick={() => setFilterCat(cat.name)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterCat === cat.name ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
+            onClick={() => setFilterCat('all')}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterCat === 'all' ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
           >
-            {cat.name}
+            전체
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setShowLowOnly(!showLowOnly)}
-          className={`ml-auto px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${showLowOnly ? 'bg-state-danger-bg text-state-danger' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
-        >
-          부족{lowCount > 0 && <span className="font-bold ml-1">{lowCount}</span>}
-        </button>
+          <button
+            type="button"
+            onClick={() => setShowLowOnly(!showLowOnly)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${showLowOnly ? 'bg-state-danger-bg text-state-danger' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
+          >
+            부족{lowCount > 0 && <span className="font-bold ml-1">{lowCount}</span>}
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setFilterCat(cat.name)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filterCat === cat.name ? 'bg-brand-600 text-white' : 'bg-surface-sunken text-text-secondary hover:bg-border-subtle'}`}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+
+        {/* 우측 고정: 카테고리 관리 + CSV 다운로드 */}
+        <div className="flex items-center gap-1 shrink-0 pt-0.5">
+          <button
+            type="button"
+            onClick={() => { setShowCatMgmt(true); setCatError(null); setEditingCat(null); setShowAddCat(false) }}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-sunken text-text-secondary hover:bg-border-subtle transition-colors"
+            aria-label="카테고리 관리"
+          >
+            <Settings size={15} />
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-sunken text-text-secondary hover:bg-border-subtle transition-colors"
+            aria-label="CSV 다운로드"
+          >
+            <Download size={15} />
+          </button>
+        </div>
       </div>
 
       {/* 아이템 목록 */}
@@ -600,10 +604,21 @@ const filteredItems = useMemo(() => items.filter((item) => {
             <select value={addForm.category} onChange={(e) => setAddForm({ ...addForm, category: e.target.value })} className={SELECT_CLASS}>
               {categories.map((cat) => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
             </select>
+            <p className="text-xs text-text-tertiary">없으면 ⚙️ 버튼에서 카테고리를 먼저 만들어 두세요.</p>
           </div>
-          <Input label="재고명 *" value={addForm.name} placeholder="예: 청소용 세제" onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
-          <Input label="단위" value={addForm.unit} placeholder="예: L, 개, 박스" onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })} />
-          <Input label="최소 수량" type="number" value={addForm.min_qty} placeholder="부족 알림 기준" onChange={(e) => setAddForm({ ...addForm, min_qty: e.target.value })} />
+          <div className="flex flex-col gap-1.5">
+            <Input label="재고명 *" value={addForm.name} placeholder="예: 청소용 세제" onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} />
+            <p className="text-xs text-text-tertiary">현장에서 실제로 부르는 품목 이름을 입력하세요.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Input label="단위" value={addForm.unit} placeholder="예: L, 개, 박스" onChange={(e) => setAddForm({ ...addForm, unit: e.target.value })} />
+            <p className="text-xs text-text-tertiary">수량 옆에 표시될 단위입니다. (예: L, 개, 박스, kg) 비워두면 숫자만 표시됩니다.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-primary">최소 수량</label>
+            <Input type="number" value={addForm.min_qty} placeholder="예: 5" onChange={(e) => setAddForm({ ...addForm, min_qty: e.target.value })} />
+            <p className="text-xs text-text-tertiary">이 수량 이하가 되면 빨간색 '수량 부족' 경고가 표시됩니다. 비워두면 알림 없음.</p>
+          </div>
           {addError && <p className="text-sm text-state-danger">{addError}</p>}
         </div>
       </Modal>
@@ -618,10 +633,21 @@ const filteredItems = useMemo(() => items.filter((item) => {
             <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })} className={SELECT_CLASS}>
               {categories.map((cat) => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
             </select>
+            <p className="text-xs text-text-tertiary">없으면 ⚙️ 버튼에서 카테고리를 먼저 만들어 두세요.</p>
           </div>
-          <Input label="재고명 *" value={editForm.name} placeholder="재고명" onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
-          <Input label="단위" value={editForm.unit} placeholder="예: L, 개, 박스" onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })} />
-          <Input label="최소 수량" type="number" value={editForm.min_qty} placeholder="부족 알림 기준" onChange={(e) => setEditForm({ ...editForm, min_qty: e.target.value })} />
+          <div className="flex flex-col gap-1.5">
+            <Input label="재고명 *" value={editForm.name} placeholder="재고명" onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
+            <p className="text-xs text-text-tertiary">현장에서 실제로 부르는 품목 이름을 입력하세요.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Input label="단위" value={editForm.unit} placeholder="예: L, 개, 박스" onChange={(e) => setEditForm({ ...editForm, unit: e.target.value })} />
+            <p className="text-xs text-text-tertiary">수량 옆에 표시될 단위입니다. (예: L, 개, 박스, kg) 비워두면 숫자만 표시됩니다.</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-text-primary">최소 수량</label>
+            <Input type="number" value={editForm.min_qty} placeholder="예: 5" onChange={(e) => setEditForm({ ...editForm, min_qty: e.target.value })} />
+            <p className="text-xs text-text-tertiary">이 수량 이하가 되면 빨간색 '수량 부족' 경고가 표시됩니다. 비워두면 알림 없음.</p>
+          </div>
           {editError && <p className="text-sm text-state-danger">{editError}</p>}
         </div>
       </Modal>
