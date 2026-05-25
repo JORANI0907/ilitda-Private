@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, RotateCcw, Plus, Trash2, Lock } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -80,6 +80,7 @@ function NotificationRuleCard({
   smsVars,
   planType,
   features,
+  totalAutoCount,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
@@ -87,6 +88,7 @@ function NotificationRuleCard({
   smsVars: SmsVar[]
   planType: PlanType
   features: Record<PlanType, PlanFeatureMap>
+  totalAutoCount: number
 }) {
   // 플랜 권한을 useState 이전에 계산 (초기값에 사용)
   const canAutoDispatch   = canUseFeature(planType, 'sms_auto_dispatch', features)
@@ -139,8 +141,12 @@ function NotificationRuleCard({
 
   const handleModeChange = (mode: 'manual' | 'auto') => {
     if (mode === 'auto' && !canAutoDispatch) {
-      setUpgradeModal({ featureName: '자동 발송', requiredPlan: 'pro' })
-      return
+      // 현재 이 rule이 manual 상태에서 auto로 전환 시도 + 이미 3개 존재
+      if (rule.mode !== 'auto' && totalAutoCount >= 3) {
+        setUpgradeModal({ featureName: '자동 발송 (4개 이상)', requiredPlan: 'pro' })
+        return
+      }
+      // 3개 미만이면 free/basic도 허용
     }
     if (mode === 'manual') {
       onChange({ ...rule, mode, trigger: undefined })
@@ -328,25 +334,26 @@ function NotificationRuleCard({
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={!useCustomTemplate}
-                  onChange={(e) => handleCustomTemplateToggle(!e.target.checked)}
+                  checked={useCustomTemplate}
+                  onChange={(e) => handleCustomTemplateToggle(e.target.checked)}
                   className="w-4 h-4 accent-brand-600"
                 />
-                <span className="text-xs text-text-secondary">기본 문구 사용</span>
+                <span className="text-xs text-text-secondary">문구 커스텀 만들기</span>
               </label>
             ) : (
-              <button
-                type="button"
-                onClick={() => setUpgradeModal({ featureName: '커스텀 문구', requiredPlan: 'pro' })}
-                className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-brand-600 transition-colors w-fit"
+              <label
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setUpgradeModal({ featureName: '커스텀 문구', requiredPlan: 'pro' })
+                }}
               >
-                <Lock size={11} />
-                커스텀 문구 설정
-                <span className="text-brand-600 underline">Pro 이상 플랜 필요</span>
-              </button>
+                <input type="checkbox" checked={false} readOnly className="w-4 h-4 accent-brand-600" />
+                <span className="text-xs text-text-secondary">문구 커스텀 만들기</span>
+              </label>
             )}
 
-            {/* 기본 문구 미리보기 — 기본모드이거나 pro 미만 플랜 */}
+            {/* 기본 문구 미리보기 — 커스텀 미사용이거나 pro 미만 플랜 */}
             {(!useCustomTemplate || !canCustomTemplate) && defaultPreview && (
               <div className="bg-surface-sunken rounded-lg p-2.5">
                 <p className="text-xs text-text-tertiary whitespace-pre-line leading-relaxed">
@@ -355,11 +362,10 @@ function NotificationRuleCard({
               </div>
             )}
 
-            {/* 커스텀 알림 + pro 미만: 저장된 문구 잠금 표시 */}
+            {/* 커스텀 알림 + pro 미만: 저장된 문구 표시 */}
             {!canCustomTemplate && !defaultPreview && rule.template && (
               <div className="bg-surface-sunken rounded-lg p-2.5 border border-border-subtle">
-                <p className="text-[10px] text-text-tertiary mb-1.5 flex items-center gap-1">
-                  <Lock size={10} />
+                <p className="text-[10px] text-text-tertiary mb-1.5">
                   저장된 문구 — Pro 이상 플랜에서 수정 가능
                 </p>
                 <p className="text-xs text-text-secondary whitespace-pre-line leading-relaxed opacity-70">
@@ -487,6 +493,10 @@ export default function NotificationsSettingsPage() {
   const [saveError, setSaveError]     = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess]  = useState(false)
   const [helpOpen, setHelpOpen]        = useState(false)
+  const [pageUpgradeModal, setPageUpgradeModal] = useState<{
+    featureName: string
+    requiredPlan: PlanType
+  } | null>(null)
   // 알림 추가 다이얼로그
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [newRuleName, setNewRuleName]     = useState('')
@@ -612,8 +622,19 @@ export default function NotificationsSettingsPage() {
     )
   }
 
+  const totalAutoCount = config?.rules.filter(r => r.mode === 'auto').length ?? 0
+
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
+      {pageUpgradeModal && (
+        <UpgradeModal
+          open={!!pageUpgradeModal}
+          onClose={() => setPageUpgradeModal(null)}
+          featureName={pageUpgradeModal.featureName}
+          requiredPlan={pageUpgradeModal.requiredPlan}
+          currentPlan={planType}
+        />
+      )}
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -760,6 +781,7 @@ export default function NotificationsSettingsPage() {
             smsVars={smsVars}
             planType={planType}
             features={features}
+            totalAutoCount={totalAutoCount}
           />
         </div>
       ))}
