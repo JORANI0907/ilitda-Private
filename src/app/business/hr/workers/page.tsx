@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft, Download } from 'lucide-react'
+import { Users, UserPlus, Phone, Link2, Check, ChevronRight, LogIn, MapPin, Search, X, ChevronLeft, Download, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
@@ -114,6 +114,39 @@ export default function WorkersPage() {
 
   const { planType, features, isLoading: planLoading } = usePlanType()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleBulkDelete() {
+    setIsDeleting(true)
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/business/hr/connections/${id}`, { method: 'DELETE' })
+        )
+      )
+      setConnections(prev => prev.filter(c => !selectedIds.has(c.id)))
+      setSelectedIds(new Set())
+      setShowDeleteModal(false)
+      setSelectMode(false)
+    } catch { /* silent */ } finally { setIsDeleting(false) }
+  }
 
   const fetchConnections = useCallback(async () => {
     setIsLoading(true)
@@ -309,10 +342,21 @@ export default function WorkersPage() {
               )
             })()}
           </div>
-          <Button size="sm" onClick={handleOpenAdd} className="shrink-0">
-            <UserPlus size={15} className="mr-1" />
-            작업자 추가
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={selectMode ? exitSelectMode : () => setSelectMode(true)}
+              className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+            >
+              {selectMode ? '취소' : '선택'}
+            </button>
+            {!selectMode && (
+              <Button size="sm" onClick={handleOpenAdd}>
+                <UserPlus size={15} className="mr-1" />
+                작업자 추가
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -415,9 +459,19 @@ export default function WorkersPage() {
           <button
             key={conn.id}
             type="button"
-            onClick={() => router.push(`/business/hr/workers/${conn.id}`)}
-            className="bg-surface rounded-2xl border border-border-subtle shadow-soft p-4 flex items-center gap-3 text-left cursor-pointer hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98] transition-all w-full"
+            onClick={selectMode ? () => toggleSelect(conn.id) : () => router.push(`/business/hr/workers/${conn.id}`)}
+            className={`bg-surface rounded-2xl border shadow-soft p-4 flex items-center gap-3 text-left cursor-pointer transition-all w-full
+              ${selectMode && selectedIds.has(conn.id)
+                ? 'border-brand-500 ring-2 ring-brand-500 ring-inset bg-brand-50'
+                : 'border-border-subtle hover:border-brand-200 hover:bg-brand-50/30 hover:shadow-card active:scale-[0.98]'}`}
           >
+            {selectMode && (
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
+                ${selectedIds.has(conn.id) ? 'bg-brand-600 border-brand-600' : 'bg-surface border-border'}`}>
+                {selectedIds.has(conn.id) && <Check size={12} className="text-white" />}
+              </div>
+            )}
+
             <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-base font-bold ${getAvatarColor(conn.display_name)}`}>
               {conn.display_name.charAt(0)}
             </div>
@@ -453,24 +507,26 @@ export default function WorkersPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-1 shrink-0">
-              {!conn.is_manual && conn.status === 'pending' && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleCopyLink(conn) }}
-                  className="p-2 rounded-lg text-text-secondary hover:bg-surface-sunken transition-colors"
-                  aria-label="초대 링크 복사"
-                  title="초대 링크 복사"
-                >
-                  {copiedId === conn.id ? (
-                    <Check size={16} className="text-state-success" />
-                  ) : (
-                    <Link2 size={16} />
-                  )}
-                </button>
-              )}
-              <ChevronRight size={16} className="text-text-tertiary" />
-            </div>
+            {!selectMode && (
+              <div className="flex items-center gap-1 shrink-0">
+                {!conn.is_manual && conn.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleCopyLink(conn) }}
+                    className="p-2 rounded-lg text-text-secondary hover:bg-surface-sunken transition-colors"
+                    aria-label="초대 링크 복사"
+                    title="초대 링크 복사"
+                  >
+                    {copiedId === conn.id ? (
+                      <Check size={16} className="text-state-success" />
+                    ) : (
+                      <Link2 size={16} />
+                    )}
+                  </button>
+                )}
+                <ChevronRight size={16} className="text-text-tertiary" />
+              </div>
+            )}
           </button>
         ))}
       </div>
@@ -635,6 +691,45 @@ export default function WorkersPage() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* 선택 삭제 플로팅 바 */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-surface border border-border shadow-pop rounded-2xl px-4 py-3 whitespace-nowrap">
+          <span className="text-sm font-medium text-text-secondary">{selectedIds.size}명 선택됨</span>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-1.5 h-9 px-4 bg-state-danger text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <Trash2 size={14} />
+            삭제
+          </button>
+        </div>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        title="작업자 삭제"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <p className="text-sm font-semibold text-state-danger">⚠️ 삭제된 데이터는 복구할 수 없습니다</p>
+            <p className="text-xs text-state-danger/80 mt-1 break-keep">
+              선택한 작업자 {selectedIds.size}명이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button variant="danger" fullWidth onClick={handleBulkDelete} isLoading={isDeleting}>
+              {selectedIds.size}명 영구 삭제
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              취소
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

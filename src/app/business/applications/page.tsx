@@ -1,22 +1,29 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react'
 import { useModalBackButton } from '@/hooks/useModalBackButton'
 import {
   Plus, Star, Search, Phone, MapPin, CalendarDays, ClipboardList,
   ChevronLeft, ChevronRight, ArrowUp, ArrowDown, LayoutList, LogIn,
+  Trash2, Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
+import { Modal } from '@/components/ui/Modal'
 import { ApplicationPanel } from '@/components/admin/ApplicationPanel'
+import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import { useRouter } from 'next/navigation'
 import type { ServiceApplication, ApplicationStatus, PanelConfig, NotificationConfig } from '@/types'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
 import { HelpTip } from '@/components/ui/HelpTip'
+import { getFeatureLimit, toPlanType } from '@/lib/plan-features'
+import { usePlanType } from '@/hooks/usePlanType'
+import { usePlanFeatures } from '@/contexts/PlanFeaturesContext'
+import { AuthContext } from '@/contexts/AuthContext'
 
 // ─── 상태 뱃지 ───────────────────────────────────────────────
 const STATUS_BADGE: Record<string, { label: string; bg: string }> = {
@@ -262,10 +269,16 @@ function AppCard({
   app,
   onClick,
   onFavoriteToggle,
+  selectMode,
+  isSelected,
+  onSelect,
 }: {
   app: ServiceApplication
   onClick: () => void
   onFavoriteToggle: (id: string, val: boolean) => void
+  selectMode?: boolean
+  isSelected?: boolean
+  onSelect?: (id: string) => void
 }) {
   const badge = STATUS_BADGE[app.status]
   const isToday = app.construction_date === TODAY
@@ -284,66 +297,78 @@ function AppCard({
   const totalAmt = app.supply_amount ?? 0
 
   return (
-    <Card
-      padding="md"
-      className={`cursor-pointer active:scale-[0.98] transition-transform hover:shadow-card ${isToday ? 'border-l-4 border-l-brand-600 bg-brand-light/30' : ''}`}
-      onClick={onClick}
-    >
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {isToday && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
-                오늘
+    <div className="relative">
+      {selectMode && (
+        <div className={`absolute top-3.5 left-3.5 z-10 w-5 h-5 rounded border-2 flex items-center justify-center pointer-events-none transition-colors
+          ${isSelected ? 'bg-brand-600 border-brand-600' : 'bg-surface border-border'}`}>
+          {isSelected && <Check size={12} className="text-white" />}
+        </div>
+      )}
+      <Card
+        padding="md"
+        className={`cursor-pointer active:scale-[0.98] transition-transform hover:shadow-card
+          ${isToday ? 'border-l-4 border-l-brand-600 bg-brand-light/30' : ''}
+          ${selectMode && isSelected ? 'ring-2 ring-brand-500 ring-inset bg-brand-50' : ''}`}
+        onClick={selectMode ? () => onSelect?.(app.id) : onClick}
+      >
+        <div className="flex flex-col gap-2">
+          <div className={`flex items-center justify-between gap-2 ${selectMode ? 'pl-7' : ''}`}>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {isToday && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-600 text-white">
+                  오늘
+                </span>
+              )}
+              {badge && (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.bg}`}>
+                  {badge.label}
+                </span>
+              )}
+            </div>
+            {!selectMode && (
+              <button
+                type="button"
+                onClick={toggleFav}
+                className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
+              >
+                <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
+              </button>
+            )}
+          </div>
+
+          <p className={`font-semibold text-text-primary leading-tight ${selectMode ? 'pl-7' : ''}`}>
+            {app.business_name || '(업체명 미입력)'}
+          </p>
+
+          <div className={`flex flex-col gap-1 text-sm text-text-secondary ${selectMode ? 'pl-7' : ''}`}>
+            {app.owner_name && (
+              <span className="flex items-center gap-1.5">
+                <Phone size={12} className="shrink-0 text-text-tertiary" />
+                {app.owner_name}{app.phone ? ` · ${app.phone}` : ''}
               </span>
             )}
-            {badge && (
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${badge.bg}`}>
-                {badge.label}
+            {app.address && (
+              <span className="flex items-start gap-1.5">
+                <MapPin size={12} className="shrink-0 text-text-tertiary mt-0.5" />
+                <span className="line-clamp-1 break-keep">{app.address}</span>
+              </span>
+            )}
+            {app.construction_date && (
+              <span className="flex items-center gap-1.5">
+                <CalendarDays size={12} className="shrink-0 text-text-tertiary" />
+                시공일: {app.construction_date}{app.construction_time ? ` ${app.construction_time}` : ''}
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={toggleFav}
-            className="shrink-0 p-1 text-text-tertiary hover:text-amber-400 transition-colors"
-          >
-            <Star size={15} className={app.is_favorite ? 'fill-amber-400 text-amber-400' : ''} />
-          </button>
-        </div>
 
-        <p className="font-semibold text-text-primary leading-tight">
-          {app.business_name || '(업체명 미입력)'}
-        </p>
-
-        <div className="flex flex-col gap-1 text-sm text-text-secondary">
-          {app.owner_name && (
-            <span className="flex items-center gap-1.5">
-              <Phone size={12} className="shrink-0 text-text-tertiary" />
-              {app.owner_name}{app.phone ? ` · ${app.phone}` : ''}
-            </span>
-          )}
-          {app.address && (
-            <span className="flex items-start gap-1.5">
-              <MapPin size={12} className="shrink-0 text-text-tertiary mt-0.5" />
-              <span className="line-clamp-1 break-keep">{app.address}</span>
-            </span>
-          )}
-          {app.construction_date && (
-            <span className="flex items-center gap-1.5">
-              <CalendarDays size={12} className="shrink-0 text-text-tertiary" />
-              시공일: {app.construction_date}{app.construction_time ? ` ${app.construction_time}` : ''}
-            </span>
+          {totalAmt > 0 && (
+            <p className={`text-sm font-medium text-brand-600 ${selectMode ? 'pl-7' : ''}`}>
+              {totalAmt.toLocaleString('ko-KR')}원
+            </p>
           )}
         </div>
-
-        {totalAmt > 0 && (
-          <p className="text-sm font-medium text-brand-600">
-            {totalAmt.toLocaleString('ko-KR')}원
-          </p>
-        )}
-      </div>
-    </Card>
+      </Card>
+    </div>
   )
 }
 
@@ -363,6 +388,12 @@ function CardSkeleton() {
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function ApplicationsPage() {
   const router = useRouter()
+  const auth = useContext(AuthContext)
+  const isGuest = !auth?.isLoading && !auth?.user
+  const { planType } = usePlanType()
+  const { features: planFeatures } = usePlanFeatures()
+  const [appLimitUpgradeOpen, setAppLimitUpgradeOpen] = useState(false)
+
   const [apps, setApps] = useState<ServiceApplication[]>([])
   const [isDemo, setIsDemo] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -432,6 +463,10 @@ export default function ApplicationsPage() {
     return () => clearTimeout(t)
   }, [fetchApps])
 
+  const appLimit = isGuest
+    ? Infinity
+    : getFeatureLimit(toPlanType(planType), 'application_limit', planFeatures ?? undefined)
+
   const displayedApps = useMemo(() => {
     const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
     const filtered = apps.filter((a) => {
@@ -439,7 +474,7 @@ export default function ApplicationsPage() {
       if (activeFilter !== 'all' && a.status !== activeFilter) return false
       return true
     })
-    return [...filtered].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const da = a.construction_date ?? ''
       const db = b.construction_date ?? ''
       if (!da && !db) return 0
@@ -448,7 +483,8 @@ export default function ApplicationsPage() {
       const cmp = da.localeCompare(db)
       return sortAsc ? cmp : -cmp
     })
-  }, [apps, activeFilter, viewYear, viewMonth, sortAsc])
+    return appLimit === Infinity ? sorted : sorted.slice(0, appLimit)
+  }, [apps, activeFilter, viewYear, viewMonth, sortAsc, appLimit])
 
   const allDates = useMemo(() => {
     const dateSet = new Set<string>()
@@ -459,6 +495,39 @@ export default function ApplicationsPage() {
   }, [displayedApps])
 
   const selected = apps.find((a) => a.id === selectedId) ?? null
+
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleBulkDelete() {
+    setIsDeleting(true)
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map(id =>
+          fetch(`/api/admin/applications/${id}`, { method: 'DELETE' })
+        )
+      )
+      setApps(prev => prev.filter(a => !selectedIds.has(a.id)))
+      setSelectedIds(new Set())
+      setShowDeleteModal(false)
+      setSelectMode(false)
+    } catch { /* silent */ } finally { setIsDeleting(false) }
+  }
 
   function handleUpdate(updated: ServiceApplication) {
     setApps((prev) => prev.map((a) => a.id === updated.id ? updated : a))
@@ -515,12 +584,25 @@ export default function ApplicationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text-primary">서비스관리</h1>
-          <p className="text-sm text-text-tertiary mt-0.5">{displayedApps.length}건</p>
+          <p className="text-sm text-text-tertiary mt-0.5">
+            {selectMode ? `${selectedIds.size}개 선택됨` : `${displayedApps.length}건`}
+          </p>
         </div>
-        <Button size="sm" onClick={() => router.push('/business/applications/new')}>
-          <Plus size={15} />
-          추가
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={selectMode ? exitSelectMode : () => { setSelectMode(true); setSelectedId(null) }}
+            className="h-9 px-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+          >
+            {selectMode ? '취소' : '선택'}
+          </button>
+          {!selectMode && (
+            <Button size="sm" onClick={() => router.push('/business/applications/new')}>
+              <Plus size={15} />
+              추가
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 검색 */}
@@ -700,6 +782,9 @@ export default function ApplicationsPage() {
               onFavoriteToggle={(id, val) =>
                 setApps((prev) => prev.map((a) => a.id === id ? { ...a, is_favorite: val } : a))
               }
+              selectMode={selectMode}
+              isSelected={selectedIds.has(app.id)}
+              onSelect={toggleSelect}
             />
           ))}
         </div>
@@ -724,6 +809,30 @@ export default function ApplicationsPage() {
             />
           )}
         </div>
+      )}
+
+      {/* 신청서 한도 초과 배너 */}
+      {!isGuest && appLimit !== Infinity && apps.length > appLimit && (
+        <Card padding="md" className="border-amber-200 bg-amber-50">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-800 break-keep">
+                신청서 한도({appLimit}건)에 도달했습니다
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5 break-keep">
+                플랜을 업그레이드하면 더 많은 신청서를 관리할 수 있어요.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="primary"
+              className="shrink-0"
+              onClick={() => setAppLimitUpgradeOpen(true)}
+            >
+              업그레이드
+            </Button>
+          </div>
+        </Card>
       )}
 
       {/* 상세 패널 */}
@@ -752,6 +861,54 @@ export default function ApplicationsPage() {
           }}
         />
       )}
+
+      {/* 선택 삭제 플로팅 바 */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-surface border border-border shadow-pop rounded-2xl px-4 py-3 whitespace-nowrap">
+          <span className="text-sm font-medium text-text-secondary">{selectedIds.size}개 선택됨</span>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-1.5 h-9 px-4 bg-state-danger text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
+          >
+            <Trash2 size={14} />
+            삭제
+          </button>
+        </div>
+      )}
+
+      {/* 신청서 한도 업그레이드 모달 */}
+      <UpgradeModal
+        open={appLimitUpgradeOpen}
+        onClose={() => setAppLimitUpgradeOpen(false)}
+        featureName="신청서 목록 한도 확장"
+        requiredPlan="basic"
+        currentPlan={toPlanType(planType)}
+      />
+
+      {/* 삭제 확인 모달 */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => !isDeleting && setShowDeleteModal(false)}
+        title="서비스 삭제"
+      >
+        <div className="flex flex-col gap-4">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <p className="text-sm font-semibold text-state-danger">⚠️ 삭제된 데이터는 복구할 수 없습니다</p>
+            <p className="text-xs text-state-danger/80 mt-1 break-keep">
+              선택한 서비스 {selectedIds.size}건이 영구 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button variant="danger" fullWidth onClick={handleBulkDelete} isLoading={isDeleting}>
+              {selectedIds.size}건 영구 삭제
+            </Button>
+            <Button variant="ghost" fullWidth onClick={() => setShowDeleteModal(false)} disabled={isDeleting}>
+              취소
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
