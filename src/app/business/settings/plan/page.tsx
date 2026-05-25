@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, Check, X, Minus, CheckCircle2,
+  ArrowLeft, Check, Minus, CheckCircle2,
   MessageSquare, ClipboardList, Users, Settings, Globe,
   Crown, Zap, Star,
 } from 'lucide-react'
@@ -14,8 +14,9 @@ import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpTip } from '@/components/ui/HelpTip'
 import { PLAN_NAMES, PLAN_PRICES, toPlanType } from '@/lib/plan-features'
-import type { PlanType, PlanFeatureMap } from '@/lib/plan-features'
+import type { PlanType } from '@/lib/plan-features'
 import { usePlanFeatures } from '@/contexts/PlanFeaturesContext'
+import type { FeatureMeta } from '@/contexts/PlanFeaturesContext'
 
 // ─── 플랜 정의 ────────────────────────────────────────────────
 const PLAN_KEYS: Exclude<PlanType, 'free'>[] = ['basic', 'pro', 'max']
@@ -40,8 +41,7 @@ function getRemainingDays(expiresAt: string | null): number {
   today.setHours(0, 0, 0, 0)
   const expiry = new Date(expiresAt)
   expiry.setHours(0, 0, 0, 0)
-  const diff = expiry.getTime() - today.getTime()
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+  return Math.max(0, Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
 }
 
 function getNewExpiryLabel(currentExpires: string | null): string {
@@ -56,6 +56,26 @@ function formatKoreanDate(dateStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`
 }
 
+// ─── 카테고리 아이콘/이름 (DB 기반 category 값 → UI) ──────────
+const CATEGORY_ICON: Record<string, React.ReactNode> = {
+  sms:      <MessageSquare size={14} className="text-blue-500" />,
+  feature:  <ClipboardList size={14} className="text-green-500" />,
+  hr:       <Users size={14} className="text-violet-500" />,
+  settings: <Settings size={14} className="text-gray-500" />,
+  business: <Globe size={14} className="text-teal-500" />,
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  sms:      'SMS 알림',
+  feature:  '서비스 관리',
+  hr:       '직원 · HR',
+  settings: '설정 · 커스텀',
+  business: '비즈니스 확장',
+}
+
+const CATEGORY_ORDER = ['sms', 'feature', 'hr', 'settings', 'business']
+
+// ─── 플랜 카드 스타일 ─────────────────────────────────────────
 const PLAN_STYLE: Record<string, {
   badge: string
   border: string
@@ -92,93 +112,70 @@ const PLAN_STYLE: Record<string, {
   },
 }
 
-// ─── 기능 비교표 ───────────────────────────────────────────────
-type FeatureValue = boolean | string
-
-interface FeatureRow {
-  label: string
-  featureKey?: keyof PlanFeatureMap
-  numericUnit?: string
-  basic: FeatureValue
-  pro: FeatureValue
-  max: FeatureValue
-  highlight?: boolean
+// ─── 숫자 한도 포맷팅 ─────────────────────────────────────────
+function formatLimit(val: unknown): string {
+  if (val === true) return ''
+  if (val === false) return ''
+  if (val === Infinity || val === null || val === undefined) return '무제한'
+  const n = Number(val)
+  if (!isFinite(n)) return '무제한'
+  return `${n.toLocaleString('ko-KR')}건`
 }
-
-interface FeatureCategory {
-  icon: React.ReactNode
-  title: string
-  rows: FeatureRow[]
-}
-
-const FEATURE_CATEGORIES: FeatureCategory[] = [
-  {
-    icon: <MessageSquare size={14} className="text-blue-500" />,
-    title: 'SMS 알림',
-    rows: [
-      { label: '수동 발송',   basic: true,      pro: true,      max: true },
-      { label: '일일 한도',   basic: '20건',    pro: '50건',    max: '100건',  highlight: true },
-      { label: '자동 발송',   basic: false,     pro: true,      max: true,     highlight: true },
-      { label: '커스텀 문구', basic: false,     pro: true,      max: true },
-    ],
-  },
-  {
-    icon: <ClipboardList size={14} className="text-green-500" />,
-    title: '서비스 관리',
-    rows: [
-      { label: '신청서 관리',   basic: true, pro: true, max: true },
-      { label: '캘린더뷰',      basic: true, pro: true, max: true },
-      { label: '고객 폴더 생성', basic: true, pro: true, max: true },
-      { label: '견적서 발행',   basic: true, pro: true, max: true },
-    ],
-  },
-  {
-    icon: <Users size={14} className="text-violet-500" />,
-    title: '직원 · HR',
-    rows: [
-      { label: '직원 등록',   basic: '10명',    pro: '무제한',  max: '무제한', highlight: true },
-      { label: '근태 관리',   basic: true,      pro: true,      max: true },
-      { label: '급여 관리',   basic: true,      pro: true,      max: true },
-      { label: '매출 관리',   basic: true,      pro: true,      max: true },
-      { label: '재고 관리',   basic: false,     pro: true,      max: true,     highlight: true },
-      { label: '계약서 관리', basic: false,     pro: false,     max: true,     highlight: true },
-    ],
-  },
-  {
-    icon: <Settings size={14} className="text-gray-500" />,
-    title: '설정 · 커스텀',
-    rows: [
-      { label: '솔라피 연동',    basic: true,  pro: true,  max: true },
-      { label: '앱 이름 커스텀', basic: false, pro: false, max: true, highlight: true },
-    ],
-  },
-  {
-    icon: <Globe size={14} className="text-teal-500" />,
-    title: '비즈니스 확장',
-    rows: [
-      { label: '마켓플레이스', basic: false, pro: true, max: true, highlight: true },
-    ],
-  },
-]
 
 // ─── 셀 렌더 ─────────────────────────────────────────────────
-function FeatureCell({ value, highlight }: { value: FeatureValue; highlight?: boolean }) {
-  if (typeof value === 'string') {
+function FeatureCell({
+  featureType, value, isHighlight,
+}: {
+  featureType: 'boolean' | 'numeric'
+  value: unknown
+  isHighlight: boolean
+}) {
+  if (featureType === 'numeric') {
+    const label = formatLimit(value)
     return (
-      <span className={`text-xs font-bold leading-tight text-center ${highlight ? 'text-brand-600' : 'text-text-secondary'}`}>
-        {value}
+      <span className={`text-xs font-bold leading-tight text-center ${isHighlight ? 'text-brand-600' : 'text-text-secondary'}`}>
+        {label}
       </span>
     )
   }
-  if (value) {
+  if (value === true) {
     return <Check size={16} strokeWidth={2.5} className="text-state-success mx-auto" />
   }
   return <Minus size={14} className="text-border-strong mx-auto opacity-40" />
 }
 
+// ─── 동적 카테고리 빌더 ───────────────────────────────────────
+interface DynamicCategory {
+  category: string
+  items: FeatureMeta[]
+}
+
+function buildCategories(meta: FeatureMeta[]): DynamicCategory[] {
+  const map = new Map<string, FeatureMeta[]>()
+  for (const item of meta) {
+    if (!map.has(item.category)) map.set(item.category, [])
+    map.get(item.category)!.push(item)
+  }
+
+  return CATEGORY_ORDER
+    .filter(cat => map.has(cat))
+    .map(cat => ({ category: cat, items: map.get(cat)! }))
+}
+
+// highlight 판별: basic/pro/max 간 값이 하나라도 다르면 highlight
+function isHighlight(
+  meta: FeatureMeta,
+  features: Record<string, Record<string, unknown>>,
+): boolean {
+  const vals = PLAN_KEYS.map(p => features[p]?.[meta.feature_key])
+  return vals.some(v => v !== vals[0])
+}
+
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function PlanPage() {
   const router = useRouter()
+  const { features, meta } = usePlanFeatures()
+
   const [currentPlan, setCurrentPlan] = useState<PlanType>('free')
   const [expiresAt, setExpiresAt]     = useState<string | null>(null)
   const [isLoading, setIsLoading]     = useState(true)
@@ -208,8 +205,7 @@ export default function PlanPage() {
   }, [])
 
   function handleSelect(plan: Exclude<PlanType, 'free'>) {
-    const type = getRequestType(currentPlan, plan)
-    setRequestType(type)
+    setRequestType(getRequestType(currentPlan, plan))
     setSelectedPlan(plan)
     setPaymentOpen(true)
     setSubmitDone(false)
@@ -218,10 +214,7 @@ export default function PlanPage() {
   }
 
   async function handleSubmit() {
-    if (!depositorName.trim()) {
-      setError('입금자명을 입력해주세요.')
-      return
-    }
+    if (!depositorName.trim()) { setError('입금자명을 입력해주세요.'); return }
     setIsSubmitting(true)
     setError(null)
     try {
@@ -240,7 +233,13 @@ export default function PlanPage() {
     }
   }
 
+  // ─── 동적 카테고리 계산 ──────────────────────────────────────
+  const dynamicCategories = useMemo(() => buildCategories(meta), [meta])
+
+  const f = features as Record<string, Record<string, unknown>> | null
+
   const selectedStyle = selectedPlan ? PLAN_STYLE[selectedPlan] : null
+  const remainingDays = getRemainingDays(expiresAt)
 
   const modalTitle = (() => {
     if (!selectedPlan) return ''
@@ -249,8 +248,6 @@ export default function PlanPage() {
     if (requestType === 'downgrade') return `${planName} 플랜 하향 신청`
     return `${planName} 플랜 업그레이드 신청`
   })()
-
-  const remainingDays = getRemainingDays(expiresAt)
 
   return (
     <div className="flex flex-col gap-5 px-4 pt-6 pb-24">
@@ -303,6 +300,15 @@ export default function PlanPage() {
           const style     = PLAN_STYLE[key]
           const isCurrent = key === currentPlan
           const isLower   = (PLAN_ORDER[key] ?? 0) < (PLAN_ORDER[currentPlan] ?? 0)
+
+          // highlight 항목 중 이 플랜에서 활성화된 것만 bullet 표시
+          const bulletItems = f
+            ? meta.filter(m => isHighlight(m, f)).filter(m => {
+                const v = f[key]?.[m.feature_key]
+                return v !== false && v !== 0 && v !== null && v !== undefined
+              })
+            : []
+
           return (
             <button
               key={key}
@@ -314,7 +320,6 @@ export default function PlanPage() {
                   : `${style.border} bg-surface hover:${style.activeBorder} hover:shadow-soft`
               }`}
             >
-              {/* 인기 태그 */}
               {style.tag && (
                 <span className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500 text-white">
                   {style.tag}
@@ -340,26 +345,20 @@ export default function PlanPage() {
                 </div>
               </div>
 
-              {/* 주요 기능 요약 */}
-              <ul className="flex flex-col gap-1.5">
-                {FEATURE_CATEGORIES.map(cat =>
-                  cat.rows
-                    .filter(r => r.highlight)
-                    .filter(r => {
-                      const v = r[key]
-                      return v !== false
-                    })
-                    .map(r => (
-                      <li key={r.label} className="flex items-center gap-2">
-                        <Check size={12} className={`shrink-0 ${style.accent}`} />
-                        <span className="text-xs text-text-secondary">
-                          {r.label}
-                          {typeof r[key] === 'string' && ` (${r[key]})`}
-                        </span>
-                      </li>
-                    ))
-                )}
-              </ul>
+              {/* 주요 기능 bullet (highlight 항목) */}
+              {bulletItems.length > 0 && (
+                <ul className="flex flex-col gap-1.5">
+                  {bulletItems.map(m => (
+                    <li key={m.feature_key} className="flex items-center gap-2">
+                      <Check size={12} className={`shrink-0 ${style.accent}`} />
+                      <span className="text-xs text-text-secondary">
+                        {m.label}
+                        {m.feature_type === 'numeric' && ` (${formatLimit(f?.[key]?.[m.feature_key])})`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </button>
           )
         })}
@@ -370,7 +369,7 @@ export default function PlanPage() {
         <SectionHeader title="기능 상세 비교" level="section" />
 
         <div className="rounded-2xl border border-border overflow-hidden bg-white">
-          {/* 고정 컬럼 헤더 */}
+          {/* 컬럼 헤더 */}
           <div className="grid grid-cols-4 bg-surface-sunken border-b-2 border-border">
             <div className="px-3 py-3" />
             {PLAN_KEYS.map(k => (
@@ -383,35 +382,53 @@ export default function PlanPage() {
             ))}
           </div>
 
-          {/* 카테고리별 섹션 */}
-          {FEATURE_CATEGORIES.map((cat, catIdx) => (
-            <div key={cat.title}>
+          {/* 카테고리별 섹션 (DB 기반 동적 렌더링) */}
+          {dynamicCategories.map((cat, catIdx) => (
+            <div key={cat.category}>
               <div className={`flex items-center gap-2 px-3 py-2.5 bg-surface-sunken/70 ${catIdx > 0 ? 'border-t-2 border-border' : ''}`}>
-                {cat.icon}
-                <span className="text-xs font-bold text-text-secondary">{cat.title}</span>
+                {CATEGORY_ICON[cat.category] ?? <ClipboardList size={14} className="text-gray-400" />}
+                <span className="text-xs font-bold text-text-secondary">
+                  {CATEGORY_LABEL[cat.category] ?? cat.category}
+                </span>
               </div>
 
-              {cat.rows.map((row, i) => (
-                <div
-                  key={row.label}
-                  className={`grid grid-cols-4 items-center ${
-                    i < cat.rows.length - 1 ? 'border-b border-border-subtle' : ''
-                  } ${row.highlight ? 'bg-brand-50/40' : ''}`}
-                >
-                  <div className="px-3 py-3.5">
-                    <span className={`text-xs leading-snug break-keep ${row.highlight ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>
-                      {row.label}
-                    </span>
-                  </div>
-                  {(['basic', 'pro', 'max'] as const).map(plan => (
-                    <div key={plan} className="py-3.5 flex justify-center items-center border-l border-border-subtle">
-                      <FeatureCell value={row[plan]} highlight={row.highlight} />
+              {cat.items.map((item, i) => {
+                const highlight = f ? isHighlight(item, f) : false
+                return (
+                  <div
+                    key={item.feature_key}
+                    className={`grid grid-cols-4 items-center ${
+                      i < cat.items.length - 1 ? 'border-b border-border-subtle' : ''
+                    } ${highlight ? 'bg-brand-50/40' : ''}`}
+                  >
+                    <div className="px-3 py-3.5">
+                      <span className={`text-xs leading-snug break-keep ${highlight ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>
+                        {item.label}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              ))}
+                    {PLAN_KEYS.map(plan => (
+                      <div key={plan} className="py-3.5 flex justify-center items-center border-l border-border-subtle">
+                        <FeatureCell
+                          featureType={item.feature_type}
+                          value={f?.[plan]?.[item.feature_key]}
+                          isHighlight={highlight}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           ))}
+
+          {/* meta가 아직 로딩 중일 때 스켈레톤 */}
+          {dynamicCategories.length === 0 && (
+            <div className="flex flex-col gap-2 p-4">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-10 rounded bg-surface-sunken animate-pulse" />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -447,7 +464,6 @@ export default function PlanPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
-            {/* 입금 계좌 */}
             <div className="rounded-xl bg-surface-sunken p-4 flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-text-tertiary">은행</span>
@@ -469,7 +485,6 @@ export default function PlanPage() {
               </div>
             </div>
 
-            {/* 신청 유형별 안내 */}
             {requestType === 'upgrade' && currentPlan !== 'free' && remainingDays > 0 && (
               <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3">
                 <span className="text-amber-500 text-base leading-none mt-0.5">⚠️</span>
