@@ -105,7 +105,9 @@ export function getFeatureLimit(
   dynamicFeatures?: Record<PlanType, PlanFeatureMap>,
 ): number {
   const featureMap = dynamicFeatures ?? PLAN_FEATURES
-  return (featureMap[plan]?.[feature] as number) ?? 0
+  const val = featureMap[plan]?.[feature] as number | null | undefined
+  if (val === null) return Infinity  // JSON 직렬화 시 Infinity→null 손실 복원
+  return val ?? 0
 }
 
 /**
