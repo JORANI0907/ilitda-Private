@@ -75,14 +75,29 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json<ApiResponse>({ success: false, error: '로그인이 필요합니다.' }, { status: 401 })
+
   const supabase = createServiceClient()
   try {
+    const { data: business, error: bizErr } = await supabase
+      .schema('ilitda')
+      .from('businesses')
+      .select('id')
+      .eq('profile_id', user.id)
+      .maybeSingle()
+
+    if (bizErr || !business) {
+      return NextResponse.json<ApiResponse>({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
+    }
+
     const body = await req.json()
 
     const { data, error } = await supabase
       .schema('ilitda')
       .from('service_applications')
-      .insert([body])
+      .insert([{ ...body, business_id: business.id }])
       .select()
       .single()
 
