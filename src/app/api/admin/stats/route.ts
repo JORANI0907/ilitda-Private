@@ -20,8 +20,8 @@ interface SmsUsageItem {
   id: string
   business_name: string
   plan_type: string
-  daily_sms_count: number
-  daily_sms_reset_date: string | null
+  monthly_sms_count: number
+  monthly_sms_reset_date: string | null
 }
 
 interface StatsData {
@@ -59,7 +59,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<StatsData>>> {
   const [businessesResult, appsResult] = await Promise.all([
     service
       .from('businesses')
-      .select('id, business_name, plan_type, created_at, daily_sms_count, daily_sms_reset_date'),
+      .select('id, business_name, plan_type, created_at, monthly_sms_count, monthly_sms_reset_date'),
     service
       .from('service_applications')
       .select('id', { count: 'exact', head: true }),
@@ -98,8 +98,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<StatsData>>> {
     id: b.id,
     business_name: b.business_name,
     plan_type: b.plan_type ?? 'free',
-    daily_sms_count: b.daily_sms_count ?? 0,
-    daily_sms_reset_date: b.daily_sms_reset_date ?? null,
+    monthly_sms_count: b.monthly_sms_count ?? 0,
+    monthly_sms_reset_date: b.monthly_sms_reset_date ?? null,
   }))
 
   const totalApplications = appsResult.count ?? 0
