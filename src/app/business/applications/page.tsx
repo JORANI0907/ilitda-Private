@@ -528,7 +528,6 @@ export default function ApplicationsPage() {
 
   function handleUpdate(updated: ServiceApplication) {
     setApps((prev) => prev.map((a) => a.id === updated.id ? updated : a))
-    setSelectedId(null)
   }
 
   function handleDelete(id: string) {
