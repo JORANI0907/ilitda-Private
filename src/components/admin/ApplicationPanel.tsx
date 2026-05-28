@@ -53,10 +53,10 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 const MAP_APPS = [
-  { name: '카카오맵',  getUrl: (a: string) => `kakaomap://search?q=${encodeURIComponent(a)}`,                  isScheme: true  },
-  { name: '네이버지도', getUrl: (a: string) => `nmap://search?query=${encodeURIComponent(a)}&appname=app`,      isScheme: true  },
-  { name: '티맵',     getUrl: (a: string) => `tmap://search?name=${encodeURIComponent(a)}`,                    isScheme: true  },
-  { name: '구글지도',  getUrl: (a: string) => `https://maps.google.com/maps?q=${encodeURIComponent(a)}`,       isScheme: false },
+  { name: '카카오맵',  getUrl: (a: string) => `https://map.kakao.com/link/search/${encodeURIComponent(a)}` },
+  { name: '네이버지도', getUrl: (a: string) => `https://map.naver.com/v5/search/${encodeURIComponent(a)}` },
+  { name: '티맵',     getUrl: (a: string) => `https://tmap.co.kr/search?searchRank=0&version=1&name=${encodeURIComponent(a)}` },
+  { name: '구글지도',  getUrl: (a: string) => `https://maps.google.com/maps?q=${encodeURIComponent(a)}` },
 ]
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────
@@ -342,13 +342,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return () => document.removeEventListener('click', close)
   }, [showMapMenu])
 
-  function handleOpenMap(addr: string, url: string, isScheme: boolean) {
-    navigator.clipboard.writeText(addr).catch(() => {})
-    if (isScheme) {
-      window.location.href = url
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer')
-    }
+  function handleOpenMap(addr: string, url: string) {
+    try { navigator.clipboard?.writeText(addr) } catch {}
+    window.open(url, '_blank', 'noopener,noreferrer')
     setShowMapMenu(false)
   }
 
@@ -517,13 +513,14 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                       {copiedPhone ? <Check size={11} className="text-state-success" /> : <Copy size={11} />}
                       {copiedPhone ? '복사됨' : '복사'}
                     </button>
-                    <a
-                      href={`tel:${form.phone}`}
+                    <button
+                      type="button"
+                      onClick={() => { window.location.href = `tel:${form.phone}` }}
                       className="flex-1 h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-brand-200 text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-[0.98] transition-all"
                     >
                       <Phone size={11} />
                       전화 걸기
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>
@@ -560,7 +557,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                           <button
                             key={app.name}
                             type="button"
-                            onClick={() => handleOpenMap(form.address, app.getUrl(form.address), app.isScheme)}
+                            onClick={() => handleOpenMap(form.address, app.getUrl(form.address))}
                             className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-sunken active:bg-surface-sunken text-sm text-text-primary transition-colors text-left"
                           >
                             <MapPin size={13} className="text-brand-500 shrink-0" />
@@ -772,9 +769,15 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           >
             <Star size={18} className={isFavorite ? 'fill-amber-400 text-amber-400' : ''} />
           </button>
-          <a href={`tel:${form.phone}`} className="p-1 text-text-secondary hover:text-brand-600">
-            <Phone size={18} />
-          </a>
+          {form.phone && (
+            <button
+              type="button"
+              onClick={() => { window.location.href = `tel:${form.phone}` }}
+              className="p-1 text-text-secondary hover:text-brand-600 transition-colors"
+            >
+              <Phone size={18} />
+            </button>
+          )}
         </div>
 
         <div className="px-4 pb-8">
