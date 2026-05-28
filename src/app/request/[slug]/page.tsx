@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { use } from 'react'
-import { CheckCircle, User, Building2, PenLine, Shield, SlidersHorizontal } from 'lucide-react'
+import {
+  CheckCircle, CheckCircle2, XCircle, X,
+  User, Building2, PenLine, Shield, SlidersHorizontal, Search, Loader2,
+} from 'lucide-react'
 import { DEFAULT_FORM_CONFIG } from '@/lib/settings-defaults'
 import type { FormConfig } from '@/types'
 
@@ -83,6 +86,15 @@ function formatPhone(value: string): string {
   if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`
 }
+
+function formatBizNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length <= 3) return digits
+  if (digits.length <= 5) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5, 10)}`
+}
+
+type BizVerifyStatus = 'idle' | 'loading' | 'valid' | 'invalid' | 'error'
 
 function Field({
   label, required, error, children,
@@ -186,6 +198,22 @@ export default function RequestPage({ params }: PageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDone, setIsDone] = useState(false)
 
+  // 연락처 OTP 인증
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false)
+  const [phoneOtp, setPhoneOtp] = useState('')
+  const [phoneOtpLoading, setPhoneOtpLoading] = useState(false)
+  const [phoneVerified, setPhoneVerified] = useState(false)
+  const [phoneOtpError, setPhoneOtpError] = useState<string | null>(null)
+
+  // 사업자번호 인증
+  const [bizVerifyStatus, setBizVerifyStatus] = useState<BizVerifyStatus>('idle')
+  const [bizVerifyMessage, setBizVerifyMessage] = useState('')
+
+  // 주소 검색
+  const [addressDetail, setAddressDetail] = useState('')
+  const [showAddressSearch, setShowAddressSearch] = useState(false)
+  const addressSearchRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     const t1 = setTimeout(() => setSplashHide(true), 1400)
     const t2 = setTimeout(() => { setSplash(false); setAppVisible(true) }, 2050)
@@ -207,16 +235,118 @@ export default function RequestPage({ params }: PageProps) {
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [slug])
 
+  // 카카오 주소 검색 위젯 임베드
+  useEffect(() => {
+    if (!showAddressSearch) return
+    const container = addressSearchRef.current
+    if (!container) return
+
+    function embed() {
+      if (!container) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any
+      if (!w.daum?.Postcode) return
+      new w.daum.Postcode({
+        oncomplete: (data: { roadAddress: string; jibunAddress: string; address: string }) => {
+          const addr = data.roadAddress || data.jibunAddress || data.address
+          setForm(prev => ({ ...prev, client_address: addr }))
+          setAddressDetail('')
+          setShowAddressSearch(false)
+        },
+        width: '100%',
+        height: '100%',
+      }).embed(container)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).daum?.Postcode) {
+      embed()
+    } else {
+      const script = document.createElement('script')
+      script.src = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js'
+      script.onload = embed
+      document.head.appendChild(script)
+    }
+  }, [showAddressSearch])
+
   const set = (key: keyof Omit<RequestForm, 'custom_fields'>) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
   const setCustomField = (key: string, value: string) =>
     setForm((prev) => ({ ...prev, custom_fields: { ...prev.custom_fields, [key]: value } }))
 
+  async function handleSendOtp() {
+    const digits = form.client_phone.replace(/-/g, '')
+    if (digits.length < 10) { setPhoneOtpError('올바른 휴대폰 번호를 입력해주세요.'); return }
+    setPhoneOtpLoading(true)
+    setPhoneOtpError(null)
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: digits }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setPhoneOtpError(json.error ?? '인증번호 발송에 실패했습니다.'); return }
+      setPhoneOtpSent(true)
+    } catch {
+      setPhoneOtpError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setPhoneOtpLoading(false)
+    }
+  }
+
+  async function handleVerifyPhone() {
+    const digits = form.client_phone.replace(/-/g, '')
+    if (phoneOtp.length !== 6) { setPhoneOtpError('6자리 인증번호를 입력해주세요.'); return }
+    setPhoneOtpError(null)
+    try {
+      const res = await fetch('/api/request/verify-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: digits, otp: phoneOtp }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) { setPhoneOtpError(json.error ?? '인증에 실패했습니다.'); return }
+      if (json.data?.valid) {
+        setPhoneVerified(true)
+      } else {
+        setPhoneOtpError('인증번호가 올바르지 않거나 만료되었습니다.')
+      }
+    } catch {
+      setPhoneOtpError('네트워크 오류가 발생했습니다.')
+    }
+  }
+
+  async function handleVerifyBiz() {
+    if (!form.business_number.trim()) return
+    setBizVerifyStatus('loading')
+    setBizVerifyMessage('')
+    try {
+      const res = await fetch('/api/auth/check-biz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ businessNumber: form.business_number.trim() }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        setBizVerifyStatus('error')
+        setBizVerifyMessage(json.message ?? '조회 중 오류가 발생했습니다.')
+        return
+      }
+      setBizVerifyStatus(json.valid ? 'valid' : 'invalid')
+      setBizVerifyMessage(json.message ?? '')
+    } catch {
+      setBizVerifyStatus('error')
+      setBizVerifyMessage('네트워크 오류가 발생했습니다.')
+    }
+  }
+
   const validate = (): Record<string, string> => {
     const e: Record<string, string> = {}
     if (!form.client_name.trim())    e.client_name = '업체명/이름을 입력해 주세요.'
     if (!form.client_phone.trim())   e.client_phone = '연락처를 입력해 주세요.'
+    else if (!phoneVerified)          e.client_phone = '연락처 인증을 완료해 주세요.'
     if (!form.client_address.trim()) e.client_address = '주소를 입력해 주세요.'
     if (!form.care_scope.trim())     e.care_scope = '서비스 내용을 입력해 주세요.'
     if (!consentPrivacy)             e.consent_privacy = '개인정보 제공에 동의해 주세요.'
@@ -230,10 +360,13 @@ export default function RequestPage({ params }: PageProps) {
     setErrors({})
     setIsSubmitting(true)
     try {
+      const fullAddress = addressDetail.trim()
+        ? `${form.client_address} ${addressDetail.trim()}`
+        : form.client_address
       const res = await fetch(`/api/request/${slug}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, client_address: fullAddress }),
       })
       const json = await res.json()
       if (!json.success) { setErrors({ _global: json.error ?? '신청 중 오류가 발생했습니다.' }); return }
@@ -389,16 +522,67 @@ export default function RequestPage({ params }: PageProps) {
                   onChange={(e) => set('client_name')(e.target.value)}
                 />
               </Field>
+
+              {/* 연락처 — OTP 인증 방식 */}
               <Field label="연락처" required error={errors.client_phone}>
-                <input
-                  type="tel"
-                  className={inputCls(errors.client_phone)}
-                  placeholder="010-0000-0000"
-                  value={form.client_phone}
-                  onChange={(e) => set('client_phone')(formatPhone(e.target.value))}
-                  maxLength={13}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    className={`flex-1 ${inputCls(errors.client_phone)}`}
+                    placeholder="010-0000-0000"
+                    value={form.client_phone}
+                    onChange={(e) => {
+                      if (!phoneVerified) {
+                        set('client_phone')(formatPhone(e.target.value))
+                        setPhoneOtpSent(false)
+                        setPhoneOtp('')
+                        setPhoneOtpError(null)
+                      }
+                    }}
+                    maxLength={13}
+                    readOnly={phoneVerified}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={phoneVerified || phoneOtpLoading || form.client_phone.replace(/-/g, '').length < 10}
+                    className={`px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all ${
+                      phoneVerified
+                        ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 disabled:opacity-40'
+                    }`}
+                  >
+                    {phoneVerified ? (
+                      <><CheckCircle2 size={13} />인증완료</>
+                    ) : phoneOtpLoading ? (
+                      <><Loader2 size={13} className="animate-spin" />발송중</>
+                    ) : phoneOtpSent ? '재발송' : '인증번호'}
+                  </button>
+                </div>
+                {phoneOtpSent && !phoneVerified && (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className={`flex-1 ${inputCls()}`}
+                      placeholder="6자리 인증번호 입력"
+                      maxLength={6}
+                      value={phoneOtp}
+                      onChange={(e) => { setPhoneOtp(e.target.value.replace(/\D/g, '')); setPhoneOtpError(null) }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyPhone}
+                      disabled={phoneOtp.length !== 6}
+                      className="px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap border border-blue-500 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-40 transition-all"
+                    >
+                      확인
+                    </button>
+                  </div>
+                )}
+                {phoneOtpError && <p className="text-xs text-red-500 mt-1">{phoneOtpError}</p>}
               </Field>
+
               {formConfig.show_fields.owner_name && (
                 <Field label="담당자명">
                   <input
@@ -420,16 +604,64 @@ export default function RequestPage({ params }: PageProps) {
                   />
                 </Field>
               )}
+
+              {/* 사업자번호 — 인증 방식 (field KEY 기반, show/hide 재진입 시에도 동작) */}
               {formConfig.show_fields.business_number && (
                 <Field label="사업자번호">
-                  <input
-                    className={inputCls()}
-                    placeholder="000-00-00000"
-                    value={form.business_number}
-                    onChange={(e) => set('business_number')(e.target.value)}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      className={`flex-1 ${inputCls(
+                        bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? 'err' : ''
+                      )}`}
+                      style={{
+                        borderColor: bizVerifyStatus === 'valid' ? '#22c55e'
+                          : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? '#ef4444'
+                          : undefined,
+                      }}
+                      placeholder="000-00-00000"
+                      value={form.business_number}
+                      maxLength={12}
+                      readOnly={bizVerifyStatus === 'valid'}
+                      onChange={(e) => {
+                        if (bizVerifyStatus !== 'valid') {
+                          set('business_number')(formatBizNumber(e.target.value))
+                          setBizVerifyStatus('idle')
+                          setBizVerifyMessage('')
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyBiz}
+                      disabled={bizVerifyStatus === 'valid' || bizVerifyStatus === 'loading' || form.business_number.replace(/-/g, '').length < 10}
+                      className={`px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all ${
+                        bizVerifyStatus === 'valid'
+                          ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                          : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 disabled:opacity-40'
+                      }`}
+                    >
+                      {bizVerifyStatus === 'valid' ? (
+                        <><CheckCircle2 size={13} />인증완료</>
+                      ) : bizVerifyStatus === 'loading' ? (
+                        <><Loader2 size={13} className="animate-spin" />조회중</>
+                      ) : (
+                        <><Search size={13} />인증</>
+                      )}
+                    </button>
+                  </div>
+                  {bizVerifyStatus === 'valid' && (
+                    <div className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
+                      <CheckCircle2 size={12} /><span>{bizVerifyMessage}</span>
+                    </div>
+                  )}
+                  {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
+                    <div className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
+                      <XCircle size={12} /><span>{bizVerifyMessage}</span>
+                    </div>
+                  )}
                 </Field>
               )}
+
               {formConfig.show_fields.account_number && (
                 <Field label="계좌번호">
                   <input
@@ -460,14 +692,33 @@ export default function RequestPage({ params }: PageProps) {
                 </div>
               </div>
 
+              {/* 주소 — 카카오 검색 방식 */}
               <Field label="주소" required error={errors.client_address}>
-                <input
-                  className={inputCls(errors.client_address)}
-                  placeholder="예: 성남시 분당구 판교역로..."
-                  value={form.client_address}
-                  onChange={(e) => set('client_address')(e.target.value)}
-                />
+                <div className="flex gap-2">
+                  <input
+                    className={`flex-1 ${inputCls(errors.client_address)}`}
+                    placeholder="주소 검색 버튼을 눌러 선택하세요"
+                    value={form.client_address}
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressSearch(true)}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 border border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 transition-all"
+                  >
+                    <Search size={13} />검색
+                  </button>
+                </div>
+                {form.client_address && (
+                  <input
+                    className={`mt-2 ${inputCls()}`}
+                    placeholder="상세 주소 입력 (동/호수 등)"
+                    value={addressDetail}
+                    onChange={(e) => setAddressDetail(e.target.value)}
+                  />
+                )}
               </Field>
+
               {formConfig.show_fields.elevator && (
                 <OptionGroup
                   label="엘리베이터"
@@ -686,6 +937,29 @@ export default function RequestPage({ params }: PageProps) {
           content={showModal === 'privacy' ? PRIVACY_TEXT : getMarketingText(businessName)}
           onClose={() => setShowModal(null)}
         />
+      )}
+
+      {/* 카카오 주소 검색 모달 */}
+      {showAddressSearch && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-stretch justify-end"
+          style={{ background: 'rgba(0,0,0,0.5)' }}
+          onClick={() => setShowAddressSearch(false)}
+        >
+          <div
+            className="bg-white rounded-t-2xl overflow-hidden flex flex-col"
+            style={{ height: '70vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 flex-shrink-0">
+              <p className="text-sm font-bold text-slate-800">주소 검색</p>
+              <button type="button" onClick={() => setShowAddressSearch(false)}>
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            <div ref={addressSearchRef} className="flex-1" />
+          </div>
+        </div>
       )}
     </>
   )
