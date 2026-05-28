@@ -148,6 +148,70 @@ const KEY_FEATURE_KEYS = new Set([
   'sms_auto_dispatch', 'application_limit', 'marketplace', 'app_name_custom',
 ])
 
+// 기능별 상세 설명 및 사용 예시
+const FEATURE_DESCRIPTIONS: Record<string, { description: string; example: string }> = {
+  application_limit: {
+    description: '등록할 수 있는 서비스 신청서의 최대 개수입니다. 한도에 도달하면 완료 처리하거나 삭제한 뒤 새 신청서를 추가할 수 있습니다.',
+    example: '베이직 플랜 500건 한도면 연간 수백 건의 계약을 끊김 없이 관리할 수 있습니다.',
+  },
+  sms_daily_limit: {
+    description: '하루 동안 발송할 수 있는 SMS 메시지의 최대 건수입니다. 매일 자정에 자동으로 초기화됩니다.',
+    example: '예약 당일 고객 10명에게 방문 안내 문자를 일괄 발송할 때 한도 내에서 처리할 수 있습니다.',
+  },
+  sms_auto_dispatch: {
+    description: '신청서 상태가 변경될 때(예약 확정, 작업 완료, 결제 안내 등) 고객에게 SMS를 자동으로 발송합니다. 직접 문자를 보낼 필요가 없습니다.',
+    example: '예약 확정 버튼을 누르는 순간 고객에게 일정·주소 안내 문자가 자동으로 전송됩니다.',
+  },
+  sms_custom_template: {
+    description: '자동 발송 SMS 문구를 업체에 맞게 직접 수정할 수 있습니다. 업체 이름이나 브랜드 톤이 담긴 문구로 자유롭게 교체할 수 있습니다.',
+    example: '기본 문구 대신 "OO 주방청소입니다. 오늘 오후 2시 방문 예정입니다 :)"처럼 업체명이 포함된 친근한 문자를 보낼 수 있습니다.',
+  },
+  worker_limit: {
+    description: '앱에 등록할 수 있는 작업자(직원)의 최대 인원 수입니다. 한도에 도달하면 기존 작업자를 삭제해야 추가 등록이 가능합니다.',
+    example: '프로 플랜 이상에서는 무제한으로 등록할 수 있어 팀이 성장해도 인원 제한 걱정 없이 운영할 수 있습니다.',
+  },
+  inventory: {
+    description: '청소 용품, 소모품 등의 재고를 품목별로 등록하고 입출고를 기록할 수 있습니다. 현재 재고 수량을 실시간으로 파악할 수 있습니다.',
+    example: '주방 세제 10통을 입고 처리하고, 현장 투입 시 출고 기록을 남겨 잔여 수량을 바로 확인합니다.',
+  },
+  marketplace: {
+    description: '일잇다 마켓플레이스에 업체를 노출할 수 있습니다. 마켓플레이스를 통해 신규 고객이 직접 업체를 찾아 견적을 신청할 수 있습니다.',
+    example: '성남시 주방후드 청소를 검색한 고객이 마켓플레이스에서 업체를 발견하고 바로 신청서를 보냅니다.',
+  },
+  contracts: {
+    description: '정기 계약 고객과의 서비스 계약서를 앱에서 작성하고 전자 서명을 받을 수 있습니다. 계약 기간, 서비스 내용, 금액 등을 명시한 공식 계약서를 관리합니다.',
+    example: '정기딥케어 계약 고객에게 링크를 보내면 고객이 OTP 인증 후 전자 서명까지 완료해 계약서가 자동 보관됩니다.',
+  },
+  app_name_custom: {
+    description: '고객과 작업자에게 보이는 앱 이름을 업체명이나 브랜드명으로 변경할 수 있습니다. 기본 \'일잇다\' 대신 자체 브랜드명이 표시됩니다.',
+    example: '\'범빌드코리아 관리앱\'으로 설정하면 고객이 링크를 열었을 때 자체 브랜드 앱처럼 보여 신뢰도가 높아집니다.',
+  },
+  payroll: {
+    description: '작업자별 출역 현황을 기반으로 급여를 자동 계산합니다. 일급·건별 단가를 설정하고 월별 급여 내역을 한눈에 확인할 수 있습니다.',
+    example: '이번 달 작업자 3명의 현장 출역 횟수를 자동 집계해 급여 명세를 엑셀 없이 즉시 확인합니다.',
+  },
+  quotations: {
+    description: '고객에게 보낼 공식 견적서를 앱에서 작성하고 발송합니다. 직인 이미지가 포함된 PDF 견적서를 카카오톡 링크로 간편하게 전달합니다.',
+    example: '현장 방문 후 30분 안에 항목별 단가와 합계가 담긴 견적서 링크를 고객 카카오톡으로 보냅니다.',
+  },
+  revenue: {
+    description: '서비스 완료 건의 결제 금액을 월별·고객별로 집계해 매출 현황을 파악합니다. CSV 내보내기 기능으로 별도 정산 작업도 간편합니다.',
+    example: '이번 달 정기딥케어 5건 + 1회성케어 8건 합계 수익을 한 화면에서 바로 파악하고 세금계산서 발행에 활용합니다.',
+  },
+  fields_settings: {
+    description: '신청서에 표시할 항목(필드)을 업종에 맞게 커스텀할 수 있습니다. 불필요한 항목은 숨기고 업체에 필요한 전용 항목을 추가할 수 있습니다.',
+    example: '주방후드 청소 업체라면 \'후드 사이즈\', \'설치 유형\' 같은 전용 항목을 신청서에 추가해 견적에 필요한 정보를 미리 수집합니다.',
+  },
+  public_form: {
+    description: '로그인 없이 누구나 접근 가능한 신청서 링크를 생성합니다. 카카오채널, 인스타그램, 웹사이트 등 어디서든 연결할 수 있습니다.',
+    example: '인스타그램 프로필 링크에 신청서 URL을 넣으면 고객이 앱 설치 없이 스마트폰으로 바로 견적을 신청합니다.',
+  },
+  workers: {
+    description: '소속 작업자를 앱에 초대하거나 수동으로 등록할 수 있습니다. 각 현장에 작업자를 배정하고 출역 현황을 실시간으로 관리합니다.',
+    example: '오늘 3개 현장에 작업자 4명을 배정하고, 누가 어느 현장에서 몇 시에 시작하는지 앱에서 한눈에 확인합니다.',
+  },
+}
+
 // DB에 등록되지 않은 기능을 위한 fallback 메타데이터
 const FEATURE_META_FALLBACK: FeatureMeta[] = [
   { feature_key: 'application_limit',   label: '신청서 목록 한도',    category: 'feature',  feature_type: 'numeric'  },
@@ -258,6 +322,9 @@ export default function PlanPage() {
   const [isSubmitting, setIsSubmitting]   = useState(false)
   const [submitDone, setSubmitDone]       = useState(false)
   const [error, setError]                 = useState<string | null>(null)
+
+  const [descKey, setDescKey]   = useState<string | null>(null)
+  const [descOpen, setDescOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -435,14 +502,17 @@ export default function PlanPage() {
               {commonItems.map(item => {
                 const isKey  = KEY_FEATURE_KEYS.has(item.feature_key)
                 const numVal = item.feature_type === 'numeric' ? f?.free?.[item.feature_key] : null
+                const hasDesc = !!FEATURE_DESCRIPTIONS[item.feature_key]
                 return (
-                  <div
+                  <button
                     key={item.feature_key}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+                    type="button"
+                    onClick={() => { if (hasDesc) { setDescKey(item.feature_key); setDescOpen(true) } }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-[0.96] ${
                       isKey
-                        ? 'bg-amber-50 border-amber-200'
-                        : 'bg-surface-sunken border-border-subtle'
-                    }`}
+                        ? 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+                        : 'bg-surface-sunken border-border-subtle hover:bg-gray-100'
+                    } ${hasDesc ? 'cursor-pointer' : 'cursor-default'}`}
                   >
                     {isKey && (
                       <span className="text-[10px] font-black text-amber-500 leading-none">★</span>
@@ -454,7 +524,10 @@ export default function PlanPage() {
                         {formatLimit(numVal)}
                       </span>
                     )}
-                  </div>
+                    {hasDesc && (
+                      <span className="text-[11px] text-text-tertiary ml-0.5 leading-none">›</span>
+                    )}
+                  </button>
                 )
               })}
             </div>
@@ -654,6 +727,55 @@ export default function PlanPage() {
           })}
         </div>
       </div>
+
+      {/* ─── 기능 설명 모달 ────────────── */}
+      {(() => {
+        const descMeta = completeMeta.find(m => m.feature_key === descKey)
+        const desc     = descKey ? FEATURE_DESCRIPTIONS[descKey] : null
+        return (
+          <Modal
+            open={descOpen}
+            onClose={() => setDescOpen(false)}
+            title={descMeta?.label ?? '기능 설명'}
+            footer={
+              <Button fullWidth onClick={() => setDescOpen(false)}>확인</Button>
+            }
+          >
+            {descMeta && desc ? (
+              <div className="flex flex-col gap-4">
+                {/* 카테고리 */}
+                <div className="flex items-center gap-1.5">
+                  {CATEGORY_ICON[descMeta.category] ?? <ClipboardList size={13} className="text-gray-400" />}
+                  <span className="text-xs font-semibold text-text-tertiary">
+                    {CATEGORY_LABEL[descMeta.category] ?? descMeta.category}
+                  </span>
+                </div>
+
+                {/* 기능 설명 */}
+                <div className="rounded-xl bg-surface-sunken p-4">
+                  <p className="text-xs font-bold text-text-secondary mb-1.5">기능 설명</p>
+                  <p className="text-sm text-text-primary leading-relaxed break-keep">
+                    {desc.description}
+                  </p>
+                </div>
+
+                {/* 사용 예시 */}
+                <div className="rounded-xl bg-blue-50 border border-blue-100 p-4">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-base leading-none">💡</span>
+                    <p className="text-xs font-bold text-blue-600">이런 때 편리해요</p>
+                  </div>
+                  <p className="text-sm text-blue-900/80 leading-relaxed break-keep">
+                    {desc.example}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-text-tertiary">설명 정보가 없습니다.</p>
+            )}
+          </Modal>
+        )
+      })()}
 
       {/* ─── 무통장 입금 신청 모달 ────────────── */}
       <Modal
