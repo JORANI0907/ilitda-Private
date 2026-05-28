@@ -44,6 +44,18 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServiceClient()
+
+  const { data: business, error: bizError } = await supabase
+    .schema('ilitda')
+    .from('businesses')
+    .select('id')
+    .eq('profile_id', user.id)
+    .maybeSingle()
+
+  if (bizError || !business) {
+    return NextResponse.json<ApiResponse>({ success: false, error: '사업자 정보를 찾을 수 없습니다.' }, { status: 404 })
+  }
+
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() || ''
   const status = searchParams.get('status') || ''
@@ -54,6 +66,7 @@ export async function GET(req: NextRequest) {
       .schema('ilitda')
       .from('service_applications')
       .select('*')
+      .eq('business_id', business.id)
       .order('created_at', { ascending: false })
 
     if (favorite) query = query.eq('is_favorite', true)
