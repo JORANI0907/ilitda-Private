@@ -73,6 +73,16 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const CATEGORY_ORDER = ['sms', 'feature', 'hr', 'settings', 'business']
 
+// 공통 기능 칩 — 카테고리별 색상
+const CHIP_STYLE: Record<string, { base: string; hover: string; num: string; arrow: string }> = {
+  sms:      { base: 'bg-blue-50 border-blue-200 text-blue-700',     hover: 'hover:bg-blue-100',    num: 'text-blue-500',    arrow: 'text-blue-400'    },
+  feature:  { base: 'bg-emerald-50 border-emerald-200 text-emerald-700', hover: 'hover:bg-emerald-100', num: 'text-emerald-500', arrow: 'text-emerald-400' },
+  hr:       { base: 'bg-violet-50 border-violet-200 text-violet-700', hover: 'hover:bg-violet-100', num: 'text-violet-500',   arrow: 'text-violet-400'  },
+  settings: { base: 'bg-orange-50 border-orange-200 text-orange-700', hover: 'hover:bg-orange-100', num: 'text-orange-500',   arrow: 'text-orange-400'  },
+  business: { base: 'bg-teal-50 border-teal-200 text-teal-700',     hover: 'hover:bg-teal-100',    num: 'text-teal-500',    arrow: 'text-teal-400'    },
+}
+const CHIP_DEFAULT = { base: 'bg-gray-50 border-gray-200 text-gray-600', hover: 'hover:bg-gray-100', num: 'text-gray-500', arrow: 'text-gray-400' }
+
 const PLAN_STYLE: Record<string, {
   badge: string
   border: string
@@ -519,7 +529,7 @@ export default function PlanPage() {
         <SectionHeader title="모든 플랜 공통 제공 기능" level="section" />
         <div className="rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs text-text-tertiary mb-3 break-keep">
-            무료 플랜을 포함한 모든 플랜에서 동일하게 제공됩니다.
+            아래 기능은 무료 플랜을 포함한 모든 플랜에서 동일하게 제공됩니다.
           </p>
           {!f ? (
             <div className="flex flex-wrap gap-2">
@@ -534,21 +544,22 @@ export default function PlanPage() {
               {commonItems.map(item => {
                 const numVal  = item.feature_type === 'numeric' ? f?.free?.[item.feature_key] : null
                 const hasDesc = !!FEATURE_DESCRIPTIONS[item.feature_key]
+                const cs = CHIP_STYLE[item.category] ?? CHIP_DEFAULT
                 return (
                   <button
                     key={item.feature_key}
                     type="button"
                     onClick={() => { if (hasDesc) { setDescKey(item.feature_key); setDescOpen(true) } }}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-subtle bg-surface-sunken transition-all active:scale-[0.96] ${hasDesc ? 'cursor-pointer hover:bg-gray-100' : 'cursor-default'}`}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full border transition-all active:scale-[0.96] ${cs.base} ${hasDesc ? `cursor-pointer ${cs.hover}` : 'cursor-default'}`}
                   >
-                    <span className="text-xs text-text-secondary break-keep">{item.label}</span>
+                    <span className="text-xs font-medium break-keep">{item.label}</span>
                     {numVal !== null && numVal !== undefined && (
-                      <span className="text-[11px] font-bold text-state-success ml-0.5">
+                      <span className={`text-[11px] font-bold ml-0.5 ${cs.num}`}>
                         {formatLimit(numVal)}
                       </span>
                     )}
                     {hasDesc && (
-                      <span className="text-[11px] text-text-tertiary ml-0.5 leading-none">›</span>
+                      <span className={`text-[11px] ml-0.5 leading-none ${cs.arrow}`}>›</span>
                     )}
                   </button>
                 )
