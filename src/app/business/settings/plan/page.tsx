@@ -142,12 +142,6 @@ const PLAN_STYLE: Record<string, {
   },
 }
 
-// 핵심 기능 키 — ★ 표시 대상
-const KEY_FEATURE_KEYS = new Set([
-  'workers', 'payroll', 'revenue', 'quotations', 'contracts',
-  'sms_auto_dispatch', 'application_limit', 'marketplace', 'app_name_custom',
-])
-
 // 기능별 상세 설명 및 사용 예시
 const FEATURE_DESCRIPTIONS: Record<string, { description: string; example: string }> = {
   application_limit: {
@@ -155,8 +149,8 @@ const FEATURE_DESCRIPTIONS: Record<string, { description: string; example: strin
     example: '베이직 플랜 500건 한도면 연간 수백 건의 계약을 끊김 없이 관리할 수 있습니다.',
   },
   sms_daily_limit: {
-    description: '하루 동안 발송할 수 있는 SMS 메시지의 최대 건수입니다. 매일 자정에 자동으로 초기화됩니다.',
-    example: '예약 당일 고객 10명에게 방문 안내 문자를 일괄 발송할 때 한도 내에서 처리할 수 있습니다.',
+    description: '한 달 동안 발송할 수 있는 SMS 메시지의 최대 건수입니다. 매월 1일에 자동으로 초기화됩니다.',
+    example: '이번 달 예약 확정·완료 알림을 고객 50명에게 발송하더라도 월 한도 내에서 여유 있게 처리할 수 있습니다.',
   },
   sms_auto_dispatch: {
     description: '신청서 상태가 변경될 때(예약 확정, 작업 완료, 결제 안내 등) 고객에게 SMS를 자동으로 발송합니다. 직접 문자를 보낼 필요가 없습니다.',
@@ -215,7 +209,7 @@ const FEATURE_DESCRIPTIONS: Record<string, { description: string; example: strin
 // DB에 등록되지 않은 기능을 위한 fallback 메타데이터
 const FEATURE_META_FALLBACK: FeatureMeta[] = [
   { feature_key: 'application_limit',   label: '신청서 목록 한도',    category: 'feature',  feature_type: 'numeric'  },
-  { feature_key: 'sms_daily_limit',     label: '일일 SMS 발송 한도',  category: 'sms',      feature_type: 'numeric'  },
+  { feature_key: 'sms_daily_limit',     label: '월 SMS 발송 한도',    category: 'sms',      feature_type: 'numeric'  },
   { feature_key: 'sms_auto_dispatch',   label: 'SMS 자동 발송',       category: 'sms',      feature_type: 'boolean'  },
   { feature_key: 'sms_custom_template', label: 'SMS 커스텀 문구',     category: 'sms',      feature_type: 'boolean'  },
   { feature_key: 'worker_limit',        label: '작업자 등록 한도',    category: 'hr',       feature_type: 'numeric'  },
@@ -325,6 +319,13 @@ export default function PlanPage() {
 
   const [descKey, setDescKey]   = useState<string | null>(null)
   const [descOpen, setDescOpen] = useState(false)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+
+  const getMonthlyEquivalent = (plan: Exclude<PlanType, 'free'>) =>
+    billingCycle === 'annual' ? Math.floor(PLAN_PRICES[plan] * 0.9) : PLAN_PRICES[plan]
+
+  const getPaymentAmount = (plan: Exclude<PlanType, 'free'>) =>
+    billingCycle === 'annual' ? Math.floor(PLAN_PRICES[plan] * 12 * 0.9) : PLAN_PRICES[plan]
 
   useEffect(() => {
     async function load() {
@@ -359,7 +360,7 @@ export default function PlanPage() {
       const res  = await fetch('/api/business/plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_name: selectedPlan, depositor_name: depositorName.trim() }),
+        body: JSON.stringify({ plan_name: selectedPlan, depositor_name: depositorName.trim(), billing_cycle: billingCycle }),
       })
       const json = await res.json()
       if (!json.success) { setError(json.error ?? '신청에 실패했습니다.'); return }
@@ -482,6 +483,37 @@ export default function PlanPage() {
 
       <HelpTip>비교표에서 베이직·프로·맥스 열을 탭하면 업그레이드·갱신·하향 신청을 할 수 있습니다. 입금 확인 후 영업일 기준 1일 이내 반영됩니다.</HelpTip>
 
+      {/* 결제 주기 토글 */}
+      <div className="flex items-center justify-center">
+        <div className="flex bg-surface-sunken rounded-xl p-1 border border-border-subtle">
+          <button
+            type="button"
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              billingCycle === 'monthly'
+                ? 'bg-white shadow-soft text-text-primary'
+                : 'text-text-tertiary hover:text-text-secondary'
+            }`}
+          >
+            월간
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle('annual')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+              billingCycle === 'annual'
+                ? 'bg-white shadow-soft text-text-primary'
+                : 'text-text-tertiary hover:text-text-secondary'
+            }`}
+          >
+            연간
+            <span className="text-[10px] font-black text-state-success bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full">
+              10% 할인
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* ─── Section 1: 공통 제공 기능 ───────────────────────── */}
       <div className="flex flex-col gap-3">
         <SectionHeader title="모든 플랜 공통 제공 기능" level="section" />
@@ -500,24 +532,15 @@ export default function PlanPage() {
           ) : (
             <div className="flex flex-wrap gap-2">
               {commonItems.map(item => {
-                const isKey  = KEY_FEATURE_KEYS.has(item.feature_key)
-                const numVal = item.feature_type === 'numeric' ? f?.free?.[item.feature_key] : null
+                const numVal  = item.feature_type === 'numeric' ? f?.free?.[item.feature_key] : null
                 const hasDesc = !!FEATURE_DESCRIPTIONS[item.feature_key]
                 return (
                   <button
                     key={item.feature_key}
                     type="button"
                     onClick={() => { if (hasDesc) { setDescKey(item.feature_key); setDescOpen(true) } }}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all active:scale-[0.96] ${
-                      isKey
-                        ? 'bg-amber-50 border-amber-200 hover:bg-amber-100'
-                        : 'bg-surface-sunken border-border-subtle hover:bg-gray-100'
-                    } ${hasDesc ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border-subtle bg-surface-sunken transition-all active:scale-[0.96] ${hasDesc ? 'cursor-pointer hover:bg-gray-100' : 'cursor-default'}`}
                   >
-                    {isKey && (
-                      <span className="text-[10px] font-black text-amber-500 leading-none">★</span>
-                    )}
-                    {CATEGORY_ICON[item.category] ?? <ClipboardList size={13} className="text-gray-400" />}
                     <span className="text-xs text-text-secondary break-keep">{item.label}</span>
                     {numVal !== null && numVal !== undefined && (
                       <span className="text-[11px] font-bold text-state-success ml-0.5">
@@ -593,11 +616,16 @@ export default function PlanPage() {
                       )}
                       <span>{s.iconLg}</span>
                       <p className={`text-xs font-extrabold leading-tight ${s.accent}`}>{PLAN_NAMES[k]}</p>
-                      <div className="flex items-baseline gap-0.5">
-                        <span className="text-xs font-black text-text-primary leading-none">
-                          {PLAN_PRICES[k].toLocaleString('ko-KR')}
-                        </span>
-                        <span className="text-[9px] text-text-tertiary">원</span>
+                      <div className="flex flex-col items-center">
+                        <div className="flex items-baseline gap-0.5">
+                          <span className="text-xs font-black text-text-primary leading-none">
+                            {getMonthlyEquivalent(k).toLocaleString('ko-KR')}
+                          </span>
+                          <span className="text-[9px] text-text-tertiary">원</span>
+                        </div>
+                        {billingCycle === 'annual' && (
+                          <span className="text-[8px] text-text-tertiary leading-none">월 (연간)</span>
+                        )}
                       </div>
                       {isCur ? (
                         <span className="mt-0.5 text-[9px] font-bold text-white bg-state-success px-2 py-0.5 rounded-full">
@@ -633,23 +661,17 @@ export default function PlanPage() {
                   {/* 기능 행 */}
                   {cat.items.map((item, i) => {
                     const isLast = i === cat.items.length - 1
-                    const isKey  = KEY_FEATURE_KEYS.has(item.feature_key)
                     return (
                       <div
                         key={item.feature_key}
-                        className={`grid items-center ${!isLast ? 'border-b border-border-subtle' : ''} ${isKey ? 'bg-amber-50/50' : ''}`}
+                        className={`grid items-center ${!isLast ? 'border-b border-border-subtle' : ''}`}
                         style={{ gridTemplateColumns: '2fr repeat(4, 1fr)' }}
                       >
                         {/* 기능명 */}
                         <div className="px-3 py-3">
-                          <div className="flex items-start gap-1.5">
-                            {isKey && (
-                              <span className="shrink-0 text-[11px] font-black text-amber-500 leading-none mt-0.5">★</span>
-                            )}
-                            <span className={`text-xs leading-snug break-keep ${isKey ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>
-                              {item.label}
-                            </span>
-                          </div>
+                          <span className="text-xs leading-snug break-keep text-text-secondary">
+                            {item.label}
+                          </span>
                         </div>
 
                         {/* 플랜별 셀 (free → basic → pro → max) */}
@@ -714,8 +736,11 @@ export default function PlanPage() {
                   {s.icon}
                   <span className={`text-xs font-extrabold ${s.accent}`}>{PLAN_NAMES[k]}</span>
                   <span className="text-[11px] font-bold text-text-primary">
-                    {PLAN_PRICES[k].toLocaleString('ko-KR')}원
+                    {getMonthlyEquivalent(k).toLocaleString('ko-KR')}원
                   </span>
+                  {billingCycle === 'annual' && (
+                    <span className="text-[9px] text-text-tertiary leading-none">/ 월 (연간)</span>
+                  )}
                   {isCur ? (
                     <span className="text-[9px] font-bold text-state-success">현재 플랜</span>
                   ) : (
@@ -825,7 +850,7 @@ export default function PlanPage() {
               <div className="flex justify-between border-t border-border-subtle pt-2 mt-1">
                 <span className="text-text-tertiary">입금 금액</span>
                 <span className="font-bold text-brand-600">
-                  {selectedPlan ? PLAN_PRICES[selectedPlan].toLocaleString('ko-KR') : 0}원
+                  {selectedPlan ? getPaymentAmount(selectedPlan).toLocaleString('ko-KR') : 0}원
                 </span>
               </div>
             </div>
@@ -835,7 +860,12 @@ export default function PlanPage() {
                 {selectedStyle.icon}
                 <div>
                   <p className={`text-sm font-bold ${selectedStyle.accent}`}>{selectedPlan ? PLAN_NAMES[selectedPlan] : ''} 플랜</p>
-                  <p className="text-xs text-text-secondary mt-0.5">월 {selectedPlan ? PLAN_PRICES[selectedPlan].toLocaleString('ko-KR') : 0}원 · 30일</p>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    {billingCycle === 'annual'
+                      ? `연간 ${selectedPlan ? getPaymentAmount(selectedPlan).toLocaleString('ko-KR') : 0}원 (월 ${selectedPlan ? getMonthlyEquivalent(selectedPlan).toLocaleString('ko-KR') : 0}원)`
+                      : `월 ${selectedPlan ? PLAN_PRICES[selectedPlan].toLocaleString('ko-KR') : 0}원 · 30일`
+                    }
+                  </p>
                 </div>
               </div>
             )}
