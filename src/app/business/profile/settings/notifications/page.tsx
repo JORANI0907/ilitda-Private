@@ -551,11 +551,11 @@ export default function NotificationsSettingsPage() {
           featuresRes.json(),
         ])
         if (notifJson.success) {
-          const { plan_type, business_name, solapi_from_phone, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string; business_name?: string; solapi_from_phone?: string }
+          const { plan_type, business_name, contact_phone, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string; business_name?: string; contact_phone?: string }
           setConfig(rest as NotificationConfig)
           setPlanType(toPlanType(plan_type))
           setBusinessName(business_name ?? '')
-          setBusinessContact(solapi_from_phone ?? '')
+          setBusinessContact(contact_phone ?? '')
         }
         if (fieldsJson.success && fieldsJson.data?.panelConfig) {
           setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)

@@ -21,7 +21,7 @@ export async function POST(
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, business_name, solapi_from_phone, solapi_phone_verified, plan_type, notification_config')
+    .select('id, business_name, plan_type, notification_config')
     .eq('profile_id', user.id)
     .maybeSingle()
 
@@ -52,9 +52,12 @@ export async function POST(
       )
     }
 
-    const contactPhone = biz.solapi_phone_verified && biz.solapi_from_phone
-      ? biz.solapi_from_phone
-      : (process.env.SOLAPI_FROM_PHONE ?? '')
+    const { data: profileData } = await service
+      .from('profiles')
+      .select('phone')
+      .eq('id', user.id)
+      .maybeSingle()
+    const profilePhone = profileData?.phone ?? ''
 
     // notification_config 미저장 시 DEFAULT_NOTIFICATION_CONFIG(INITIAL_TEMPLATES 포함)로 폴백
     const notifConfig = (biz.notification_config as NotificationConfig | null) ?? DEFAULT_NOTIFICATION_CONFIG
@@ -72,7 +75,7 @@ export async function POST(
           time:      app.construction_time ?? '',
           amount:    app.balance?.toLocaleString('ko-KR') ?? '',
           account:   app.account_number ?? '',
-          contact:   contactPhone,
+          contact:   profilePhone,
           folderUrl: app.drive_folder_url ?? '',
         })
       } else {
@@ -81,7 +84,7 @@ export async function POST(
       }
     }
 
-    const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${biz.solapi_from_phone ?? ''}`
+    const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${profilePhone}`
     await sendSMS(app.phone, msgText + footer)
 
     // 알림 기록 append

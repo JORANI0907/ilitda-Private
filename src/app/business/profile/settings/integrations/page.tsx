@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, FolderOpen, Plus, Trash2, Pencil, Check } from 'lucide-react'
+import { ArrowLeft, Mail, CheckCircle2, XCircle, FolderOpen, Plus, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
-import { HelpTip } from '@/components/ui/HelpTip'
-import type { Business, Profile } from '@/types'
+import type { Business } from '@/types'
 
 // ─── 상태 배지 ───────────────────────────────────────────────
 function StatusBadge({ verified, label }: { verified: boolean; label: string }) {
@@ -53,12 +52,6 @@ export default function IntegrationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
-  // 담당자 연락처 상태
-  const [phoneInput, setPhoneInput] = useState('')
-  const [phoneSaving, setPhoneSaving] = useState(false)
-  const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [phoneSuccess, setPhoneSuccess] = useState(false)
-
   // Drive 상태
   const [gmailInput, setGmailInput] = useState('')
   const [driveLoading, setDriveLoading] = useState(false)
@@ -85,9 +78,7 @@ export default function IntegrationsPage() {
         const json = await res.json()
         if (json.success && json.data?.business) {
           const b = json.data.business as Business
-          const p = json.data.profile as Profile | undefined
           setBiz(b)
-          setPhoneInput(b.solapi_from_phone ?? p?.phone ?? '')
           setGmailInput(b.gmail_for_drive ?? '')
           if (Array.isArray(b.drive_subfolders) && b.drive_subfolders.length > 0) {
             setSubfolderList(b.drive_subfolders)
@@ -98,43 +89,6 @@ export default function IntegrationsPage() {
       }
     })()
   }, [])
-
-  // ── 담당자 연락처 ────────────────────────────────────────────
-  async function handleSavePhone() {
-    const phone = phoneInput.replace(/[^0-9]/g, '')
-    if (phone.length < 9) { setPhoneError('올바른 전화번호를 입력해주세요.'); return }
-    setPhoneSaving(true)
-    setPhoneError(null)
-    setPhoneSuccess(false)
-    try {
-      const res = await fetch('/api/admin/integrations/solapi', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: phone }),
-      })
-      const json = await res.json()
-      if (!json.success) { setPhoneError(json.error ?? '저장 실패'); return }
-      setBiz(prev => prev ? { ...prev, solapi_from_phone: phone, solapi_phone_verified: true } : prev)
-      setPhoneSuccess(true)
-      setTimeout(() => setPhoneSuccess(false), 3000)
-    } catch {
-      setPhoneError('네트워크 오류가 발생했습니다.')
-    } finally {
-      setPhoneSaving(false)
-    }
-  }
-
-  async function handleClearPhone() {
-    if (!confirm('담당자 연락처를 삭제하시겠습니까?')) return
-    setPhoneSaving(true)
-    try {
-      await fetch('/api/admin/integrations/solapi', { method: 'DELETE' })
-      setBiz(prev => prev ? { ...prev, solapi_from_phone: null, solapi_phone_verified: false } : prev)
-      setPhoneInput('')
-    } finally {
-      setPhoneSaving(false)
-    }
-  }
 
   // ── Google Drive ─────────────────────────────────────────────
   function handleConnectDrive() {
@@ -234,55 +188,11 @@ export default function IntegrationsPage() {
         title="외부 연동 안내"
         sections={[
           {
-            title: 'SMS 문의전화 번호란?',
-            content: '알림 SMS 메시지 본문에 표시되는 담당자 연락처입니다.\n고객이 문의 전화를 걸 때 사용하는 번호를 입력해주세요.',
-          },
-          {
-            title: '어떤 번호를 입력하나요?',
-            content: '사업체 대표 번호 또는 담당자 직통 번호를 입력하시면 됩니다.\n저장 후 알림 SMS 커스텀 문구에서 {contact} 변수로 활용할 수 있습니다.',
-          },
-          {
             title: 'Google Drive 연동이란?',
             content: '입력한 Gmail로 업체 전용 드라이브 폴더가 공유됩니다.\n신청서에서 작업 폴더를 생성하면 자동으로 하위 폴더가 만들어지며, 작업자는 로그인 없이 링크로 사진을 업로드할 수 있습니다.',
           },
         ]}
       />
-
-      {/* 도움말 팁 */}
-      <HelpTip variant="warning">
-        SMS 문의전화 번호는 메시지 본문에 표시되는 연락처입니다. 실제 발신번호는 일잇다 플랫폼 번호로 고정됩니다.
-      </HelpTip>
-
-      {/* ── SMS 문의전화 번호 ────────────────────── */}
-      <Section
-        icon={<Phone size={16} />}
-        title="SMS 문의전화 번호"
-        badge={<StatusBadge verified={!!biz?.solapi_from_phone} label={biz?.solapi_from_phone ?? ''} />}
-      >
-        <p className="text-xs text-text-tertiary leading-relaxed">
-          알림 SMS 본문에 표시되는 담당자 연락처입니다. 커스텀 문구의 <span className="font-medium text-text-secondary">{'{contact}'}</span> 변수에 사용됩니다.
-        </p>
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Input
-              placeholder="010-0000-0000"
-              value={phoneInput}
-              onChange={e => setPhoneInput(e.target.value)}
-              className="flex-1"
-            />
-            <Button size="md" onClick={handleSavePhone} isLoading={phoneSaving} className="whitespace-nowrap">
-              저장
-            </Button>
-          </div>
-          {biz?.solapi_from_phone && (
-            <Button variant="ghost" size="sm" onClick={handleClearPhone} isLoading={phoneSaving}>
-              번호 삭제
-            </Button>
-          )}
-        </div>
-        {phoneError && <p className="text-xs text-state-danger">{phoneError}</p>}
-        {phoneSuccess && <p className="text-xs text-state-success">저장되었습니다.</p>}
-      </Section>
 
       {/* ── 구글 드라이브 ─────────────────────────── */}
       <Section

@@ -12,8 +12,6 @@ interface AutoDispatchBusiness {
   profile_id: string
   business_name: string | null
   notification_config: NotificationConfig | null
-  solapi_from_phone: string | null
-  solapi_phone_verified: boolean
   plan_type: string
 }
 
@@ -67,13 +65,23 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
   const { data: businesses, error: bizError } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, profile_id, business_name, notification_config, solapi_from_phone, solapi_phone_verified, plan_type')
+    .select('id, profile_id, business_name, notification_config, plan_type')
 
   if (bizError) {
     return NextResponse.json({ success: false, error: bizError.message }, { status: 500 })
   }
 
   const bizList = (businesses ?? []) as AutoDispatchBusiness[]
+
+  // 모든 business의 profile phone을 한 번에 조회 (N+1 방지)
+  const profileIds = bizList.map(b => b.profile_id)
+  const { data: profileRows } = await service
+    .from('profiles')
+    .select('id, phone')
+    .in('id', profileIds)
+  const profilePhoneMap = new Map<string, string>(
+    (profileRows ?? []).map(p => [p.id as string, (p.phone as string) ?? ''])
+  )
 
   for (const biz of bizList) {
     const config = biz.notification_config
@@ -110,7 +118,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
             continue
           }
 
-          const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${biz.solapi_from_phone ?? ''}`
+          const profilePhone = profilePhoneMap.get(biz.profile_id) ?? ''
+          const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${profilePhone}`
           await sendSMS(app.phone, message + footer)
 
           const existing = (app.notification_log ?? []) as Array<{ type: string; sent_at: string; method?: string }>

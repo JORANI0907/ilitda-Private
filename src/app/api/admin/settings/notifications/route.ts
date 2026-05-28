@@ -6,7 +6,7 @@ import type { ApiResponse, NotificationConfig } from '@/types'
 interface NotificationConfigWithPlan extends NotificationConfig {
   plan_type: string
   business_name: string | null
-  solapi_from_phone: string | null
+  contact_phone: string | null
 }
 
 export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfigWithPlan>>> {
@@ -20,14 +20,20 @@ export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('notification_config, plan_type, business_name, solapi_from_phone')
+    .select('notification_config, plan_type, business_name')
     .eq('profile_id', user.id)
     .maybeSingle()
 
   const saved = biz?.notification_config as NotificationConfig | null
   const plan_type = (biz?.plan_type as string | null) ?? 'free'
   const business_name = (biz?.business_name as string | null) ?? null
-  const solapi_from_phone = (biz?.solapi_from_phone as string | null) ?? null
+
+  const { data: profileData } = await service
+    .from('profiles')
+    .select('phone')
+    .eq('id', user.id)
+    .maybeSingle()
+  const contact_phone = (profileData?.phone as string | null) ?? null
 
   let rules
   if (!saved?.rules?.length) {
@@ -46,7 +52,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<NotificationConfig
     })
   }
 
-  return NextResponse.json({ success: true, data: { rules, plan_type, business_name, solapi_from_phone } })
+  return NextResponse.json({ success: true, data: { rules, plan_type, business_name, contact_phone } })
 }
 
 export async function PATCH(req: NextRequest): Promise<NextResponse<ApiResponse>> {
