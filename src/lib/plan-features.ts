@@ -38,7 +38,7 @@ export interface PlanFeatureMap {
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
   free: {
-    sms_daily_limit:     10,
+    sms_daily_limit:     300,
     sms_auto_dispatch:   false,
     sms_custom_template: false,
     worker_limit:        10,
@@ -46,7 +46,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     marketplace:         false,
     contracts:           false,
     app_name_custom:     false,
-    application_limit:   100,
+    application_limit:   50,
     payroll:             false,
     quotations:          false,
     revenue:             false,
@@ -55,7 +55,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     workers:             false,
   },
   basic: {
-    sms_daily_limit:     20,
+    sms_daily_limit:     600,
     sms_auto_dispatch:   true,
     sms_custom_template: true,
     worker_limit:        Infinity,
@@ -72,7 +72,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     workers:             true,
   },
   pro: {
-    sms_daily_limit:     50,
+    sms_daily_limit:     1500,
     sms_auto_dispatch:   true,
     sms_custom_template: true,
     worker_limit:        Infinity,
@@ -89,7 +89,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
     workers:             true,
   },
   max: {
-    sms_daily_limit:     100,
+    sms_daily_limit:     3000,
     sms_auto_dispatch:   true,
     sms_custom_template: true,
     worker_limit:        Infinity,
