@@ -105,7 +105,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
           // SMS 발송 한도 확인 및 증가
           const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
           if (!limitResult.allowed) {
-            results.push({ business_id: biz.id, application_id: app.id, type: rule.type, status: 'failed', error: '오늘 발송 한도 초과' })
+            results.push({ business_id: biz.id, application_id: app.id, type: rule.type, status: 'failed', error: '이번 달 발송 한도 초과' })
             continue
           }
 
