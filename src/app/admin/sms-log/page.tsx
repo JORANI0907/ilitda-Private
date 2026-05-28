@@ -11,13 +11,13 @@ interface SmsUsageItem {
   id: string
   business_name: string
   plan_type: string
-  daily_sms_count: number
-  daily_sms_reset_date: string | null
+  monthly_sms_count: number
+  monthly_sms_reset_date: string | null
 }
 
 const SMS_LIMITS: Record<string, number | null> = {
-  free: 10,
-  basic: 50,
+  free: 150,
+  basic: 600,
   pro: null,
   max: null,
 }
@@ -46,7 +46,7 @@ function formatDate(dateStr: string | null) {
 function SmsCard({ item }: { item: SmsUsageItem }) {
   const limit = SMS_LIMITS[item.plan_type] ?? null
   const isUnlimited = limit === null
-  const used = item.daily_sms_count
+  const used = item.monthly_sms_count
   const pct = isUnlimited ? 100 : limit > 0 ? Math.min(Math.round((used / limit) * 100), 100) : 0
 
   return (
@@ -60,7 +60,7 @@ function SmsCard({ item }: { item: SmsUsageItem }) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between text-sm">
             <span className="text-text-secondary">
-              오늘 발송: <span className="font-semibold text-text-primary">{used}건</span>
+              이번 달 발송: <span className="font-semibold text-text-primary">{used}건</span>
               {' / '}
               한도: <span className="font-semibold text-text-primary">
                 {isUnlimited ? '무제한' : `${limit}건`}
@@ -80,7 +80,7 @@ function SmsCard({ item }: { item: SmsUsageItem }) {
         </div>
 
         <p className="text-xs text-text-tertiary">
-          마지막 리셋: {formatDate(item.daily_sms_reset_date)}
+          마지막 초기화: {formatDate(item.monthly_sms_reset_date)}
         </p>
       </div>
     </Card>
