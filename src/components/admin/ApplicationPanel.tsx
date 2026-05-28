@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users, Copy, Check } from 'lucide-react'
+import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users, Copy, Check, MapPin } from 'lucide-react'
 import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
 import { HelpIcon } from '@/components/ui/HelpIcon'
@@ -51,6 +51,13 @@ const STATUS_BADGE: Record<string, string> = {
   'A/S방문':        'bg-yellow-100 text-yellow-700',
   '방문견적':       'bg-purple-100 text-purple-700',
 }
+
+const MAP_APPS = [
+  { name: '카카오맵',  getUrl: (a: string) => `kakaomap://search?q=${encodeURIComponent(a)}`,                  isScheme: true  },
+  { name: '네이버지도', getUrl: (a: string) => `nmap://search?query=${encodeURIComponent(a)}&appname=app`,      isScheme: true  },
+  { name: '티맵',     getUrl: (a: string) => `tmap://search?name=${encodeURIComponent(a)}`,                    isScheme: true  },
+  { name: '구글지도',  getUrl: (a: string) => `https://maps.google.com/maps?q=${encodeURIComponent(a)}`,       isScheme: false },
+]
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────
 function FieldRow({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
@@ -116,6 +123,13 @@ function SectionTitle({ children, color = 'gray' }: SectionTitleProps) {
       {children}
     </p>
   )
+}
+
+function copyText(text: string, setter: (v: boolean) => void) {
+  if (!text.trim()) return
+  navigator.clipboard.writeText(text)
+    .then(() => { setter(true); setTimeout(() => setter(false), 2000) })
+    .catch(() => {})
 }
 
 // ─── FormState ───────────────────────────────────────────────
@@ -203,6 +217,9 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const [connections, setConnections] = useState<ConnectionOption[]>([])
   const [selectedWorkers, setSelectedWorkers] = useState<string[]>(app.assigned_connection_ids ?? [])
   const [savingWorkers, setSavingWorkers] = useState(false)
+  const [copiedPhone, setCopiedPhone] = useState(false)
+  const [copiedAccount, setCopiedAccount] = useState(false)
+  const [showMapMenu, setShowMapMenu] = useState(false)
 
   // 알림 타입 목록: notificationConfig에서 동적으로 파생 (폴더링크알림 제외)
   const activeNotifyTypes = useMemo(() => {
@@ -315,6 +332,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     const override = panelConfig?.fields?.[key]?.hidden
     if (override !== undefined) return override
     return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.defaultHidden ?? false
+  }
+
+  // 지도 메뉴 외부 클릭 닫기
+  useEffect(() => {
+    if (!showMapMenu) return
+    const close = () => setShowMapMenu(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [showMapMenu])
+
+  function handleOpenMap(addr: string, url: string, isScheme: boolean) {
+    navigator.clipboard.writeText(addr).catch(() => {})
+    if (isScheme) {
+      window.location.href = url
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+    setShowMapMenu(false)
   }
 
   // ─── 작업자 배정 ──────────────────────────────────────────
@@ -470,7 +505,28 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('phone') && (
             <FieldRow label={resolveLabel('phone')}>
-              <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+              <div className="flex flex-col gap-1.5">
+                <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+                {form.phone.trim() && (
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => copyText(form.phone, setCopiedPhone)}
+                      className="flex-1 h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                    >
+                      {copiedPhone ? <Check size={11} className="text-state-success" /> : <Copy size={11} />}
+                      {copiedPhone ? '복사됨' : '복사'}
+                    </button>
+                    <a
+                      href={`tel:${form.phone}`}
+                      className="flex-1 h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-brand-200 text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-[0.98] transition-all"
+                    >
+                      <Phone size={11} />
+                      전화 걸기
+                    </a>
+                  </div>
+                )}
+              </div>
             </FieldRow>
           )}
           {!isHidden('email') && (
@@ -485,7 +541,38 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('address') && (
             <FieldRow label={resolveLabel('address')}>
-              <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+              <div className="flex flex-col gap-1.5">
+                <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+                {form.address.trim() && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowMapMenu(prev => !prev)}
+                      className="w-full h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                    >
+                      <MapPin size={11} />
+                      지도 앱으로 열기
+                      <ChevronDown size={11} className={`ml-auto mr-1 transition-transform ${showMapMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showMapMenu && (
+                      <div className="absolute top-full mt-1 left-0 right-0 bg-surface rounded-xl border border-border shadow-pop overflow-hidden z-10">
+                        {MAP_APPS.map(app => (
+                          <button
+                            key={app.name}
+                            type="button"
+                            onClick={() => handleOpenMap(form.address, app.getUrl(form.address), app.isScheme)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-sunken active:bg-surface-sunken text-sm text-text-primary transition-colors text-left"
+                          >
+                            <MapPin size={13} className="text-brand-500 shrink-0" />
+                            <span className="font-medium">{app.name}</span>
+                            <span className="ml-auto text-xs text-text-tertiary">주소 복사됨</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </FieldRow>
           )}
           {['spare_basic_1', 'spare_basic_2'].map((key) => !isHidden(key) && (
@@ -581,7 +668,19 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('account_number') && (
             <FieldRow label={resolveLabel('account_number')}>
-              <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+              <div className="flex flex-col gap-1.5">
+                <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+                {form.account_number.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => copyText(form.account_number, setCopiedAccount)}
+                    className="w-full h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                  >
+                    {copiedAccount ? <Check size={11} className="text-state-success" /> : <Copy size={11} />}
+                    {copiedAccount ? '복사됨' : '계좌번호 복사'}
+                  </button>
+                )}
+              </div>
             </FieldRow>
           )}
           <FieldRow label="단가 (원)">
