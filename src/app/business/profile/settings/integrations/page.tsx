@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, Loader2, FolderOpen, Plus, Trash2, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Modal } from '@/components/ui/Modal'
 import { SectionHeader } from '@/components/ui/SectionHeader'
 import { HelpBanner } from '@/components/ui/HelpBanner'
 import { HelpDrawer } from '@/components/ui/HelpDrawer'
@@ -64,6 +65,12 @@ export default function IntegrationsPage() {
   const [driveLoading, setDriveLoading] = useState(false)
   const [driveError, setDriveError] = useState<string | null>(null)
   const [driveSuccess, setDriveSuccess] = useState(false)
+  const [showDriveConfirm, setShowDriveConfirm] = useState(false)
+
+  // 이메일 도메인 검사
+  const emailDomain = gmailInput.includes('@') ? gmailInput.split('@')[1]?.toLowerCase() ?? '' : ''
+  const isGoogleDomain = emailDomain === 'gmail.com' || emailDomain === 'googlemail.com'
+  const showNonGoogleWarning = gmailInput.includes('@') && emailDomain.length > 0 && !isGoogleDomain
 
   // 하위 폴더 편집 상태
   const [subfolderEditing, setSubfolderEditing] = useState(false)
@@ -165,8 +172,14 @@ export default function IntegrationsPage() {
   }
 
   // ── Google Drive ─────────────────────────────────────────────
-  async function handleConnectDrive() {
-    if (!gmailInput.includes('@')) { setDriveError('올바른 Gmail 주소를 입력해주세요.'); return }
+  function handleConnectDrive() {
+    if (!gmailInput.includes('@')) { setDriveError('올바른 이메일 주소를 입력해주세요.'); return }
+    setDriveError(null)
+    setShowDriveConfirm(true)
+  }
+
+  async function handleConfirmDrive() {
+    setShowDriveConfirm(false)
     setDriveLoading(true)
     setDriveError(null)
     setDriveSuccess(false)
@@ -436,6 +449,15 @@ export default function IntegrationsPage() {
               {biz?.gmail_for_drive ? '재연동' : '연동'}
             </Button>
           </div>
+          {showNonGoogleWarning && (
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-state-danger font-medium">구글 메일만 연동이 가능합니다.</p>
+              <p className="text-xs text-state-danger">연동 후 개인 저장공간을 사용합니다.</p>
+            </div>
+          )}
+          {isGoogleDomain && gmailInput.length > 0 && (
+            <p className="text-xs text-text-tertiary">연동 후 해당 구글 계정의 개인 저장공간을 사용합니다.</p>
+          )}
           {biz?.drive_root_folder_id && (
             <a
               href={`https://drive.google.com/drive/folders/${biz.drive_root_folder_id}`}
@@ -452,10 +474,54 @@ export default function IntegrationsPage() {
               연동 해제
             </Button>
           )}
-          {driveSuccess && <p className="text-xs text-state-success">드라이브 폴더가 공유되었습니다. Gmail을 확인해주세요.</p>}
+          {driveSuccess && (
+            <div className="flex flex-col gap-0.5">
+              <p className="text-xs text-state-success font-medium">드라이브 폴더 공유 요청이 전송됐습니다.</p>
+              <p className="text-xs text-text-tertiary leading-relaxed">
+                입력한 이메일로 공유 초대 메일이 발송됐습니다. 메일을 받지 못하셨다면 이메일 주소를 다시 확인해주세요.
+              </p>
+            </div>
+          )}
           {driveError && <p className="text-xs text-state-danger">{driveError}</p>}
         </div>
       </Section>
+
+      {/* ── 드라이브 연동 확인 팝업 ──────────────────── */}
+      <Modal
+        open={showDriveConfirm}
+        onClose={() => setShowDriveConfirm(false)}
+        title="드라이브 연동 전 확인"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" size="md" className="flex-1" onClick={() => setShowDriveConfirm(false)}>
+              취소
+            </Button>
+            <Button size="md" className="flex-1" onClick={handleConfirmDrive}>
+              연동하기
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-text-secondary leading-relaxed">
+            <span className="font-semibold text-text-primary">{gmailInput}</span> 계정의 Google Drive 저장공간에 작업 사진이 저장됩니다.
+          </p>
+          <div className="bg-surface-sunken rounded-xl px-4 py-3 flex flex-col gap-1.5">
+            <p className="text-xs font-semibold text-text-primary">💾 저장공간 안내</p>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              Google 계정 기본 제공 용량은 <span className="font-medium text-text-primary">15GB</span>입니다. 작업 사진이 많아질 경우 용량이 부족할 수 있습니다.
+            </p>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              용량 부족 시 <span className="font-medium text-text-primary">Google One</span>을 통해 추가 저장공간을 구입하여 사용하실 수 있습니다.
+              <br />
+              <span className="text-text-tertiary">(100GB 월 2,900원 / 200GB 월 4,000원)</span>
+            </p>
+          </div>
+          <p className="text-xs text-text-tertiary leading-relaxed">
+            연동 후에도 언제든지 해제하거나 다른 계정으로 변경하실 수 있습니다.
+          </p>
+        </div>
+      </Modal>
 
     </div>
   )
