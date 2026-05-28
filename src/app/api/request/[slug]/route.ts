@@ -15,6 +15,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
   const service = createServiceClient()
 
   const { data: business, error } = await service
+    .schema('ilitda')
     .from('businesses')
     .select('id, business_name, request_slug, form_config, panel_config')
     .eq('request_slug', slug)
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const service = createServiceClient()
 
   const { data: business, error: bizError } = await service
+    .schema('ilitda')
     .from('businesses')
     .select('id, panel_config, form_config')
     .eq('request_slug', slug)
@@ -143,25 +145,29 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  const { error } = await service.from('service_applications').insert({
-    business_name:     (client_name as string).trim(),
-    phone:             (client_phone as string).trim(),
-    address:           (client_address as string).trim(),
-    construction_date: strOrNull(desired_date),
-    construction_time: strOrNull(desired_time),
-    request_notes:     finalNotes,
-    status:            '신규',
-    owner_name:        strOrNull(owner_name),
-    email:             strOrNull(email),
-    business_number:   strOrNull(business_number),
-    account_number:    strOrNull(account_number),
-    payment_method:    strOrNull(payment_method),
-    elevator:          strOrNull(elevator),
-    parking:           strOrNull(parking),
-    building_access:   strOrNull(building_access),
-    access_method:     strOrNull(access_method),
-    care_scope:        strOrNull(care_scope),
-  })
+  const { error } = await service
+    .schema('ilitda')
+    .from('service_applications')
+    .insert({
+      business_id:       business.id,
+      business_name:     (client_name as string).trim(),
+      phone:             (client_phone as string).trim(),
+      address:           (client_address as string).trim(),
+      construction_date: strOrNull(desired_date),
+      construction_time: strOrNull(desired_time),
+      request_notes:     finalNotes,
+      status:            '신규',
+      owner_name:        strOrNull(owner_name),
+      email:             strOrNull(email),
+      business_number:   strOrNull(business_number),
+      account_number:    strOrNull(account_number),
+      payment_method:    strOrNull(payment_method),
+      elevator:          strOrNull(elevator),
+      parking:           strOrNull(parking),
+      building_access:   strOrNull(building_access),
+      access_method:     strOrNull(access_method),
+      care_scope:        strOrNull(care_scope),
+    })
 
   if (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
