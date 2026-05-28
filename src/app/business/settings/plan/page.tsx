@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Check, Minus, CheckCircle2,
-  MessageSquare, ClipboardList, Users, Settings, Globe,
-  Crown, Zap, Star,
+  MessageSquare, ClipboardList, Users,
+  Crown, Zap, Star, Settings, Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -18,7 +18,6 @@ import type { PlanType } from '@/lib/plan-features'
 import { usePlanFeatures } from '@/contexts/PlanFeaturesContext'
 import type { FeatureMeta } from '@/contexts/PlanFeaturesContext'
 
-// ─── 플랜 정의 ────────────────────────────────────────────────
 const PLAN_KEYS: Exclude<PlanType, 'free'>[] = ['basic', 'pro', 'max']
 
 const PLAN_ORDER: Record<string, number> = {
@@ -56,13 +55,12 @@ function formatKoreanDate(dateStr: string): string {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`
 }
 
-// ─── 카테고리 아이콘/이름 (DB 기반 category 값 → UI) ──────────
 const CATEGORY_ICON: Record<string, React.ReactNode> = {
-  sms:      <MessageSquare size={14} className="text-blue-500" />,
-  feature:  <ClipboardList size={14} className="text-green-500" />,
-  hr:       <Users size={14} className="text-violet-500" />,
-  settings: <Settings size={14} className="text-gray-500" />,
-  business: <Globe size={14} className="text-teal-500" />,
+  sms:      <MessageSquare size={13} className="text-blue-500" />,
+  feature:  <ClipboardList size={13} className="text-green-500" />,
+  hr:       <Users size={13} className="text-violet-500" />,
+  settings: <Settings size={13} className="text-gray-500" />,
+  business: <Globe size={13} className="text-teal-500" />,
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -75,76 +73,107 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 const CATEGORY_ORDER = ['sms', 'feature', 'hr', 'settings', 'business']
 
-// ─── 플랜 카드 스타일 ─────────────────────────────────────────
 const PLAN_STYLE: Record<string, {
   badge: string
   border: string
   activeBorder: string
   activeBg: string
+  headerBg: string
   icon: React.ReactNode
+  iconLg: React.ReactNode
   accent: string
+  accentBg: string
+  topBar: string
+  colBg: string
   tag?: string
 }> = {
   basic: {
     badge: 'bg-blue-100 text-blue-700',
     border: 'border-border',
     activeBorder: 'border-blue-500',
-    activeBg: 'bg-blue-50',
-    icon: <Star size={16} className="text-blue-500" />,
+    activeBg: 'bg-blue-50/40',
+    headerBg: 'bg-blue-50',
+    icon: <Star size={18} className="text-blue-500" />,
+    iconLg: <Star size={22} className="text-blue-500" />,
     accent: 'text-blue-600',
+    accentBg: 'bg-blue-100',
+    topBar: 'bg-blue-500',
+    colBg: 'bg-blue-50/50',
   },
   pro: {
     badge: 'bg-violet-100 text-violet-700',
     border: 'border-border',
     activeBorder: 'border-violet-500',
-    activeBg: 'bg-violet-50',
-    icon: <Zap size={16} className="text-violet-500" />,
+    activeBg: 'bg-violet-50/40',
+    headerBg: 'bg-violet-50',
+    icon: <Zap size={18} className="text-violet-500" />,
+    iconLg: <Zap size={22} className="text-violet-500" />,
     accent: 'text-violet-600',
+    accentBg: 'bg-violet-100',
+    topBar: 'bg-violet-500',
+    colBg: 'bg-violet-50/50',
     tag: '인기',
   },
   max: {
     badge: 'bg-amber-100 text-amber-700',
     border: 'border-border',
     activeBorder: 'border-amber-500',
-    activeBg: 'bg-amber-50',
-    icon: <Crown size={16} className="text-amber-500" />,
+    activeBg: 'bg-amber-50/40',
+    headerBg: 'bg-amber-50',
+    icon: <Crown size={18} className="text-amber-500" />,
+    iconLg: <Crown size={22} className="text-amber-500" />,
     accent: 'text-amber-600',
+    accentBg: 'bg-amber-100',
+    topBar: 'bg-amber-500',
+    colBg: 'bg-amber-50/50',
   },
 }
 
-// ─── 숫자 한도 포맷팅 ─────────────────────────────────────────
 function formatLimit(val: unknown): string {
-  if (val === true) return ''
-  if (val === false) return ''
+  if (val === true || val === false) return ''
   if (val === Infinity || val === null || val === undefined) return '무제한'
   const n = Number(val)
   if (!isFinite(n)) return '무제한'
   return `${n.toLocaleString('ko-KR')}건`
 }
 
-// ─── 셀 렌더 ─────────────────────────────────────────────────
 function FeatureCell({
-  featureType, value, isHighlight,
+  featureType, value,
 }: {
   featureType: 'boolean' | 'numeric'
   value: unknown
-  isHighlight: boolean
 }) {
   if (featureType === 'numeric') {
     const label = formatLimit(value)
+    const isUnlimited = label === '무제한'
+    if (isUnlimited) {
+      return (
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="text-base font-black text-state-success leading-none">∞</span>
+          <span className="text-[9px] text-state-success/70 font-medium">무제한</span>
+        </div>
+      )
+    }
     return (
-      <span className={`text-xs font-bold leading-tight text-center ${isHighlight ? 'text-brand-600' : 'text-text-secondary'}`}>
-        {label}
-      </span>
+      <div className="flex flex-col items-center gap-0.5">
+        <span className="text-xs font-bold text-text-primary leading-none">{label}</span>
+      </div>
     )
   }
   if (value === true) {
-    return <Check size={16} strokeWidth={2.5} className="text-state-success mx-auto" />
+    return (
+      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+        <Check size={13} strokeWidth={3} className="text-state-success" />
+      </div>
+    )
   }
-  return <Minus size={14} className="text-border-strong mx-auto opacity-40" />
+  return (
+    <div className="w-6 h-6 rounded-full bg-surface-sunken flex items-center justify-center mx-auto">
+      <Minus size={10} className="text-border-strong opacity-50" />
+    </div>
+  )
 }
 
-// ─── 동적 카테고리 빌더 ───────────────────────────────────────
 interface DynamicCategory {
   category: string
   items: FeatureMeta[]
@@ -156,19 +185,9 @@ function buildCategories(meta: FeatureMeta[]): DynamicCategory[] {
     if (!map.has(item.category)) map.set(item.category, [])
     map.get(item.category)!.push(item)
   }
-
   return CATEGORY_ORDER
     .filter(cat => map.has(cat))
     .map(cat => ({ category: cat, items: map.get(cat)! }))
-}
-
-// highlight 판별: basic/pro/max 간 값이 하나라도 다르면 highlight
-function isHighlight(
-  meta: FeatureMeta,
-  features: Record<string, Record<string, unknown>>,
-): boolean {
-  const vals = PLAN_KEYS.map(p => features[p]?.[meta.feature_key])
-  return vals.some(v => v !== vals[0])
 }
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
@@ -233,9 +252,7 @@ export default function PlanPage() {
     }
   }
 
-  // ─── 동적 카테고리 계산 ──────────────────────────────────────
   const dynamicCategories = useMemo(() => buildCategories(meta), [meta])
-
   const f = features as Record<string, Record<string, unknown>> | null
 
   const selectedStyle = selectedPlan ? PLAN_STYLE[selectedPlan] : null
@@ -294,42 +311,48 @@ export default function PlanPage() {
 
       <HelpTip>플랜 카드를 탭해 업그레이드·갱신·하향 신청을 할 수 있습니다. 입금 확인 후 영업일 기준 1일 이내 반영됩니다.</HelpTip>
 
-      {/* 플랜 카드 3개 */}
+      {/* ─── 플랜 카드 3개 ─────────────────────── */}
       <div className="flex flex-col gap-3">
         {PLAN_KEYS.map(key => {
           const style     = PLAN_STYLE[key]
           const isCurrent = key === currentPlan
           const isLower   = (PLAN_ORDER[key] ?? 0) < (PLAN_ORDER[currentPlan] ?? 0)
 
-          // highlight 항목 중 이 플랜에서 활성화된 것만 bullet 표시
-          const bulletItems = f
-            ? meta.filter(m => isHighlight(m, f)).filter(m => {
-                const v = f[key]?.[m.feature_key]
-                return v !== false && v !== 0 && v !== null && v !== undefined
-              })
-            : []
+          // 이 플랜에서 활성화된 기능 목록 (카테고리별 그룹)
+          const enabledByCategory = CATEGORY_ORDER
+            .map(cat => ({
+              cat,
+              items: meta.filter(m => {
+                if (m.category !== cat) return false
+                const v = f?.[key]?.[m.feature_key]
+                if (m.feature_type === 'numeric') return typeof v === 'number' && v > 0
+                return v === true
+              }),
+            }))
+            .filter(g => g.items.length > 0)
 
           return (
             <button
               key={key}
               type="button"
               onClick={() => handleSelect(key)}
-              className={`text-left rounded-2xl border-2 p-4 transition-all active:scale-[0.98] relative ${
+              className={`text-left rounded-2xl border-2 overflow-hidden transition-all active:scale-[0.98] relative ${
                 isCurrent
                   ? `${style.activeBorder} ${style.activeBg}`
                   : `${style.border} bg-surface hover:${style.activeBorder} hover:shadow-soft`
               }`}
             >
               {style.tag && (
-                <span className="absolute -top-2.5 left-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500 text-white">
+                <span className="absolute -top-px right-4 px-2.5 py-0.5 rounded-b-full text-[10px] font-bold bg-violet-500 text-white">
                   {style.tag}
                 </span>
               )}
 
-              <div className="flex items-center justify-between mb-3">
+              {/* 플랜 헤더 */}
+              <div className={`flex items-center justify-between px-4 py-3.5 ${isCurrent ? '' : style.headerBg}`}>
                 <div className="flex items-center gap-2">
                   {style.icon}
-                  <span className={`font-bold text-[15px] ${style.accent}`}>{PLAN_NAMES[key]}</span>
+                  <span className={`font-bold text-base ${style.accent}`}>{PLAN_NAMES[key]}</span>
                   {isCurrent && (
                     <span className="text-[10px] font-semibold text-white bg-gray-400 px-2 py-0.5 rounded-full">현재</span>
                   )}
@@ -338,90 +361,170 @@ export default function PlanPage() {
                   )}
                 </div>
                 <div className="text-right">
-                  <span className="text-lg font-bold text-text-primary">
+                  <span className="text-xl font-bold text-text-primary">
                     {PLAN_PRICES[key].toLocaleString('ko-KR')}
                   </span>
                   <span className="text-xs text-text-tertiary">원/월</span>
                 </div>
               </div>
 
-              {/* 주요 기능 bullet (highlight 항목) */}
-              {bulletItems.length > 0 && (
-                <ul className="flex flex-col gap-1.5">
-                  {bulletItems.map(m => (
-                    <li key={m.feature_key} className="flex items-center gap-2">
-                      <Check size={12} className={`shrink-0 ${style.accent}`} />
-                      <span className="text-xs text-text-secondary">
-                        {m.label}
-                        {m.feature_type === 'numeric' && ` (${formatLimit(f?.[key]?.[m.feature_key])})`}
-                      </span>
-                    </li>
+              {/* 활성화된 기능 목록 */}
+              {enabledByCategory.length > 0 && (
+                <div className="px-4 py-3 flex flex-col gap-2.5 border-t border-border-subtle">
+                  {enabledByCategory.map(({ cat, items }) => (
+                    <div key={cat}>
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        {CATEGORY_ICON[cat]}
+                        <span className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wide">
+                          {CATEGORY_LABEL[cat] ?? cat}
+                        </span>
+                      </div>
+                      <ul className="flex flex-col gap-1">
+                        {items.map(m => (
+                          <li key={m.feature_key} className="flex items-center gap-2">
+                            <Check size={11} className={`shrink-0 ${style.accent}`} />
+                            <span className="text-xs text-text-secondary break-keep leading-snug">
+                              {m.label}
+                              {m.feature_type === 'numeric' && (
+                                <span className={`ml-1 font-semibold ${style.accent}`}>
+                                  ({formatLimit(f?.[key]?.[m.feature_key])})
+                                </span>
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
+              )}
+
+              {/* 스켈레톤 (meta 로딩 중) */}
+              {meta.length === 0 && (
+                <div className="px-4 py-3 border-t border-border-subtle flex flex-col gap-2">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-4 rounded bg-surface-sunken animate-pulse w-3/4" />
+                  ))}
+                </div>
               )}
             </button>
           )
         })}
       </div>
 
-      {/* 기능 비교표 */}
-      <div className="flex flex-col gap-3 mt-2">
-        <SectionHeader title="기능 상세 비교" level="section" />
+      {/* ─── 기능 비교표 ───────────────────────── */}
+      <div className="flex flex-col gap-3 mt-1">
+        <SectionHeader title="플랜별 기능 비교" level="section" />
 
-        <div className="rounded-2xl border border-border overflow-hidden bg-white">
-          {/* 컬럼 헤더 */}
-          <div className="grid grid-cols-4 bg-surface-sunken border-b-2 border-border">
-            <div className="px-3 py-3" />
-            {PLAN_KEYS.map(k => (
-              <div key={k} className="py-3 text-center border-l border-border">
-                <p className={`text-xs font-bold ${PLAN_STYLE[k].accent}`}>{PLAN_NAMES[k]}</p>
-                <p className="text-[11px] text-text-tertiary mt-0.5">
-                  {PLAN_PRICES[k].toLocaleString('ko-KR')}원
-                </p>
-              </div>
-            ))}
+        <div className="rounded-2xl border border-border overflow-hidden bg-white shadow-soft">
+
+          {/* ── 컬럼 헤더 (sticky) ── */}
+          <div className="grid grid-cols-4 sticky top-0 z-10 bg-white border-b-2 border-border shadow-pop">
+            {/* 빈 첫 번째 칸 */}
+            <div className="px-3 py-4 flex items-end pb-3">
+              <span className="text-[10px] font-semibold text-text-tertiary tracking-widest uppercase">기능</span>
+            </div>
+
+            {PLAN_KEYS.map(k => {
+              const s = PLAN_STYLE[k]
+              const isCur = currentPlan === k
+              return (
+                <div
+                  key={k}
+                  className={`relative border-l border-border flex flex-col items-center pt-3 pb-3 gap-1 ${isCur ? s.colBg : ''}`}
+                >
+                  {/* 상단 컬러 바 */}
+                  <div className={`absolute top-0 left-0 right-0 h-[3px] ${s.topBar}`} />
+
+                  {/* 인기 태그 */}
+                  {s.tag && (
+                    <span className="absolute -top-px right-2 text-[9px] font-black text-white bg-violet-500 px-2 py-0.5 rounded-b-md tracking-wide">
+                      {s.tag}
+                    </span>
+                  )}
+
+                  {/* 아이콘 */}
+                  <span>{s.iconLg}</span>
+
+                  {/* 플랜명 */}
+                  <p className={`text-sm font-extrabold leading-tight ${s.accent}`}>
+                    {PLAN_NAMES[k]}
+                  </p>
+
+                  {/* 가격 */}
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-base font-black text-text-primary leading-none">
+                      {PLAN_PRICES[k].toLocaleString('ko-KR')}
+                    </span>
+                    <span className="text-[10px] text-text-tertiary">원</span>
+                  </div>
+                  <span className="text-[10px] text-text-tertiary -mt-0.5">/ 월</span>
+
+                  {/* 현재 플랜 뱃지 */}
+                  {isCur && (
+                    <span className="mt-0.5 text-[9px] font-bold text-white bg-state-success px-2.5 py-0.5 rounded-full">
+                      현재 플랜
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
-          {/* 카테고리별 섹션 (DB 기반 동적 렌더링) */}
+          {/* ── 카테고리별 섹션 ── */}
           {dynamicCategories.map((cat, catIdx) => (
             <div key={cat.category}>
-              <div className={`flex items-center gap-2 px-3 py-2.5 bg-surface-sunken/70 ${catIdx > 0 ? 'border-t-2 border-border' : ''}`}>
-                {CATEGORY_ICON[cat.category] ?? <ClipboardList size={14} className="text-gray-400" />}
-                <span className="text-xs font-bold text-text-secondary">
-                  {CATEGORY_LABEL[cat.category] ?? cat.category}
-                </span>
+              {/* 카테고리 구분 행 */}
+              <div className={`grid grid-cols-4 ${catIdx > 0 ? 'border-t-2 border-border' : ''}`}>
+                <div className={`col-span-4 flex items-center gap-2 px-3 py-2.5 bg-surface-sunken`}>
+                  <div className="flex items-center gap-2">
+                    {CATEGORY_ICON[cat.category] ?? <ClipboardList size={13} className="text-gray-400" />}
+                    <span className="text-xs font-bold text-text-secondary">
+                      {CATEGORY_LABEL[cat.category] ?? cat.category}
+                    </span>
+                  </div>
+                </div>
               </div>
 
+              {/* 기능 행 */}
               {cat.items.map((item, i) => {
-                const highlight = f ? isHighlight(item, f) : false
+                const isLast = i === cat.items.length - 1
                 return (
                   <div
                     key={item.feature_key}
-                    className={`grid grid-cols-4 items-center ${
-                      i < cat.items.length - 1 ? 'border-b border-border-subtle' : ''
-                    } ${highlight ? 'bg-brand-50/40' : ''}`}
+                    className={`grid grid-cols-4 items-center ${!isLast ? 'border-b border-border-subtle' : ''}`}
                   >
+                    {/* 기능명 */}
                     <div className="px-3 py-3.5">
-                      <span className={`text-xs leading-snug break-keep ${highlight ? 'font-bold text-text-primary' : 'text-text-secondary'}`}>
+                      <span className="text-xs leading-snug break-keep text-text-secondary">
                         {item.label}
                       </span>
                     </div>
-                    {PLAN_KEYS.map(plan => (
-                      <div key={plan} className="py-3.5 flex justify-center items-center border-l border-border-subtle">
-                        <FeatureCell
-                          featureType={item.feature_type}
-                          value={f?.[plan]?.[item.feature_key]}
-                          isHighlight={highlight}
-                        />
-                      </div>
-                    ))}
+
+                    {/* 플랜별 셀 */}
+                    {PLAN_KEYS.map(plan => {
+                      const isCur = currentPlan === plan
+                      return (
+                        <div
+                          key={plan}
+                          className={`py-3.5 flex justify-center items-center border-l border-border-subtle ${
+                            isCur ? PLAN_STYLE[plan].colBg : ''
+                          }`}
+                        >
+                          <FeatureCell
+                            featureType={item.feature_type}
+                            value={f?.[plan]?.[item.feature_key]}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               })}
             </div>
           ))}
 
-          {/* meta가 아직 로딩 중일 때 스켈레톤 */}
+          {/* 로딩 스켈레톤 */}
           {dynamicCategories.length === 0 && (
             <div className="flex flex-col gap-2 p-4">
               {[1, 2, 3, 4, 5].map(i => (
@@ -432,7 +535,7 @@ export default function PlanPage() {
         </div>
       </div>
 
-      {/* 무통장 입금 신청 모달 */}
+      {/* ─── 무통장 입금 신청 모달 ────────────── */}
       <Modal
         open={paymentOpen}
         onClose={() => { if (!isSubmitting) setPaymentOpen(false) }}
@@ -484,6 +587,16 @@ export default function PlanPage() {
                 </span>
               </div>
             </div>
+
+            {selectedStyle && (
+              <div className={`flex items-center gap-3 rounded-xl p-3 ${selectedStyle.accentBg}`}>
+                {selectedStyle.icon}
+                <div>
+                  <p className={`text-sm font-bold ${selectedStyle.accent}`}>{selectedPlan ? PLAN_NAMES[selectedPlan] : ''} 플랜</p>
+                  <p className="text-xs text-text-secondary mt-0.5">월 {selectedPlan ? PLAN_PRICES[selectedPlan].toLocaleString('ko-KR') : 0}원 · 30일</p>
+                </div>
+              </div>
+            )}
 
             {requestType === 'upgrade' && currentPlan !== 'free' && remainingDays > 0 && (
               <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-100 p-3">
