@@ -85,6 +85,8 @@ function NotificationRuleCard({
   planType,
   features,
   totalAutoCount,
+  businessName,
+  businessContact,
 }: {
   rule: NotificationRule
   onChange: (updated: NotificationRule) => void
@@ -93,6 +95,8 @@ function NotificationRuleCard({
   planType: PlanType
   features: Record<PlanType, PlanFeatureMap>
   totalAutoCount: number
+  businessName: string
+  businessContact: string
 }) {
   const canAutoDispatch   = canUseFeature(planType, 'sms_auto_dispatch', features)
   const canCustomTemplate = canUseFeature(planType, 'sms_custom_template', features)
@@ -340,6 +344,7 @@ function NotificationRuleCard({
 
           {/* 문구 설정 */}
           <div className="flex flex-col gap-2">
+
             {/* 토글: pro 이상은 커스텀 문구 체크박스, 미만은 잠금 버튼 */}
             {canCustomTemplate ? (
               <label className="flex items-center gap-2 cursor-pointer">
@@ -484,6 +489,20 @@ function NotificationRuleCard({
                 )}
               </div>
             )}
+
+            {/* 자동 추가 문구 안내 */}
+            <div className="mt-1">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="flex-1 border-t border-dashed border-border-subtle" />
+                <span className="text-[10px] text-text-tertiary whitespace-nowrap font-medium">모든 문자에 자동으로 추가</span>
+                <div className="flex-1 border-t border-dashed border-border-subtle" />
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                <p className="text-xs text-amber-800 whitespace-pre-line leading-relaxed">
+                  {`업체명 : ${businessName || '[업체명 미설정]'}\n고객센터 : ${businessContact || '[연락처 미설정 — 통합 설정에서 등록]'}`}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -504,6 +523,8 @@ export default function NotificationsSettingsPage() {
   const [saveError, setSaveError]     = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess]  = useState(false)
   const [helpOpen, setHelpOpen]        = useState(false)
+  const [businessName, setBusinessName]   = useState<string>('')
+  const [businessContact, setBusinessContact] = useState<string>('')
   const [pageUpgradeModal, setPageUpgradeModal] = useState<{
     featureName: string
     requiredPlan: PlanType
@@ -530,9 +551,11 @@ export default function NotificationsSettingsPage() {
           featuresRes.json(),
         ])
         if (notifJson.success) {
-          const { plan_type, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string }
+          const { plan_type, business_name, solapi_from_phone, ...rest } = notifJson.data as NotificationConfig & { plan_type?: string; business_name?: string; solapi_from_phone?: string }
           setConfig(rest as NotificationConfig)
           setPlanType(toPlanType(plan_type))
+          setBusinessName(business_name ?? '')
+          setBusinessContact(solapi_from_phone ?? '')
         }
         if (fieldsJson.success && fieldsJson.data?.panelConfig) {
           setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)
@@ -793,6 +816,8 @@ export default function NotificationsSettingsPage() {
             planType={planType}
             features={features}
             totalAutoCount={totalAutoCount}
+            businessName={businessName}
+            businessContact={businessContact}
           />
         </div>
       ))}

@@ -10,6 +10,7 @@ const CRON_SECRET = 'BBK_CRON_2024_xK9mPqR3vLwZnYeA'
 interface AutoDispatchBusiness {
   id: string
   profile_id: string
+  business_name: string | null
   notification_config: NotificationConfig | null
   solapi_from_phone: string | null
   solapi_phone_verified: boolean
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
   const { data: businesses, error: bizError } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, profile_id, notification_config, solapi_from_phone, solapi_phone_verified, plan_type')
+    .select('id, profile_id, business_name, notification_config, solapi_from_phone, solapi_phone_verified, plan_type')
 
   if (bizError) {
     return NextResponse.json({ success: false, error: bizError.message }, { status: 500 })
@@ -109,7 +110,8 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
             continue
           }
 
-          await sendSMS(app.phone, message)
+          const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${biz.solapi_from_phone ?? ''}`
+          await sendSMS(app.phone, message + footer)
 
           const existing = (app.notification_log ?? []) as Array<{ type: string; sent_at: string; method?: string }>
           const updatedLog = [

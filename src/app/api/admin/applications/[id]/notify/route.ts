@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { checkAndIncrementSmsLimit } from '@/lib/sms-limit'
 import { sendSMS } from '@/lib/solapi/client'
-import { applyNotificationTemplate, DEFAULT_MSG_TEMPLATE, CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE } from '@/lib/settings-defaults'
+import { applyNotificationTemplate, DEFAULT_MSG_TEMPLATE, CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE, DEFAULT_NOTIFICATION_CONFIG } from '@/lib/settings-defaults'
 import type { ApiResponse, NotifyLog, NotificationConfig } from '@/types'
 
 export async function POST(
@@ -21,7 +21,7 @@ export async function POST(
   const { data: biz } = await service
     .schema('ilitda')
     .from('businesses')
-    .select('id, solapi_from_phone, solapi_phone_verified, plan_type, notification_config')
+    .select('id, business_name, solapi_from_phone, solapi_phone_verified, plan_type, notification_config')
     .eq('profile_id', user.id)
     .maybeSingle()
 
@@ -56,9 +56,9 @@ export async function POST(
       ? biz.solapi_from_phone
       : (process.env.SOLAPI_FROM_PHONE ?? '')
 
-    // 커스텀 템플릿 우선, 없으면 DEFAULT_MSG_TEMPLATE, 그 외엔 CUSTOM_NOTIFICATION_DEFAULT_TEMPLATE
-    const notifConfig = biz.notification_config as NotificationConfig | null
-    const matchedRule = notifConfig?.rules?.find(r => r.type === notifyType)
+    // notification_config 미저장 시 DEFAULT_NOTIFICATION_CONFIG(INITIAL_TEMPLATES 포함)로 폴백
+    const notifConfig = (biz.notification_config as NotificationConfig | null) ?? DEFAULT_NOTIFICATION_CONFIG
+    const matchedRule = notifConfig.rules?.find(r => r.type === notifyType)
     let msgText: string
 
     if (matchedRule?.template) {
@@ -81,7 +81,8 @@ export async function POST(
       }
     }
 
-    await sendSMS(app.phone, msgText)
+    const footer = `\n\n업체명 : ${biz.business_name ?? ''}\n고객센터 : ${biz.solapi_from_phone ?? ''}`
+    await sendSMS(app.phone, msgText + footer)
 
     // 알림 기록 append
     const newLog: NotifyLog = { type: notifyType, sent_at: new Date().toISOString(), method: 'manual' }
