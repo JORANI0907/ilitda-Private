@@ -526,8 +526,8 @@ export default function NotificationsSettingsPage() {
         if (fieldsJson.success && fieldsJson.data?.panelConfig) {
           setPanelConfig(fieldsJson.data.panelConfig as PanelConfig)
         }
-        if (featuresJson.success && featuresJson.data) {
-          setFeatures(featuresJson.data as Record<PlanType, PlanFeatureMap>)
+        if (featuresJson.success && featuresJson.data?.features) {
+          setFeatures(featuresJson.data.features as Record<PlanType, PlanFeatureMap>)
         }
       } finally {
         setIsLoading(false)
