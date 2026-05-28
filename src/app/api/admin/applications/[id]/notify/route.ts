@@ -47,7 +47,7 @@ export async function POST(
     const limitResult = await checkAndIncrementSmsLimit(service, biz.id, biz.plan_type ?? 'free')
     if (!limitResult.allowed) {
       return NextResponse.json<ApiResponse>(
-        { success: false, error: `오늘 발송 한도(${limitResult.limit}건)에 도달했습니다.` },
+        { success: false, error: `이번 달 발송 한도(${limitResult.limit}건)에 도달했습니다.` },
         { status: 429 }
       )
     }
