@@ -301,12 +301,15 @@ export default function BusinessProfilePage() {
         </div>
       </Card>
 
-      {/* 오늘 SMS 발송량 현황 */}
+      {/* 이번 달 SMS 발송량 현황 */}
       {business && (() => {
         const plan = business.plan_type ?? 'free'
-        const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
+        // planFeatures(DB 동적 값) 우선, 없으면 정적 상수 fallback
+        const planKey = (plan as 'free' | 'basic' | 'pro' | 'max')
+        const limit = planFeatures?.[planKey]?.sms_daily_limit ?? PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
         const used = business.monthly_sms_count ?? 0
-        const usedRatio = Math.min(used / limit, 1)
+        const isUnlimited = limit === Number.MAX_SAFE_INTEGER
+        const usedRatio = isUnlimited ? 0 : Math.min(used / limit, 1)
         return (
           <Card padding="md">
             <div className="flex items-center justify-between mb-3">
@@ -325,14 +328,21 @@ export default function BusinessProfilePage() {
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-text-tertiary">이번 달 발송</span>
-                <span className="text-sm font-medium text-text-primary">{used} / {limit === Number.MAX_SAFE_INTEGER ? '무제한' : `${limit}건`}</span>
+                <span className="text-sm font-medium text-text-primary">
+                  {used}건 / {isUnlimited ? '무제한' : `${limit.toLocaleString('ko-KR')}건`}
+                </span>
               </div>
               <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${usedRatio >= 0.9 ? 'bg-state-danger' : usedRatio >= 0.7 ? 'bg-state-warning' : 'bg-brand-600'}`}
-                  style={{ width: `${limit === Number.MAX_SAFE_INTEGER ? 0 : usedRatio * 100}%` }}
+                  style={{ width: `${usedRatio * 100}%` }}
                 />
               </div>
+              {!isUnlimited && (
+                <p className="text-xs text-text-tertiary text-right">
+                  잔여 {Math.max(limit - used, 0).toLocaleString('ko-KR')}건
+                </p>
+              )}
               {usedRatio >= 1 && (
                 <p className="text-xs text-state-danger">이번 달 발송 한도에 도달했습니다. 다음 달 1일에 초기화됩니다.</p>
               )}
