@@ -458,12 +458,14 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
 
   function handleCopyFolderLink() {
     if (!driveUrl) return
-    navigator.clipboard.writeText(driveUrl)
-      .then(() => {
-        setIsFolderLinkCopied(true)
-        setTimeout(() => setIsFolderLinkCopied(false), 2000)
-      })
-      .catch(() => {})
+    try {
+      navigator.clipboard?.writeText(driveUrl)
+        .then(() => {
+          setIsFolderLinkCopied(true)
+          setTimeout(() => setIsFolderLinkCopied(false), 2000)
+        })
+        .catch(() => {})
+    } catch {}
   }
 
   // ─── 섹션별 border color ──────────────────────────────────
