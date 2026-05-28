@@ -219,6 +219,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return Array.from(new Set([...BASE_STATUSES, ...fromRules]))
   }, [notificationConfig])
 
+  const unfilledFields = useMemo(() => {
+    const fieldKeys = [
+      'business_name', 'owner_name', 'phone', 'address',
+      'platform_nickname', 'email', 'business_number',
+      'construction_date', 'construction_time',
+      'elevator', 'parking', 'building_access', 'access_method', 'door_password',
+      'care_scope', 'request_notes', 'admin_request_notes',
+      'payment_method', 'account_number',
+      'disposition', 'admin_notes',
+    ]
+    type StringFormKey = Exclude<keyof FormState, 'spare_data'>
+    return fieldKeys
+      .filter(key => !isHidden(key))
+      .filter(key => !form[key as StringFormKey].trim())
+      .map(key => resolveLabel(key))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, panelConfig])
+
   const [notifyType, setNotifyType] = useState(() => activeNotifyTypes[0] ?? FALLBACK_NOTIFY_TYPES[0])
   const [isSendingNotify, setIsSendingNotify] = useState(false)
   const [notifyError, setNotifyError] = useState<string | null>(null)
@@ -678,8 +696,18 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             <ChevronDown size={14} className="absolute right-3 top-3 text-text-tertiary pointer-events-none" />
           </div>
 
-          {/* 섹션 (panelConfig.order.sections 순서 적용) */}
-          {orderedSectionIds.map(sectionId => {
+          {/* 일정 섹션 - 상태 바로 아래 고정 */}
+          {PANEL_SECTIONS.filter(s => s.id === 'schedule').map(sec => (
+            <div key="schedule">
+              <SectionTitle color={sec.color}>{sec.title}</SectionTitle>
+              <div className={`bg-surface rounded-2xl border-2 ${sectionBorder('schedule')} px-3 shadow-flat`}>
+                {getSectionContent('schedule')}
+              </div>
+            </div>
+          ))}
+
+          {/* 나머지 섹션 (schedule 제외, panelConfig.order.sections 순서 적용) */}
+          {orderedSectionIds.filter(id => id !== 'schedule').map(sectionId => {
             const sec = PANEL_SECTIONS.find(s => s.id === sectionId)
             if (!sec) return null
             return (
@@ -877,6 +905,24 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               </div>
             )}
           </div>
+
+          {/* 미작성 항목 */}
+          {unfilledFields.length > 0 && (
+            <>
+              <SectionTitle>미작성 항목</SectionTitle>
+              <div className="rounded-2xl border-2 border-state-warning/40 bg-state-warning-bg p-3 shadow-flat">
+                <p className="text-xs text-text-secondary mb-2 break-keep">아래 항목이 아직 작성되지 않았습니다</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {unfilledFields.map(label => (
+                    <span key={label} className="inline-flex items-center gap-1 text-xs font-medium text-state-warning bg-surface border border-state-warning/30 rounded-full px-2.5 py-1">
+                      <span className="w-1 h-1 rounded-full bg-state-warning inline-block shrink-0" />
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* 알림 기록 */}
           {notifyLogs.length > 0 && (
