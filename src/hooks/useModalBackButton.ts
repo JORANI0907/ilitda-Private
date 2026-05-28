@@ -7,8 +7,10 @@ import { useEffect, useRef } from 'react'
  * - isOpen=true  → history에 더미 entry 추가 + popstate 리스너 등록
  * - popstate 발생 → onClose() 호출 (뒤로가기로 닫힘)
  * - X버튼 등으로 프로그래밍 닫기 → replaceState로 더미 entry 소비
- *   (go(-1) 대신 replaceState 사용: Capacitor/인앱 WebView에서 go(-1)이
- *    앱 히스토리 밖으로 이탈해 "This page couldn't load" 오류 유발)
+ *
+ * 주의: pushState/replaceState URL은 반드시 상대경로(pathname)만 사용.
+ * 풀 URL(https://...)을 넣으면 Kakao 인앱브라우저·Capacitor WebView 일부
+ * 버전에서 실제 페이지 탐색으로 처리되어 "This page couldn't load" 오류 유발.
  */
 export function useModalBackButton(isOpen: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose)
@@ -19,8 +21,9 @@ export function useModalBackButton(isOpen: boolean, onClose: () => void) {
   useEffect(() => {
     if (!isOpen) return
 
-    // URL을 명시적으로 지정해 WebView 호환성 확보
-    window.history.pushState({ __modalBackButton: true }, '', window.location.href)
+    // 상대경로만 사용 — 풀 URL은 일부 WebView에서 실제 탐색을 유발함
+    const currentPath = window.location.pathname + window.location.search + window.location.hash
+    window.history.pushState({ __modalBackButton: true }, '', currentPath)
     didPopRef.current = false
 
     function handlePopState() {
@@ -33,10 +36,8 @@ export function useModalBackButton(isOpen: boolean, onClose: () => void) {
     return () => {
       window.removeEventListener('popstate', handlePopState)
       if (!didPopRef.current && window.history.state?.__modalBackButton) {
-        // go(-1) 대신 replaceState 사용:
-        // Capacitor WebView / 인앱브라우저에서 go(-1)이 앱 히스토리 밖으로
-        // 이탈해 "This page couldn't load" 오류를 유발하는 문제를 방지함
-        window.history.replaceState(null, '', window.location.href)
+        const path = window.location.pathname + window.location.search + window.location.hash
+        window.history.replaceState(null, '', path)
       }
     }
   }, [isOpen])
