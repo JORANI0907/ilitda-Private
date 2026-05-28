@@ -94,13 +94,20 @@ function NotificationRuleCard({
   features: Record<PlanType, PlanFeatureMap>
   totalAutoCount: number
 }) {
-  // 플랜 권한을 useState 이전에 계산 (초기값에 사용)
   const canAutoDispatch   = canUseFeature(planType, 'sms_auto_dispatch', features)
   const canCustomTemplate = canUseFeature(planType, 'sms_custom_template', features)
 
   const [useCustomTemplate, setUseCustomTemplate] = useState(
     rule.template !== null && rule.template !== undefined && canCustomTemplate,
   )
+
+  // API 로드 후 canCustomTemplate 이 true 로 바뀌면 기존 template 이 있을 때 편집기 열기
+  useEffect(() => {
+    if (canCustomTemplate && rule.template !== null && rule.template !== undefined) {
+      setUseCustomTemplate(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCustomTemplate])
   const [activeSection, setActiveSection] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
