@@ -78,17 +78,17 @@ export interface Business {
   plan_type?: string
   plan?: string
   plan_expires_at?: string | null
-  daily_sms_count?: number
-  daily_sms_reset_date?: string | null
+  monthly_sms_count?: number
+  monthly_sms_reset_date?: string | null
   app_display_name?: string | null
 }
 
-// ─── 플랜 발송 한도 ───────────────────────────────────────────
+// ─── 플랜 월간 발송 한도 ──────────────────────────────────────
 export const PLAN_SMS_LIMITS: Record<string, number> = {
-  free:  10,
-  basic: 20,
-  pro:   50,
-  max:   100,  // sms_daily_limit 값과 동기화 (plan-features.ts)
+  free:  150,
+  basic: 600,
+  pro:   1500,
+  max:   3000,
 }
 
 // ─── 용역자 프로필 ────────────────────────────────────────────
