@@ -81,8 +81,7 @@ export async function POST(
       }
     }
 
-    const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
-    await sendSMS(app.phone, msgText, fromPhone)
+    await sendSMS(app.phone, msgText)
 
     // 알림 기록 append
     const newLog: NotifyLog = { type: notifyType, sent_at: new Date().toISOString(), method: 'manual' }

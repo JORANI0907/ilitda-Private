@@ -109,8 +109,7 @@ export async function POST(req: NextRequest): Promise<NextResponse<ApiResponse<D
             continue
           }
 
-          const fromPhone = biz.solapi_phone_verified && biz.solapi_from_phone ? biz.solapi_from_phone : undefined
-          await sendSMS(app.phone, message, fromPhone)
+          await sendSMS(app.phone, message)
 
           const existing = (app.notification_log ?? []) as Array<{ type: string; sent_at: string; method?: string }>
           const updatedLog = [
