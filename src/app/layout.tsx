@@ -11,6 +11,11 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: '일잇다',
   },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
 }
 
 export const viewport: Viewport = {

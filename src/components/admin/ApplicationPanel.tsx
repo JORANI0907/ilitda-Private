@@ -127,9 +127,11 @@ function SectionTitle({ children, color = 'gray' }: SectionTitleProps) {
 
 function copyText(text: string, setter: (v: boolean) => void) {
   if (!text.trim()) return
-  navigator.clipboard.writeText(text)
-    .then(() => { setter(true); setTimeout(() => setter(false), 2000) })
-    .catch(() => {})
+  try {
+    navigator.clipboard?.writeText(text)
+      .then(() => { setter(true); setTimeout(() => setter(false), 2000) })
+      .catch(() => {})
+  } catch {}
 }
 
 // ─── FormState ───────────────────────────────────────────────
