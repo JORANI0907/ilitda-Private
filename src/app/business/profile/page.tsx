@@ -305,14 +305,14 @@ export default function BusinessProfilePage() {
       {business && (() => {
         const plan = business.plan_type ?? 'free'
         const limit = PLAN_SMS_LIMITS[plan] ?? PLAN_SMS_LIMITS.free
-        const used = business.daily_sms_count ?? 0
+        const used = business.monthly_sms_count ?? 0
         const usedRatio = Math.min(used / limit, 1)
         return (
           <Card padding="md">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <BarChart2 size={16} className="text-brand-600" />
-                <SectionHeader title="오늘 SMS 발송량 현황" />
+                <SectionHeader title="이번 달 SMS 발송량 현황" />
               </div>
               <button
                 type="button"
@@ -324,7 +324,7 @@ export default function BusinessProfilePage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-text-tertiary">오늘 발송</span>
+                <span className="text-xs text-text-tertiary">이번 달 발송</span>
                 <span className="text-sm font-medium text-text-primary">{used} / {limit === Number.MAX_SAFE_INTEGER ? '무제한' : `${limit}건`}</span>
               </div>
               <div className="h-2 rounded-full bg-surface-sunken overflow-hidden">
@@ -334,7 +334,7 @@ export default function BusinessProfilePage() {
                 />
               </div>
               {usedRatio >= 1 && (
-                <p className="text-xs text-state-danger">오늘 발송 한도에 도달했습니다. 내일 초기화됩니다.</p>
+                <p className="text-xs text-state-danger">이번 달 발송 한도에 도달했습니다. 다음 달 1일에 초기화됩니다.</p>
               )}
             </div>
           </Card>
