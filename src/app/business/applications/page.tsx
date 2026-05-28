@@ -460,7 +460,13 @@ export default function ApplicationsPage() {
   const displayedApps = useMemo(() => {
     const monthPrefix = `${viewYear}-${String(viewMonth).padStart(2, '0')}`
     const filtered = apps.filter((a) => {
-      if (!a.construction_date?.startsWith(monthPrefix)) return false
+      if (viewMode === 'calendar') {
+        // 캘린더 뷰: 해당 월에 날짜가 있는 항목만
+        if (!a.construction_date?.startsWith(monthPrefix)) return false
+      } else {
+        // 리스트 뷰: 날짜가 해당 월인 항목 + 날짜 미입력 항목 모두 포함
+        if (a.construction_date && !a.construction_date.startsWith(monthPrefix)) return false
+      }
       if (activeFilter !== 'all' && a.status !== activeFilter) return false
       return true
     })
@@ -474,7 +480,7 @@ export default function ApplicationsPage() {
       return sortAsc ? cmp : -cmp
     })
     return appLimit === Infinity ? sorted : sorted.slice(0, appLimit)
-  }, [apps, activeFilter, viewYear, viewMonth, sortAsc, appLimit])
+  }, [apps, activeFilter, viewYear, viewMonth, sortAsc, appLimit, viewMode])
 
   const allDates = useMemo(() => {
     const dateSet = new Set<string>()
