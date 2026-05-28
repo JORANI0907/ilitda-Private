@@ -129,6 +129,35 @@ const PLAN_STYLE: Record<string, {
   },
 }
 
+// 플랜 설명 및 추천 대상 (정적 문구 — 관리자 플랜 구성과 독립적으로 유지)
+const PLAN_DESC: Record<string, { tagline: string; target: string }> = {
+  basic: {
+    tagline: '팀 관리의 첫 시작, 핵심만 담았습니다',
+    target: '소규모 팀·1인 사업자가 처음 시작하기에 적합',
+  },
+  pro: {
+    tagline: '무제한 신청서 + 견적서까지 완전 운영',
+    target: '빠르게 성장 중인 팀, 견적이 잦은 업종 추천',
+  },
+  max: {
+    tagline: '계약서·앱 커스텀까지 모든 기능 완전 해제',
+    target: '계약 관리 필요, 나만의 브랜드 앱을 원하는 분',
+  },
+}
+
+// 핵심 기능 키 집합 — ★ 표시 대상
+const KEY_FEATURE_KEYS = new Set([
+  'workers',
+  'payroll',
+  'revenue',
+  'quotations',
+  'contracts',
+  'sms_auto_dispatch',
+  'application_limit',
+  'marketplace',
+  'app_name_custom',
+])
+
 function formatLimit(val: unknown): string {
   if (val === true || val === false) return ''
   if (val === Infinity || val === null || val === undefined) return '무제한'
@@ -349,22 +378,42 @@ export default function PlanPage() {
               )}
 
               {/* 플랜 헤더 */}
-              <div className={`flex items-center justify-between px-4 py-3.5 ${isCurrent ? '' : style.headerBg}`}>
-                <div className="flex items-center gap-2">
-                  {style.icon}
-                  <span className={`font-bold text-base ${style.accent}`}>{PLAN_NAMES[key]}</span>
-                  {isCurrent && (
-                    <span className="text-[10px] font-semibold text-white bg-gray-400 px-2 py-0.5 rounded-full">현재</span>
-                  )}
-                  {isLower && !isCurrent && (
-                    <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">하향</span>
-                  )}
+              <div className={`px-4 pt-4 pb-3 ${isCurrent ? '' : style.headerBg}`}>
+                {/* 플랜명 + 가격 */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {style.icon}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`font-extrabold text-base leading-tight ${style.accent}`}>{PLAN_NAMES[key]}</span>
+                        {isCurrent && (
+                          <span className="text-[9px] font-bold text-white bg-state-success px-1.5 py-0.5 rounded-full">현재</span>
+                        )}
+                        {isLower && !isCurrent && (
+                          <span className="text-[9px] font-bold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full">하향</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-text-tertiary leading-snug mt-0.5 break-keep">
+                        {PLAN_DESC[key]?.tagline}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="flex items-baseline gap-0.5 justify-end">
+                      <span className="text-2xl font-black text-text-primary leading-none">
+                        {PLAN_PRICES[key].toLocaleString('ko-KR')}
+                      </span>
+                      <span className="text-xs text-text-tertiary">원</span>
+                    </div>
+                    <p className="text-[10px] text-text-tertiary text-right">/ 월</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xl font-bold text-text-primary">
-                    {PLAN_PRICES[key].toLocaleString('ko-KR')}
+                {/* 추천 대상 */}
+                <div className={`mt-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl ${style.accentBg}`}>
+                  <span className="text-xs leading-none">👤</span>
+                  <span className={`text-[11px] font-medium leading-snug break-keep ${style.accent}`}>
+                    {PLAN_DESC[key]?.target}
                   </span>
-                  <span className="text-xs text-text-tertiary">원/월</span>
                 </div>
               </div>
 
@@ -379,20 +428,32 @@ export default function PlanPage() {
                           {CATEGORY_LABEL[cat] ?? cat}
                         </span>
                       </div>
-                      <ul className="flex flex-col gap-1">
-                        {items.map(m => (
-                          <li key={m.feature_key} className="flex items-center gap-2">
-                            <Check size={11} className={`shrink-0 ${style.accent}`} />
-                            <span className="text-xs text-text-secondary break-keep leading-snug">
-                              {m.label}
-                              {m.feature_type === 'numeric' && (
-                                <span className={`ml-1 font-semibold ${style.accent}`}>
-                                  ({formatLimit(f?.[key]?.[m.feature_key])})
-                                </span>
+                      <ul className="flex flex-col gap-1.5">
+                        {items.map(m => {
+                          const isKey = KEY_FEATURE_KEYS.has(m.feature_key)
+                          return (
+                            <li key={m.feature_key} className="flex items-start gap-2">
+                              {isKey ? (
+                                <span className="shrink-0 text-[11px] font-black text-amber-500 mt-0.5 leading-none">★</span>
+                              ) : (
+                                <Check size={11} className={`shrink-0 ${style.accent} mt-0.5`} />
                               )}
-                            </span>
-                          </li>
-                        ))}
+                              <span className={`text-xs break-keep leading-snug ${isKey ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>
+                                {m.label}
+                                {isKey && (
+                                  <span className="ml-1.5 text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                    핵심
+                                  </span>
+                                )}
+                                {m.feature_type === 'numeric' && (
+                                  <span className={`ml-1 font-semibold ${style.accent}`}>
+                                    ({formatLimit(f?.[key]?.[m.feature_key])})
+                                  </span>
+                                )}
+                              </span>
+                            </li>
+                          )
+                        })}
                       </ul>
                     </div>
                   ))}
@@ -489,16 +550,22 @@ export default function PlanPage() {
               {/* 기능 행 */}
               {cat.items.map((item, i) => {
                 const isLast = i === cat.items.length - 1
+                const isKey  = KEY_FEATURE_KEYS.has(item.feature_key)
                 return (
                   <div
                     key={item.feature_key}
-                    className={`grid grid-cols-4 items-center ${!isLast ? 'border-b border-border-subtle' : ''}`}
+                    className={`grid grid-cols-4 items-center ${!isLast ? 'border-b border-border-subtle' : ''} ${isKey ? 'bg-amber-50/50' : ''}`}
                   >
                     {/* 기능명 */}
                     <div className="px-3 py-3.5">
-                      <span className="text-xs leading-snug break-keep text-text-secondary">
-                        {item.label}
-                      </span>
+                      <div className="flex items-start gap-1.5">
+                        {isKey && (
+                          <span className="shrink-0 text-[11px] font-black text-amber-500 leading-none mt-0.5">★</span>
+                        )}
+                        <span className={`text-xs leading-snug break-keep ${isKey ? 'font-semibold text-text-primary' : 'text-text-secondary'}`}>
+                          {item.label}
+                        </span>
+                      </div>
                     </div>
 
                     {/* 플랜별 셀 */}
