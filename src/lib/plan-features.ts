@@ -38,7 +38,7 @@ export interface PlanFeatureMap {
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatureMap> = {
   free: {
-    sms_daily_limit:     300,
+    sms_daily_limit:     150,
     sms_auto_dispatch:   false,
     sms_custom_template: false,
     worker_limit:        10,
