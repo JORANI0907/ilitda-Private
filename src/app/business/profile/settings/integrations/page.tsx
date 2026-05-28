@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, Loader2, FolderOpen, Plus, Trash2, Pencil, Check } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, CheckCircle2, XCircle, FolderOpen, Plus, Trash2, Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
@@ -53,12 +53,11 @@ export default function IntegrationsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showHelpDrawer, setShowHelpDrawer] = useState(false)
 
-  // Solapi 상태
+  // 담당자 연락처 상태
   const [phoneInput, setPhoneInput] = useState('')
-  const [otpInput, setOtpInput] = useState('')
-  const [pendingPhone, setPendingPhone] = useState('')
-  const [solapiLoading, setSolapiLoading] = useState(false)
-  const [solapiError, setSolapiError] = useState<string | null>(null)
+  const [phoneSaving, setPhoneSaving] = useState(false)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [phoneSuccess, setPhoneSuccess] = useState(false)
 
   // Drive 상태
   const [gmailInput, setGmailInput] = useState('')
@@ -88,23 +87,10 @@ export default function IntegrationsPage() {
           const b = json.data.business as Business
           const p = json.data.profile as Profile | undefined
           setBiz(b)
-          setPhoneInput(b.solapi_from_phone ?? '')
+          setPhoneInput(b.solapi_from_phone ?? p?.phone ?? '')
           setGmailInput(b.gmail_for_drive ?? '')
           if (Array.isArray(b.drive_subfolders) && b.drive_subfolders.length > 0) {
             setSubfolderList(b.drive_subfolders)
-          }
-          // 미인증 상태에서 가입 연락처로 자동 설정
-          if (!b.solapi_phone_verified && p?.phone) {
-            try {
-              const autoRes = await fetch('/api/admin/integrations/solapi', { method: 'PATCH' })
-              const autoJson = await autoRes.json()
-              if (autoJson.success && autoJson.data?.phone) {
-                setBiz(prev => prev ? { ...prev, solapi_from_phone: autoJson.data.phone, solapi_phone_verified: true } : prev)
-                setPhoneInput(autoJson.data.phone)
-              }
-            } catch {
-              // 자동 설정 실패 시 수동 입력으로 fallback
-            }
           }
         }
       } finally {
@@ -113,61 +99,40 @@ export default function IntegrationsPage() {
     })()
   }, [])
 
-  // ── Solapi ──────────────────────────────────────────────────
-  async function handleRequestOtp() {
+  // ── 담당자 연락처 ────────────────────────────────────────────
+  async function handleSavePhone() {
     const phone = phoneInput.replace(/[^0-9]/g, '')
-    if (phone.length < 10) { setSolapiError('올바른 전화번호를 입력해주세요.'); return }
-    setSolapiLoading(true)
-    setSolapiError(null)
+    if (phone.length < 9) { setPhoneError('올바른 전화번호를 입력해주세요.'); return }
+    setPhoneSaving(true)
+    setPhoneError(null)
+    setPhoneSuccess(false)
     try {
       const res = await fetch('/api/admin/integrations/solapi', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: phone }),
       })
       const json = await res.json()
-      if (!json.success) { setSolapiError(json.error ?? '요청 실패'); return }
-      setPendingPhone(phone)
-      setOtpInput('')
+      if (!json.success) { setPhoneError(json.error ?? '저장 실패'); return }
+      setBiz(prev => prev ? { ...prev, solapi_from_phone: phone, solapi_phone_verified: true } : prev)
+      setPhoneSuccess(true)
+      setTimeout(() => setPhoneSuccess(false), 3000)
     } catch {
-      setSolapiError('네트워크 오류가 발생했습니다.')
+      setPhoneError('네트워크 오류가 발생했습니다.')
     } finally {
-      setSolapiLoading(false)
+      setPhoneSaving(false)
     }
   }
 
-  async function handleVerifyOtp() {
-    if (!pendingPhone || otpInput.length < 5) { setSolapiError('인증번호를 입력해주세요.'); return }
-    setSolapiLoading(true)
-    setSolapiError(null)
-    try {
-      const res = await fetch('/api/admin/integrations/solapi', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otp: otpInput, phoneNumber: pendingPhone }),
-      })
-      const json = await res.json()
-      if (!json.success) { setSolapiError(json.error ?? '인증 실패'); return }
-      setBiz(prev => prev ? { ...prev, solapi_from_phone: pendingPhone, solapi_phone_verified: true } : prev)
-      setPendingPhone('')
-      setOtpInput('')
-    } catch {
-      setSolapiError('네트워크 오류가 발생했습니다.')
-    } finally {
-      setSolapiLoading(false)
-    }
-  }
-
-  async function handleRemoveSolapi() {
-    if (!confirm('발신번호 연동을 해제하시겠습니까?')) return
-    setSolapiLoading(true)
+  async function handleClearPhone() {
+    if (!confirm('담당자 연락처를 삭제하시겠습니까?')) return
+    setPhoneSaving(true)
     try {
       await fetch('/api/admin/integrations/solapi', { method: 'DELETE' })
       setBiz(prev => prev ? { ...prev, solapi_from_phone: null, solapi_phone_verified: false } : prev)
       setPhoneInput('')
-      setPendingPhone('')
     } finally {
-      setSolapiLoading(false)
+      setPhoneSaving(false)
     }
   }
 
@@ -269,84 +234,54 @@ export default function IntegrationsPage() {
         title="외부 연동 안내"
         sections={[
           {
-            title: '솔라피(Solapi) 연동이란?',
-            content: '솔라피는 문자 발송 서비스입니다.\n솔라피 연동을 완료하면 고객에게 보내는 알림 문자가 일잇다 기본 번호가 아닌 내 사업용 전화번호로 발송됩니다.',
+            title: 'SMS 문의전화 번호란?',
+            content: '알림 SMS 메시지 본문에 표시되는 담당자 연락처입니다.\n고객이 문의 전화를 걸 때 사용하는 번호를 입력해주세요.',
           },
           {
-            title: '내 번호로 문자 발송하기',
-            content: '연동하면 고객이 받는 문자에 내 사업체 전화번호가 표시됩니다.\n고객 입장에서 모르는 번호가 아니라 익숙한 업체 번호로 알림이 오므로 신뢰도가 높아집니다.',
+            title: '어떤 번호를 입력하나요?',
+            content: '사업체 대표 번호 또는 담당자 직통 번호를 입력하시면 됩니다.\n저장 후 알림 SMS 커스텀 문구에서 {contact} 변수로 활용할 수 있습니다.',
           },
           {
-            title: '연동 방법 (API키 발급 위치)',
-            content: '1. https://solapi.com 에 접속 후 회원가입 또는 로그인\n2. 좌측 메뉴 → [발신번호 관리] → 사용할 전화번호 등록\n3. 아래 [인증 요청] 버튼을 눌러 번호 인증을 진행하면 연동이 완료됩니다.',
+            title: 'Google Drive 연동이란?',
+            content: '입력한 Gmail로 업체 전용 드라이브 폴더가 공유됩니다.\n신청서에서 작업 폴더를 생성하면 자동으로 하위 폴더가 만들어지며, 작업자는 로그인 없이 링크로 사진을 업로드할 수 있습니다.',
           },
         ]}
       />
 
-      {/* 도움말 팁 (warning) */}
+      {/* 도움말 팁 */}
       <HelpTip variant="warning">
-        솔라피 연동 전에는 일잇다 기본 발신번호로 문자가 발송됩니다.
+        SMS 문의전화 번호는 메시지 본문에 표시되는 연락처입니다. 실제 발신번호는 일잇다 플랫폼 번호로 고정됩니다.
       </HelpTip>
 
-      {/* ── 알림 발신번호 ─────────────────────────── */}
+      {/* ── SMS 문의전화 번호 ────────────────────── */}
       <Section
         icon={<Phone size={16} />}
-        title="서비스 알림 발신 번호 설정"
-        badge={<StatusBadge verified={!!biz?.solapi_phone_verified} label={biz?.solapi_from_phone ?? ''} />}
+        title="SMS 문의전화 번호"
+        badge={<StatusBadge verified={!!biz?.solapi_from_phone} label={biz?.solapi_from_phone ?? ''} />}
       >
         <p className="text-xs text-text-tertiary leading-relaxed">
-          인증된 번호로 고객에게 알림이 발송됩니다. 번호 인증 시 해당 번호로 인증번호가 발송됩니다.
+          알림 SMS 본문에 표시되는 담당자 연락처입니다. 커스텀 문구의 <span className="font-medium text-text-secondary">{'{contact}'}</span> 변수에 사용됩니다.
         </p>
-
-        {!pendingPhone ? (
-          // 1단계: 번호 입력
-          <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Input
-                placeholder="010-0000-0000"
-                value={phoneInput}
-                onChange={e => setPhoneInput(e.target.value)}
-                className="flex-1"
-              />
-              <Button size="md" onClick={handleRequestOtp} isLoading={solapiLoading} className="whitespace-nowrap">
-                인증 요청
-              </Button>
-            </div>
-            {biz?.solapi_phone_verified && (
-              <Button variant="ghost" size="sm" onClick={handleRemoveSolapi} isLoading={solapiLoading}>
-                발신번호 해제
-              </Button>
-            )}
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input
+              placeholder="010-0000-0000"
+              value={phoneInput}
+              onChange={e => setPhoneInput(e.target.value)}
+              className="flex-1"
+            />
+            <Button size="md" onClick={handleSavePhone} isLoading={phoneSaving} className="whitespace-nowrap">
+              저장
+            </Button>
           </div>
-        ) : (
-          // 2단계: OTP 입력
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-brand-600 font-medium">
-              {pendingPhone} 으로 인증번호를 발송했습니다.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="인증번호 6자리"
-                value={otpInput}
-                onChange={e => setOtpInput(e.target.value)}
-                maxLength={6}
-                className="flex-1"
-              />
-              <Button size="md" onClick={handleVerifyOtp} isLoading={solapiLoading}>
-                확인
-              </Button>
-            </div>
-            <button
-              type="button"
-              className="text-xs text-text-tertiary text-left underline underline-offset-2"
-              onClick={() => { setPendingPhone(''); setOtpInput('') }}
-            >
-              번호 다시 입력
-            </button>
-          </div>
-        )}
-
-        {solapiError && <p className="text-xs text-state-danger">{solapiError}</p>}
+          {biz?.solapi_from_phone && (
+            <Button variant="ghost" size="sm" onClick={handleClearPhone} isLoading={phoneSaving}>
+              번호 삭제
+            </Button>
+          )}
+        </div>
+        {phoneError && <p className="text-xs text-state-danger">{phoneError}</p>}
+        {phoneSuccess && <p className="text-xs text-state-success">저장되었습니다.</p>}
       </Section>
 
       {/* ── 구글 드라이브 ─────────────────────────── */}
