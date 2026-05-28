@@ -225,7 +225,7 @@ export default function BusinessProfilePage() {
           },
           {
             title: '앱 설정 변경 방법',
-            content: '아래쪽 "설정" 섹션에서 알림 설정, 발신번호·드라이브 연동, 직원 권한 설정을 변경할 수 있습니다.\n\n각 항목을 탭하면 해당 설정 화면으로 이동합니다.',
+            content: '아래쪽 "설정" 섹션에서 알림 설정, 드라이브 연동, 직원 권한 설정을 변경할 수 있습니다.\n\n각 항목을 탭하면 해당 설정 화면으로 이동합니다.',
           },
           {
             title: '관리자 패널 접근 방법',
@@ -492,8 +492,8 @@ export default function BusinessProfilePage() {
             <div className="flex items-center gap-3">
               <CreditCard size={16} className="text-text-tertiary" />
               <div>
-                <span className="text-sm text-text-primary">발신번호 · 드라이브 연동</span>
-                <p className="text-xs text-text-tertiary mt-0.5">고객 수신용 연락처, 서비스폴더를 설정 하세요</p>
+                <span className="text-sm text-text-primary">드라이브 연동</span>
+                <p className="text-xs text-text-tertiary mt-0.5">고객 수신용 서비스 폴더를 설정하세요.</p>
               </div>
             </div>
             <ChevronRight size={16} className="text-text-tertiary" />
