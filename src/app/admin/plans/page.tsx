@@ -48,7 +48,7 @@ const FEATURE_PAGE_MAP: Record<string, { path: string; type: '페이지차단' |
   app_name_custom:     { path: '/프로필 › 앱이름 설정',       type: '기능제한'  },
   sms_auto_dispatch:   { path: '/설정 › SMS알림',            type: '기능제한'  },
   sms_custom_template: { path: '/설정 › SMS알림',            type: '기능제한'  },
-  sms_daily_limit:     { path: '/서비스관리 › SMS발송',       type: '수제한'    },
+  sms_daily_limit:     { path: '/서비스관리 › SMS발송 (월 한도)', type: '수제한'    },
 }
 
 const PAGE_TYPE_STYLE: Record<string, string> = {
@@ -415,7 +415,7 @@ export default function AdminPlansPage() {
       {!isLoading && numericConfigs.length > 0 && (
         <Card padding="md">
           <h3 className="text-sm font-semibold text-text-secondary mb-1">수치 한도</h3>
-          <p className="text-xs text-text-tertiary mb-4">빈 칸은 무제한(∞)으로 처리됩니다.</p>
+          <p className="text-xs text-text-tertiary mb-4">빈 칸은 무제한(∞)으로 처리됩니다. SMS 발송 한도는 월 기준이며 매월 1일 초기화됩니다.</p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[360px]">
               <thead>
