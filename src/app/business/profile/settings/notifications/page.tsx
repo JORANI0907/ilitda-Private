@@ -50,20 +50,24 @@ interface SmsVar { token: string; label: string; preview: string; section: strin
 function buildVarsFromConfig(panelConfig: PanelConfig | null): SmsVar[] {
   return DEFAULT_PANEL_FIELDS
     .filter(f => {
-      if (f.readOnly) return false
-      if (f.defaultHidden) return false
-      if (!(f.key in SMS_TOKEN_META)) return false
-      const isHidden = panelConfig?.fields?.[f.key]?.hidden ?? false
+      // 필드 설정 페이지의 visibility 와 동일하게 판단:
+      // panelConfig.hidden 이 명시된 경우 그 값을, 아니면 defaultHidden 사용
+      const panelOverride = panelConfig?.fields?.[f.key]
+      const isHidden = panelOverride?.hidden !== undefined
+        ? panelOverride.hidden
+        : (f.defaultHidden ?? false)
       return !isHidden
     })
     .map(f => {
       const override = panelConfig?.fields?.[f.key]
       const label = override?.label?.trim() || f.label
+      // SMS_TOKEN_META 에 있으면 실제 예시값, 없으면 라벨 표시
+      const preview = SMS_TOKEN_META[f.key]?.preview ?? `[${label}]`
       return {
         token:   `{${f.key}}`,
         label,
         section: f.section,
-        preview: SMS_TOKEN_META[f.key].preview,
+        preview,
       }
     })
 }

@@ -216,33 +216,25 @@ export const SMS_TOKEN_META: Record<string, { preview: string }> = {
   drive_folder_url:  { preview: 'https://drive.google.com/drive/folders/예시링크' },
 }
 
-// 커스텀 알림 템플릿의 {fieldKey} 토큰을 실제 데이터로 치환
+// 금액 포맷이 필요한 숫자 필드
+const NUMERIC_AMOUNT_KEYS = new Set(['supply_amount', 'vat', 'supply_total', 'balance'])
+
+// 커스텀 알림 템플릿의 {fieldKey} 토큰을 실제 데이터로 치환.
+// 필드 설정 페이지에서 추가된 커스텀 필드(spare_* 등)도 자동으로 처리됨.
 export function applyNotificationTemplate(
   template: string,
   app: Record<string, unknown>,
 ): string {
-  const values: Record<string, string> = {
-    business_name:     String(app.business_name ?? ''),
-    owner_name:        String(app.owner_name ?? ''),
-    phone:             String(app.phone ?? ''),
-    email:             String(app.email ?? ''),
-    business_number:   String(app.business_number ?? ''),
-    address:           String(app.address ?? ''),
-    construction_date: String(app.construction_date ?? ''),
-    construction_time: String(app.construction_time ?? ''),
-    care_scope:        String(app.care_scope ?? ''),
-    request_notes:     String(app.request_notes ?? ''),
-    payment_method:    String(app.payment_method ?? ''),
-    account_number:    String(app.account_number ?? ''),
-    supply_amount:     app.supply_amount ? `${Number(app.supply_amount).toLocaleString('ko-KR')}원` : '',
-    vat:               app.vat ? `${Number(app.vat).toLocaleString('ko-KR')}원` : '',
-    balance:           app.balance ? `${Number(app.balance).toLocaleString('ko-KR')}원` : '',
-    drive_folder_url:  String(app.drive_folder_url ?? ''),
-  }
-  return Object.entries(values).reduce(
-    (msg, [key, val]) => msg.replaceAll(`{${key}}`, val),
-    template,
-  )
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => {
+    const val = app[key]
+    if (val === null || val === undefined || val === '') return ''
+    if (typeof val === 'number') {
+      return NUMERIC_AMOUNT_KEYS.has(key)
+        ? `${val.toLocaleString('ko-KR')}원`
+        : val.toLocaleString('ko-KR')
+    }
+    return String(val)
+  })
 }
 
 export const SECTION_BORDER_COLOR: Record<string, string> = {
