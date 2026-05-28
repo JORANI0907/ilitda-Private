@@ -206,6 +206,7 @@ export default function RequestPage({ params }: PageProps) {
   const [phoneOtpError, setPhoneOtpError] = useState<string | null>(null)
 
   // 사업자번호 인증
+  const [noBizNumber, setNoBizNumber] = useState(false)
   const [bizVerifyStatus, setBizVerifyStatus] = useState<BizVerifyStatus>('idle')
   const [bizVerifyMessage, setBizVerifyMessage] = useState('')
 
@@ -608,56 +609,80 @@ export default function RequestPage({ params }: PageProps) {
               {/* 사업자번호 — 인증 방식 (field KEY 기반, show/hide 재진입 시에도 동작) */}
               {formConfig.show_fields.business_number && (
                 <Field label="사업자번호">
-                  <div className="flex gap-2">
+                  {/* 없음 체크박스 */}
+                  <label className="flex items-center gap-2 mb-2.5 cursor-pointer select-none">
                     <input
-                      className={`flex-1 ${inputCls(
-                        bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? 'err' : ''
-                      )}`}
-                      style={{
-                        borderColor: bizVerifyStatus === 'valid' ? '#22c55e'
-                          : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? '#ef4444'
-                          : undefined,
-                      }}
-                      placeholder="000-00-00000"
-                      value={form.business_number}
-                      maxLength={12}
-                      readOnly={bizVerifyStatus === 'valid'}
+                      type="checkbox"
+                      checked={noBizNumber}
                       onChange={(e) => {
-                        if (bizVerifyStatus !== 'valid') {
-                          set('business_number')(formatBizNumber(e.target.value))
+                        setNoBizNumber(e.target.checked)
+                        if (e.target.checked) {
+                          set('business_number')('')
                           setBizVerifyStatus('idle')
                           setBizVerifyMessage('')
                         }
                       }}
+                      className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                     />
-                    <button
-                      type="button"
-                      onClick={handleVerifyBiz}
-                      disabled={bizVerifyStatus === 'valid' || bizVerifyStatus === 'loading' || form.business_number.replace(/-/g, '').length < 10}
-                      className={`px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all ${
-                        bizVerifyStatus === 'valid'
-                          ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
-                          : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 disabled:opacity-40'
-                      }`}
-                    >
-                      {bizVerifyStatus === 'valid' ? (
-                        <><CheckCircle2 size={13} />인증완료</>
-                      ) : bizVerifyStatus === 'loading' ? (
-                        <><Loader2 size={13} className="animate-spin" />조회중</>
-                      ) : (
-                        <><Search size={13} />인증</>
+                    <span className="text-sm text-slate-600">사업자번호가 없습니다</span>
+                  </label>
+
+                  {noBizNumber ? (
+                    <p className="text-xs text-slate-400 py-2">사업자번호 없이도 신청 가능합니다.</p>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          className={`flex-1 ${inputCls(
+                            bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? 'err' : ''
+                          )}`}
+                          style={{
+                            borderColor: bizVerifyStatus === 'valid' ? '#22c55e'
+                              : bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error' ? '#ef4444'
+                              : undefined,
+                          }}
+                          placeholder="000-00-00000"
+                          value={form.business_number}
+                          maxLength={12}
+                          readOnly={bizVerifyStatus === 'valid'}
+                          onChange={(e) => {
+                            if (bizVerifyStatus !== 'valid') {
+                              set('business_number')(formatBizNumber(e.target.value))
+                              setBizVerifyStatus('idle')
+                              setBizVerifyMessage('')
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyBiz}
+                          disabled={bizVerifyStatus === 'valid' || bizVerifyStatus === 'loading' || form.business_number.replace(/-/g, '').length < 10}
+                          className={`px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all ${
+                            bizVerifyStatus === 'valid'
+                              ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
+                              : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 disabled:opacity-40'
+                          }`}
+                        >
+                          {bizVerifyStatus === 'valid' ? (
+                            <><CheckCircle2 size={13} />인증완료</>
+                          ) : bizVerifyStatus === 'loading' ? (
+                            <><Loader2 size={13} className="animate-spin" />조회중</>
+                          ) : (
+                            <><Search size={13} />인증</>
+                          )}
+                        </button>
+                      </div>
+                      {bizVerifyStatus === 'valid' && (
+                        <div className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle2 size={12} /><span>{bizVerifyMessage}</span>
+                        </div>
                       )}
-                    </button>
-                  </div>
-                  {bizVerifyStatus === 'valid' && (
-                    <div className="mt-1.5 flex items-center gap-1 text-xs text-green-600">
-                      <CheckCircle2 size={12} /><span>{bizVerifyMessage}</span>
-                    </div>
-                  )}
-                  {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
-                    <div className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
-                      <XCircle size={12} /><span>{bizVerifyMessage}</span>
-                    </div>
+                      {(bizVerifyStatus === 'invalid' || bizVerifyStatus === 'error') && (
+                        <div className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
+                          <XCircle size={12} /><span>{bizVerifyMessage}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </Field>
               )}
