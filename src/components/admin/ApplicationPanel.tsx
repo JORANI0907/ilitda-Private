@@ -505,27 +505,27 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('phone') && (
             <FieldRow label={resolveLabel('phone')}>
-              <div className="flex flex-col gap-1.5">
-                <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <EditInput value={form.phone} onChange={setF('phone')} type="tel" placeholder={resolvePlaceholder('phone')} />
+                </div>
                 {form.phone.trim() && (
-                  <div className="flex gap-1.5">
+                  <>
                     <button
                       type="button"
                       onClick={() => copyText(form.phone, setCopiedPhone)}
-                      className="flex-1 h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                      className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
                     >
-                      {copiedPhone ? <Check size={11} className="text-state-success" /> : <Copy size={11} />}
-                      {copiedPhone ? '복사됨' : '복사'}
+                      {copiedPhone ? <Check size={14} className="text-state-success" /> : <Copy size={14} />}
                     </button>
                     <button
                       type="button"
                       onClick={() => { window.location.href = `tel:${form.phone}` }}
-                      className="flex-1 h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-brand-200 text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-[0.98] transition-all"
+                      className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border border-brand-200 text-brand-600 bg-brand-50 hover:bg-brand-100 active:scale-[0.98] transition-all"
                     >
-                      <Phone size={11} />
-                      전화 걸기
+                      <Phone size={14} />
                     </button>
-                  </div>
+                  </>
                 )}
               </div>
             </FieldRow>
@@ -542,31 +542,30 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('address') && (
             <FieldRow label={resolveLabel('address')}>
-              <div className="flex flex-col gap-1.5">
-                <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <EditInput value={form.address} onChange={setF('address')} placeholder={resolvePlaceholder('address')} />
+                </div>
                 {form.address.trim() && (
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <button
                       type="button"
                       onClick={() => setShowMapMenu(prev => !prev)}
-                      className="w-full h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
                     >
-                      <MapPin size={11} />
-                      지도 앱으로 열기
-                      <ChevronDown size={11} className={`ml-auto mr-1 transition-transform ${showMapMenu ? 'rotate-180' : ''}`} />
+                      <MapPin size={14} />
                     </button>
                     {showMapMenu && (
-                      <div className="absolute top-full mt-1 left-0 right-0 bg-surface rounded-xl border border-border shadow-pop overflow-hidden z-10">
+                      <div className="absolute top-full mt-1 right-0 w-44 bg-surface rounded-xl border border-border shadow-pop overflow-hidden z-10">
                         {MAP_APPS.map(app => (
                           <button
                             key={app.name}
                             type="button"
                             onClick={() => handleOpenMap(form.address, app.getUrl(form.address))}
-                            className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-sunken active:bg-surface-sunken text-sm text-text-primary transition-colors text-left"
+                            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-surface-sunken active:bg-surface-sunken text-sm text-text-primary transition-colors text-left"
                           >
                             <MapPin size={13} className="text-brand-500 shrink-0" />
                             <span className="font-medium">{app.name}</span>
-                            <span className="ml-auto text-xs text-text-tertiary">주소 복사됨</span>
                           </button>
                         ))}
                       </div>
@@ -669,16 +668,17 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
           )}
           {!isHidden('account_number') && (
             <FieldRow label={resolveLabel('account_number')}>
-              <div className="flex flex-col gap-1.5">
-                <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+              <div className="flex items-center gap-1.5">
+                <div className="flex-1 min-w-0">
+                  <EditInput value={form.account_number} onChange={setF('account_number')} placeholder={resolvePlaceholder('account_number')} />
+                </div>
                 {form.account_number.trim() && (
                   <button
                     type="button"
                     onClick={() => copyText(form.account_number, setCopiedAccount)}
-                    className="w-full h-8 rounded-lg flex items-center justify-center gap-1 text-xs font-medium border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
+                    className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center border border-border text-text-secondary hover:bg-surface-sunken active:scale-[0.98] transition-all"
                   >
-                    {copiedAccount ? <Check size={11} className="text-state-success" /> : <Copy size={11} />}
-                    {copiedAccount ? '복사됨' : '계좌번호 복사'}
+                    {copiedAccount ? <Check size={14} className="text-state-success" /> : <Copy size={14} />}
                   </button>
                 )}
               </div>
