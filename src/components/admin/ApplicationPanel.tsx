@@ -238,6 +238,31 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
     return Array.from(new Set([...BASE_STATUSES, ...fromRules]))
   }, [notificationConfig])
 
+  // ─── panelConfig 헬퍼 ─────────────────────────────────────
+  const resolveLabel = (key: string): string => {
+    const override = panelConfig?.fields?.[key]?.label
+    if (override) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.label ?? key
+  }
+
+  const resolvePlaceholder = (key: string): string => {
+    const override = panelConfig?.fields?.[key]?.placeholder
+    if (override !== undefined) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.placeholder ?? ''
+  }
+
+  const resolveOptions = (key: string): string[] => {
+    const override = panelConfig?.fields?.[key]?.options
+    if (override?.length) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.options ?? []
+  }
+
+  const isHidden = (key: string): boolean => {
+    const override = panelConfig?.fields?.[key]?.hidden
+    if (override !== undefined) return override
+    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.defaultHidden ?? false
+  }
+
   const unfilledFields = useMemo(() => {
     const fieldKeys = [
       'business_name', 'owner_name', 'phone', 'address',
@@ -310,31 +335,6 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
   const totalAmount = unitPrice + vatAmount
   const depositAmount = Number(form.deposit) || 0
   const balanceAmount = totalAmount - depositAmount
-
-  // ─── panelConfig 헬퍼 ─────────────────────────────────────
-  const resolveLabel = (key: string): string => {
-    const override = panelConfig?.fields?.[key]?.label
-    if (override) return override
-    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.label ?? key
-  }
-
-  const resolvePlaceholder = (key: string): string => {
-    const override = panelConfig?.fields?.[key]?.placeholder
-    if (override !== undefined) return override
-    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.placeholder ?? ''
-  }
-
-  const resolveOptions = (key: string): string[] => {
-    const override = panelConfig?.fields?.[key]?.options
-    if (override?.length) return override
-    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.options ?? []
-  }
-
-  const isHidden = (key: string): boolean => {
-    const override = panelConfig?.fields?.[key]?.hidden
-    if (override !== undefined) return override
-    return DEFAULT_PANEL_FIELDS.find((f) => f.key === key)?.defaultHidden ?? false
-  }
 
   // 지도 메뉴 외부 클릭 닫기
   useEffect(() => {
