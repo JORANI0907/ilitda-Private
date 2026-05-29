@@ -166,8 +166,6 @@ function DayListPanel({
   allDates: string[]
   onDateChange: (date: string) => void
 }) {
-  useModalBackButton(true, onClose)
-
   const touchStartX = useRef<number | null>(null)
   const parts = dateStr.split('-').map(Number)
   const m = parts[1]
