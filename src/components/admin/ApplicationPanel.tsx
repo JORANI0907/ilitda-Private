@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Star, Phone, Megaphone, Save, Trash2, ChevronDown, FolderOpen, ExternalLink, Users, Copy, Check, MapPin } from 'lucide-react'
-import { useModalBackButton } from '@/hooks/useModalBackButton'
 import { Button } from '@/components/ui/Button'
 import { HelpIcon } from '@/components/ui/HelpIcon'
 import {
@@ -209,7 +209,7 @@ interface Props {
 
 // ─── 메인 패널 ────────────────────────────────────────────────
 export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig, notificationConfig }: Props) {
-  useModalBackButton(true, onClose)
+  const router = useRouter()
 
   const [form, setForm] = useState<FormState>(() => toForm(app))
   const [status, setStatus] = useState<string>(app.status)
@@ -943,7 +943,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
                 ) : (
                   <p className="text-xs text-teal-600/70 break-keep">
                     Google Drive 연동이 필요해요.{' '}
-                    <a href="/business/profile/settings/integrations" className="underline font-medium">연동 설정하기 →</a>
+                    <button type="button" onClick={() => router.push('/business/profile/settings/integrations')} className="underline font-medium">연동 설정하기 →</button>
                   </p>
                 )}
               </>
@@ -966,7 +966,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
               {activeNotifyTypes.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
             <p className="text-xs text-amber-700/70 break-keep">
-              <a href="/business/profile/settings/notifications" className="underline font-medium">알림 목록 수정 →</a>
+              <button type="button" onClick={() => router.push('/business/profile/settings/notifications')} className="underline font-medium">알림 목록 수정 →</button>
             </p>
             {solapiConnected ? (
               <button
@@ -985,7 +985,7 @@ export function ApplicationPanel({ app, onClose, onUpdate, onDelete, panelConfig
             ) : (
               <p className="text-xs text-amber-700/70 break-keep">
                 발신번호 등록이 필요해요.{' '}
-                <a href="/business/profile/settings/integrations" className="underline font-medium">연동 설정하기 →</a>
+                <button type="button" onClick={() => router.push('/business/profile/settings/integrations')} className="underline font-medium">연동 설정하기 →</button>
               </p>
             )}
             {notifyError && <p className="text-xs text-state-danger">{notifyError}</p>}
